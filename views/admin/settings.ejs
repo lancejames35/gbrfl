@@ -1,0 +1,242 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-0">League Settings</h1>
+        <p class="text-muted">Configure league rules and system settings</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <button class="btn btn-success">
+            <i class="bi bi-check-circle"></i> Save All Changes
+        </button>
+    </div>
+</div>
+
+<!-- Settings Tabs -->
+<ul class="nav nav-tabs mb-4" id="settingsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" type="button" role="tab">
+            <i class="bi bi-gear me-2"></i>General
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="draft-tab" data-bs-toggle="tab" data-bs-target="#draft" type="button" role="tab">
+            <i class="bi bi-list-ol me-2"></i>Draft
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="scoring-tab" data-bs-toggle="tab" data-bs-target="#scoring" type="button" role="tab">
+            <i class="bi bi-trophy me-2"></i>Scoring
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="roster-tab" data-bs-toggle="tab" data-bs-target="#roster" type="button" role="tab">
+            <i class="bi bi-people me-2"></i>Roster
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="settingsTabContent">
+    <!-- General Settings -->
+    <div class="tab-pane fade show active" id="general" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">General League Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">League Name</label>
+                            <input type="text" class="form-control" value="George Blanda Rotisserie Football League">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Season Year</label>
+                            <input type="number" class="form-control" value="2024">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Number of Teams</label>
+                            <select class="form-select">
+                                <option value="8">8 Teams</option>
+                                <option value="10" selected>10 Teams</option>
+                                <option value="12">12 Teams</option>
+                                <option value="14">14 Teams</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Season Type</label>
+                            <select class="form-select">
+                                <option value="standard" selected>Standard</option>
+                                <option value="keeper">Keeper League</option>
+                                <option value="dynasty">Dynasty League</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Draft Settings -->
+    <div class="tab-pane fade" id="draft" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Draft Configuration</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Draft Date</label>
+                            <input type="datetime-local" class="form-control" value="2024-08-31T19:00">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Draft Type</label>
+                            <select class="form-select">
+                                <option value="snake" selected>Snake Draft</option>
+                                <option value="linear">Linear Draft</option>
+                                <option value="auction">Auction Draft</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Rounds</label>
+                            <input type="number" class="form-control" value="16" min="1" max="25">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Pick Time Limit</label>
+                            <select class="form-select">
+                                <option value="60">1 minute</option>
+                                <option value="90" selected>1.5 minutes</option>
+                                <option value="120">2 minutes</option>
+                                <option value="300">5 minutes</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scoring Settings -->
+    <div class="tab-pane fade" id="scoring" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Scoring System</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Passing</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Passing Yards</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" value="1" step="0.1">
+                                <span class="input-group-text">points per 25 yards</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Passing TDs</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" value="4">
+                                <span class="input-group-text">points each</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Rushing</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Rushing Yards</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" value="1" step="0.1">
+                                <span class="input-group-text">points per 10 yards</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Rushing TDs</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" value="6">
+                                <span class="input-group-text">points each</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Roster Settings -->
+    <div class="tab-pane fade" id="roster" role="tabpanel">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Roster Configuration</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Roster Size</label>
+                            <input type="number" class="form-control" value="16" min="10" max="25">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Keepers Allowed</label>
+                            <input type="number" class="form-control" value="12" min="0" max="16">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Keeper Deadline</label>
+                            <input type="date" class="form-control" value="2024-08-24">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Trade Deadline</label>
+                            <input type="date" class="form-control" value="2024-11-15">
+                        </div>
+                    </div>
+                </div>
+                
+                <h6 class="mt-4">Starting Lineup Requirements</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">QB</label>
+                            <input type="number" class="form-control" value="1" min="0" max="3">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">RB</label>
+                            <input type="number" class="form-control" value="2" min="0" max="5">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">RC</label>
+                            <input type="number" class="form-control" value="2" min="0" max="5">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label class="form-label">FLEX</label>
+                            <input type="number" class="form-control" value="1" min="0" max="3">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

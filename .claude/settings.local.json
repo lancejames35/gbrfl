@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "/permissions allow write_files\n/permissions allow run_commands"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

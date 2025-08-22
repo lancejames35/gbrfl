@@ -1,0 +1,278 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <!-- Team Selector Dropdown -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="teamSelector" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-people"></i> <%= team.team_name %>
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="teamSelector">
+                <% if (typeof allTeams !== 'undefined' && allTeams.length > 0) { %>
+                    <% allTeams.forEach(otherTeam => { %>
+                        <% if (otherTeam.team_id !== team.team_id) { %>
+                            <li>
+                                <a class="dropdown-item" href="/teams/<%= otherTeam.team_id %>">
+                                    <%= otherTeam.team_name %> 
+                                    <span class="text-muted">(<%= otherTeam.owner_username %>)</span>
+                                </a>
+                            </li>
+                        <% } %>
+                    <% }); %>
+                <% } else { %>
+                    <li><a class="dropdown-item disabled" href="#">No other teams available</a></li>
+                <% } %>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/teams/all"><i class="bi bi-list-ul"></i> View All Teams</a></li>
+            </ul>
+        </div>
+        <p class="text-muted">Owned by: <%= team.owner_username %></p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <div class="btn-group">
+            <% if (canEdit) { %>
+                <a href="/teams/<%= team.team_id %>/edit" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Edit Team
+                </a>
+            <% } %>
+            <a href="/trades/new?team_id=<%= team.team_id %>" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left-right"></i> Propose Trade
+            </a>
+        </div>
+    </div>
+</div>
+
+        <div class="row">
+            <!-- Team Roster -->
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Team Roster</h5>
+                        <div>
+                            <% if (canEdit) { %>
+                                <a href="/players?availability=available" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-plus-circle"></i> Add Player
+                                </a>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <% if (players.length === 0) { %>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                This team currently has no players on its roster.
+                            </div>
+                        <% } else { %>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Position</th>
+                                            <th>NFL Team</th>
+                                            <th>Acquisition</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% players.forEach(player => { %>
+                                            <tr>
+                                                <td>
+                                                    <a href="/players/<%= player.player_id %>" class="text-decoration-none">
+                                                        <%= player.display_name %>
+                                                        <% if (player.is_rookie) { %>
+                                                            <span class="badge bg-warning text-dark">R</span>
+                                                        <% } %>
+                                                    </a>
+                                                </td>
+                                                <td><%= player.position %></td>
+                                                <td>
+                                                    <% if (player.team_code) { %>
+                                                        <%= player.team_code %> - <%= player.team_name %>
+                                                    <% } else { %>
+                                                        <span class="text-muted">Free Agent</span>
+                                                    <% } %>
+                                                </td>
+                                                <td>
+                                                    <% if (player.acquisition_type === 'Draft') { %>
+                                                        <span class="badge bg-primary">Draft</span>
+                                                    <% } else if (player.acquisition_type === 'Keeper') { %>
+                                                        <span class="badge bg-info">Keeper</span>
+                                                    <% } else if (player.acquisition_type === 'Trade') { %>
+                                                        <span class="badge bg-warning text-dark">Trade</span>
+                                                    <% } else if (player.acquisition_type === 'Free Agent') { %>
+                                                        <span class="badge bg-secondary">Free Agent</span>
+                                                    <% } %>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <% } %>
+                    </div>
+                    <div class="card-footer">
+                        <small class="text-muted">
+                            <% if (players && players.length > 0) { %>
+                                <%= players.length %> players on roster
+                            <% } else { %>
+                                0 players on roster
+                            <% } %>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Team Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Team Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Owner:</dt>
+                            <dd class="col-sm-7"><%= team.owner_username %></dd>
+                            
+                            <dt class="col-sm-5">Member since:</dt>
+                            <dd class="col-sm-7"><%= team.member_since ? new Date(team.member_since).toLocaleDateString() : 'N/A' %></dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Keeper Management Link (only for team owner) -->
+                <% if (canEdit) { %>
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Keeper Management</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <% if (!deadlinePassed) { %>
+                            <p class="text-muted mb-3">
+                                <%= keeperCount %> of <%= keeperLimit %> keepers selected
+                            </p>
+                            <a href="/keepers/<%= team.team_id %>" class="btn btn-primary">
+                                <i class="bi bi-shield-check"></i> Manage Keepers
+                            </a>
+                        <% } else { %>
+                            <p class="text-muted mb-3">
+                                <%= keeperCount %> keepers finalized
+                            </p>
+                            <a href="/keepers/<%= team.team_id %>" class="btn btn-outline-secondary">
+                                <i class="bi bi-eye"></i> View Keepers
+                            </a>
+                        <% } %>
+                    </div>
+                </div>
+                <% } %>
+
+                <!-- Waiver Requests (for team owner only) -->
+                <% if (canEdit) { %>
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Waiver Requests</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div id="waiver-status-loading">
+                            <i class="bi bi-hourglass-split"></i>
+                            <span class="text-muted">Loading...</span>
+                        </div>
+                        <div id="waiver-status-content" style="display: none;">
+                            <p class="text-muted mb-3">
+                                <span id="pending-count">0</span> pending waiver requests
+                            </p>
+                            <a href="/waivers/pending" class="btn btn-outline-primary">
+                                <i class="bi bi-clock-history"></i> View Pending Requests
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+
+                <!-- Roster Breakdown -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Roster Breakdown</h5>
+                    </div>
+                    <div class="card-body">
+                        <% 
+                            // Count players by position
+                            const positionCounts = {};
+                            if (players && players.length > 0) {
+                                players.forEach(player => {
+                                    positionCounts[player.position] = (positionCounts[player.position] || 0) + 1;
+                                });
+                            }
+                        %>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Quarterbacks (QB)
+                                <span class="badge bg-primary rounded-pill"><%= positionCounts['QB'] || 0 %></span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Running Backs (RB)
+                                <span class="badge bg-primary rounded-pill"><%= positionCounts['RB'] || 0 %></span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Receivers (RC)
+                                <span class="badge bg-primary rounded-pill"><%= positionCounts['RC'] || 0 %></span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Kickers (PK)
+                                <span class="badge bg-primary rounded-pill"><%= positionCounts['PK'] || 0 %></span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                Defense Units (DU)
+                                <span class="badge bg-primary rounded-pill"><%= positionCounts['DU'] || 0 %></span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load waiver request count for team owner
+    <% if (canEdit) { %>
+    loadWaiverRequestCount();
+    <% } %>
+});
+
+<% if (canEdit) { %>
+function loadWaiverRequestCount() {
+    fetch('/waivers/api/pending/count')
+        .then(response => response.json())
+        .then(data => {
+            const loadingDiv = document.getElementById('waiver-status-loading');
+            const contentDiv = document.getElementById('waiver-status-content');
+            const countSpan = document.getElementById('pending-count');
+            
+            if (loadingDiv) loadingDiv.style.display = 'none';
+            if (contentDiv) contentDiv.style.display = 'block';
+            
+            if (countSpan && data.success) {
+                countSpan.textContent = data.count || 0;
+                
+                // Update button style based on count
+                const viewButton = contentDiv.querySelector('.btn');
+                if (data.count > 0) {
+                    viewButton.classList.remove('btn-outline-primary');
+                    viewButton.classList.add('btn-primary');
+                    countSpan.closest('p').innerHTML = `<span class="badge bg-warning text-dark">${data.count}</span> pending waiver requests`;
+                } else {
+                    countSpan.closest('p').innerHTML = '<span class="text-muted">No pending waiver requests</span>';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error loading waiver count:', error);
+            const loadingDiv = document.getElementById('waiver-status-loading');
+            const contentDiv = document.getElementById('waiver-status-content');
+            
+            if (loadingDiv) {
+                loadingDiv.innerHTML = '<span class="text-danger">Error loading waiver status</span>';
+            }
+        });
+}
+<% } %>
+</script>

@@ -1,0 +1,380 @@
+<!-- Mobile Swipe Interface -->
+<div class="mobile-scoreboard">
+  <!-- Swipe Header -->
+  <div class="swipe-header mb-3">
+    <div class="card">
+      <div class="card-body text-center py-2">
+        <div class="team-indicators mb-2">
+          <span class="team-dot active" id="team1-dot">●</span>
+          <span class="mx-2 text-muted">My Team</span>
+          <span class="team-dot" id="team2-dot">○</span>
+          <span class="mx-2 text-muted">Opponent</span>
+        </div>
+        <div class="game-meta">
+          <small class="text-muted">Week <%= game.week %> - <%= game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1) %> Game</small>
+        </div>
+        <div class="swipe-instruction mt-1">
+          <small class="text-muted"><i class="fas fa-hand-pointer"></i> Swipe left/right to switch teams</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Swipeable Team Display -->
+  <div class="team-swipe-container" id="teamContainer">
+    
+    <!-- Team 1 Display -->
+    <div class="team-display active" id="team1-display" data-team="1">
+      <div class="team-header mb-3">
+        <div class="card bg-primary text-white">
+          <div class="card-body text-center">
+            <h4 class="team-name mb-1"><%= game.team1.name %></h4>
+            <p class="owner-name mb-2"><%= game.team1.owner %></p>
+            <div class="score-display">
+              <span class="total-score display-4"><%= game.team1.totalScore %></span>
+              <div class="score-status mt-2">
+                <% if (game.team1.status === 'winning') { %>
+                  <span class="badge bg-success fs-6">
+                    <i class="fas fa-trophy"></i> WINNING
+                  </span>
+                <% } else { %>
+                  <span class="badge bg-danger fs-6">
+                    <i class="fas fa-chart-line-down"></i> LOSING
+                  </span>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team 2 Display -->
+    <div class="team-display" id="team2-display" data-team="2" style="display: none;">
+      <div class="team-header mb-3">
+        <div class="card bg-secondary text-white">
+          <div class="card-body text-center">
+            <h4 class="team-name mb-1"><%= game.team2.name %></h4>
+            <p class="owner-name mb-2"><%= game.team2.owner %></p>
+            <div class="score-display">
+              <span class="total-score display-4"><%= game.team2.totalScore %></span>
+              <div class="score-status mt-2">
+                <% if (game.team2.status === 'winning') { %>
+                  <span class="badge bg-success fs-6">
+                    <i class="fas fa-trophy"></i> WINNING
+                  </span>
+                <% } else { %>
+                  <span class="badge bg-danger fs-6">
+                    <i class="fas fa-chart-line-down"></i> LOSING
+                  </span>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Cards (Stacked Vertically) -->
+  <div class="mobile-categories">
+    
+    <!-- PASSING Category -->
+    <div class="mobile-category-card mb-3" data-category="passing">
+      <div class="card">
+        <div class="category-header bg-danger text-white" onclick="toggleMobileCategory('passing')">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-0">
+                  <i class="fas fa-football me-2"></i>PASSING (6 pts)
+                </h6>
+                <% if (game.team1.categories.passing.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team1.name %> Wins</small>
+                <% } else if (game.team2.categories.passing.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team2.name %> Wins</small>
+                <% } %>
+              </div>
+              <i class="fas fa-chevron-down expand-icon"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="category-content" id="mobile-passing-content">
+          <div class="card-body">
+            <!-- Quick Stats Comparison -->
+            <div class="quick-stats mb-3">
+              <div class="row text-center">
+                <div class="col-6">
+                  <strong class="text-primary"><%= game.team1.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Yards: <%= game.team1.categories.passing.stats.yards %> | 
+                    TDs: <%= game.team1.categories.passing.stats.tds %> | 
+                    Comp: <%= game.team1.categories.passing.stats.completion %>%
+                  </small>
+                </div>
+                <div class="col-6">
+                  <strong class="text-secondary"><%= game.team2.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Yards: <%= game.team2.categories.passing.stats.yards %> | 
+                    TDs: <%= game.team2.categories.passing.stats.tds %> | 
+                    Comp: <%= game.team2.categories.passing.stats.completion %>%
+                  </small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Player Details Button -->
+            <div class="text-center">
+              <button class="btn btn-outline-primary btn-sm" onclick="showMobilePlayerDetails('passing')">
+                <i class="fas fa-users"></i> Show Player Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RUSHING Category -->
+    <div class="mobile-category-card mb-3" data-category="rushing">
+      <div class="card">
+        <div class="category-header bg-warning text-dark" onclick="toggleMobileCategory('rushing')">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-0">
+                  <i class="fas fa-running me-2"></i>RUSHING (6 pts)
+                </h6>
+                <% if (game.team1.categories.rushing.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team1.name %> Wins</small>
+                <% } else if (game.team2.categories.rushing.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team2.name %> Wins</small>
+                <% } %>
+              </div>
+              <i class="fas fa-chevron-down expand-icon"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="category-content" id="mobile-rushing-content">
+          <div class="card-body">
+            <!-- Quick Stats Comparison -->
+            <div class="quick-stats mb-3">
+              <div class="row text-center">
+                <div class="col-6">
+                  <strong class="text-primary"><%= game.team1.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Yards: <%= game.team1.categories.rushing.stats.yards %> | 
+                    TDs: <%= game.team1.categories.rushing.stats.tds %> | 
+                    YPC: <%= game.team1.categories.rushing.stats.ypc %>
+                  </small>
+                </div>
+                <div class="col-6">
+                  <strong class="text-secondary"><%= game.team2.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Yards: <%= game.team2.categories.rushing.stats.yards %> | 
+                    TDs: <%= game.team2.categories.rushing.stats.tds %> | 
+                    YPC: <%= game.team2.categories.rushing.stats.ypc %>
+                  </small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Player Details Button -->
+            <div class="text-center">
+              <button class="btn btn-outline-warning btn-sm" onclick="showMobilePlayerDetails('rushing')">
+                <i class="fas fa-users"></i> Show Player Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECEIVING Category -->
+    <div class="mobile-category-card mb-3" data-category="receiving">
+      <div class="card">
+        <div class="category-header bg-success text-white" onclick="toggleMobileCategory('receiving')">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-0">
+                  <i class="fas fa-hands-catching me-2"></i>RECEIVING (6 pts)
+                </h6>
+                <% if (game.team1.categories.receiving.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team1.name %> Wins</small>
+                <% } else if (game.team2.categories.receiving.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team2.name %> Wins</small>
+                <% } %>
+              </div>
+              <i class="fas fa-chevron-down expand-icon"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="category-content" id="mobile-receiving-content">
+          <div class="card-body">
+            <!-- Quick Stats Comparison -->
+            <div class="quick-stats mb-3">
+              <div class="row text-center">
+                <div class="col-6">
+                  <strong class="text-primary"><%= game.team1.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Yards: <%= game.team1.categories.receiving.stats.yards %> | 
+                    TDs: <%= game.team1.categories.receiving.stats.tds %> | 
+                    Rec: <%= game.team1.categories.receiving.stats.receptions %>
+                  </small>
+                </div>
+                <div class="col-6">
+                  <strong class="text-secondary"><%= game.team2.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Yards: <%= game.team2.categories.receiving.stats.yards %> | 
+                    TDs: <%= game.team2.categories.receiving.stats.tds %> | 
+                    Rec: <%= game.team2.categories.receiving.stats.receptions %>
+                  </small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Player Details Button -->
+            <div class="text-center">
+              <button class="btn btn-outline-success btn-sm" onclick="showMobilePlayerDetails('receiving')">
+                <i class="fas fa-users"></i> Show Player Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KICKING Category -->
+    <div class="mobile-category-card mb-3" data-category="kicking">
+      <div class="card">
+        <div class="category-header bg-info text-white" onclick="toggleMobileCategory('kicking')">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-0">
+                  <i class="fas fa-bullseye me-2"></i>KICKING (6 pts)
+                </h6>
+                <% if (game.team1.categories.kicking.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team1.name %> Wins</small>
+                <% } else if (game.team2.categories.kicking.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team2.name %> Wins</small>
+                <% } %>
+              </div>
+              <i class="fas fa-chevron-down expand-icon"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="category-content" id="mobile-kicking-content">
+          <div class="card-body">
+            <!-- Quick Stats Comparison -->
+            <div class="quick-stats mb-3">
+              <div class="row text-center">
+                <div class="col-6">
+                  <strong class="text-primary"><%= game.team1.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Points: <%= game.team1.categories.kicking.stats.points %> | 
+                    FG: <%= game.team1.categories.kicking.stats.fg_made %>/<%= game.team1.categories.kicking.stats.fg_att %> | 
+                    Long: <%= game.team1.categories.kicking.stats.long %>
+                  </small>
+                </div>
+                <div class="col-6">
+                  <strong class="text-secondary"><%= game.team2.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Points: <%= game.team2.categories.kicking.stats.points %> | 
+                    FG: <%= game.team2.categories.kicking.stats.fg_made %>/<%= game.team2.categories.kicking.stats.fg_att %> | 
+                    Long: <%= game.team2.categories.kicking.stats.long %>
+                  </small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Player Details Button -->
+            <div class="text-center">
+              <button class="btn btn-outline-info btn-sm" onclick="showMobilePlayerDetails('kicking')">
+                <i class="fas fa-users"></i> Show Player Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEFENSE Category -->
+    <div class="mobile-category-card mb-3" data-category="defense">
+      <div class="card">
+        <div class="category-header bg-secondary text-white" onclick="toggleMobileCategory('defense')">
+          <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <h6 class="mb-0">
+                  <i class="fas fa-shield-alt me-2"></i>DEFENSE (6 pts)
+                </h6>
+                <% if (game.team1.categories.defense.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team1.name %> Wins</small>
+                <% } else if (game.team2.categories.defense.winner) { %>
+                  <small><i class="fas fa-trophy"></i> <%= game.team2.name %> Wins</small>
+                <% } %>
+              </div>
+              <i class="fas fa-chevron-down expand-icon"></i>
+            </div>
+          </div>
+        </div>
+        
+        <div class="category-content" id="mobile-defense-content">
+          <div class="card-body">
+            <!-- Quick Stats Comparison -->
+            <div class="quick-stats mb-3">
+              <div class="row text-center">
+                <div class="col-6">
+                  <strong class="text-primary"><%= game.team1.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Pts Allow: <%= game.team1.categories.defense.stats.points_allowed %> | 
+                    Yds Allow: <%= game.team1.categories.defense.stats.yards_allowed %> | 
+                    Sacks: <%= game.team1.categories.defense.stats.sacks %>
+                  </small>
+                </div>
+                <div class="col-6">
+                  <strong class="text-secondary"><%= game.team2.name.split(' ')[0] %>:</strong><br>
+                  <small>
+                    Pts Allow: <%= game.team2.categories.defense.stats.points_allowed %> | 
+                    Yds Allow: <%= game.team2.categories.defense.stats.yards_allowed %> | 
+                    Sacks: <%= game.team2.categories.defense.stats.sacks %>
+                  </small>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Player Details Button -->
+            <div class="text-center">
+              <button class="btn btn-outline-secondary btn-sm" onclick="showMobilePlayerDetails('defense')">
+                <i class="fas fa-users"></i> Show Player Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Mobile Player Details Modal -->
+<div class="modal fade" id="mobilePlayerModal" tabindex="-1">
+  <div class="modal-dialog modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="mobilePlayerModalTitle">Player Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="mobilePlayerModalBody">
+        <!-- Player details will be dynamically loaded here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile JavaScript functionality is handled in scoreboard.js -->

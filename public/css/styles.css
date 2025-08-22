@@ -1,0 +1,259 @@
+/* Main stylesheet for GBRFL Fantasy Football League */
+
+/* Base styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+/* Header styles */
+header {
+    background-color: #0a3161; /* NFL blue */
+    color: white;
+    padding: 1rem 0;
+}
+
+header .display-4 {
+    font-weight: 600;
+}
+
+/* Footer styles */
+footer {
+    margin-top: auto;
+    background-color: #333;
+    color: white;
+}
+
+/* Card customizations */
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    font-weight: 600;
+}
+
+/* Button styles */
+.btn-primary {
+    background-color: #0a3161; /* NFL blue */
+    border-color: #0a3161;
+}
+
+.btn-primary:hover {
+    background-color: #072244;
+    border-color: #072244;
+}
+
+.btn-danger {
+    background-color: #c71f37; /* NFL red */
+    border-color: #c71f37;
+}
+
+.btn-danger:hover {
+    background-color: #a51a2d;
+    border-color: #a51a2d;
+}
+
+/* Table styles */
+.table thead th {
+    background-color: #f2f2f2;
+    border-bottom: 2px solid #dee2e6;
+}
+
+/* Form styles */
+.form-label {
+    font-weight: 500;
+}
+
+.form-control:focus {
+    border-color: #0a3161;
+    box-shadow: 0 0 0 0.25rem rgba(10, 49, 97, 0.25);
+}
+
+/* Alert customizations */
+.alert {
+    border-radius: 0.375rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Utility classes */
+.text-nfl-blue {
+    color: #0a3161;
+}
+
+.text-nfl-red {
+    color: #c71f37;
+}
+
+.bg-nfl-blue {
+    background-color: #0a3161;
+}
+
+.bg-nfl-red {
+    background-color: #c71f37;
+}
+
+/* Admin user switching submenu styles */
+.user-switch-submenu {
+    position: absolute;
+    top: 0;
+    right: 100%;
+    min-width: 280px;
+    z-index: 9999 !important;
+    background-color: #fff !important;
+    border: 1px solid rgba(0,0,0,.15);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+    margin-right: -1px;
+    margin-top: -1px;
+}
+
+.submenu-content {
+    padding: 0.5rem 0;
+}
+
+.submenu-item {
+    display: block;
+    padding: 0.375rem 1rem;
+    clear: both;
+    font-weight: 400;
+    color: #212529;
+    text-decoration: none;
+    white-space: nowrap;
+    background-color: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.submenu-item:hover {
+    color: #16181b;
+    background-color: #e9ecef;
+}
+
+.submenu-item:focus,
+.submenu-item:active {
+    color: #16181b;
+    background-color: #e9ecef;
+    text-decoration: none;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 500;
+}
+
+/* Arrow rotation */
+#switchUserArrow {
+    transition: transform 0.2s ease;
+}
+
+#switchUserArrow.rotated {
+    transform: rotate(90deg);
+}
+
+/* Responsive submenu positioning */
+@media (max-width: 768px) {
+    .user-switch-submenu {
+        position: static;
+        width: 100%;
+        margin: 0;
+        border: none;
+        box-shadow: none;
+        background-color: #f8f9fa;
+        border-radius: 0;
+    }
+    
+    .submenu-content {
+        padding-left: 1rem;
+    }
+}
+
+/* Admin badge styles */
+.badge.bg-warning.text-dark {
+    font-size: 0.7em;
+}
+
+/* Admin control styles in header */
+.dropdown-header {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.dropdown-item small {
+    display: block;
+    margin-top: 2px;
+}
+
+/* Notification styles */
+.notification-item {
+    transition: background-color 0.2s ease;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+    background-color: #e3f2fd;
+    border-left: 3px solid #2196F3;
+    padding-left: 0.5rem;
+}
+
+.notification-item.unread:hover {
+    background-color: #e1f5fe;
+}
+
+.notification-item .dropdown-toggle {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.notification-item:hover .dropdown-toggle {
+    opacity: 1;
+}
+
+#notificationBadge {
+    font-size: 0.6rem;
+    min-width: 16px;
+    height: 16px;
+    line-height: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    header .display-4 {
+        font-size: 1.8rem;
+    }
+    
+    header .lead {
+        font-size: 1rem;
+    }
+    
+    /* Adjust submenu position on mobile */
+    .dropdown-submenu .dropdown-menu {
+        left: -100%;
+        top: 0;
+    }
+    
+    /* Notification dropdown on mobile */
+    #notificationsDropdown + .dropdown-menu {
+        min-width: 300px;
+        right: 0;
+        left: auto;
+    }
+}

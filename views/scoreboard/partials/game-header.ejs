@@ -1,0 +1,137 @@
+<!-- Game Header for Desktop -->
+<div class="game-header mb-4">
+  <div class="card shadow-sm">
+    <div class="card-body py-4">
+      <div class="row align-items-center">
+        <!-- Team 1 -->
+        <div class="col-5">
+          <div class="team-section text-end">
+            <div class="team-info">
+              <h3 class="team-name mb-1"><%= game.team1.name %></h3>
+              <p class="owner-name text-muted mb-2"><%= game.team1.owner %></p>
+              <div class="score-display">
+                <span class="total-score <%= game.team1.status %>"><%= game.team1.totalScore %></span>
+                <div class="score-indicator mt-1">
+                  <% if (game.team1.status === 'winning') { %>
+                    <span class="badge bg-success">
+                      <i class="fas fa-trophy"></i> WINNING
+                    </span>
+                  <% } else { %>
+                    <span class="badge bg-danger">
+                      <i class="fas fa-chart-line-down"></i> LOSING
+                    </span>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VS Divider -->
+        <div class="col-2">
+          <div class="vs-section text-center">
+            <div class="vs-circle">
+              <span class="vs-text">VS</span>
+            </div>
+            <div class="game-info mt-2">
+              <small class="text-muted">
+                Week <%= game.week %><br>
+                <%= game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1) %>
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team 2 -->
+        <div class="col-5">
+          <div class="team-section">
+            <div class="team-info">
+              <h3 class="team-name mb-1"><%= game.team2.name %></h3>
+              <p class="owner-name text-muted mb-2"><%= game.team2.owner %></p>
+              <div class="score-display">
+                <span class="total-score <%= game.team2.status %>"><%= game.team2.totalScore %></span>
+                <div class="score-indicator mt-1">
+                  <% if (game.team2.status === 'winning') { %>
+                    <span class="badge bg-success">
+                      <i class="fas fa-trophy"></i> WINNING
+                    </span>
+                  <% } else { %>
+                    <span class="badge bg-danger">
+                      <i class="fas fa-chart-line-down"></i> LOSING
+                    </span>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Category Summary -->
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="category-summary">
+            <h6 class="text-center text-muted mb-3">Category Winners</h6>
+            <div class="row text-center">
+              <div class="col">
+                <div class="category-quick-stat">
+                  <i class="fas fa-football position-relative text-danger"></i>
+                  <br>
+                  <small class="fw-bold">PASSING</small>
+                  <br>
+                  <small class="<%= game.team1.categories.passing.winner ? 'text-success' : (game.team2.categories.passing.winner ? 'text-primary' : 'text-muted') %>">
+                    <%= game.team1.categories.passing.winner ? game.team1.name.split(' ')[0] : (game.team2.categories.passing.winner ? game.team2.name.split(' ')[0] : 'TIE') %>
+                  </small>
+                </div>
+              </div>
+              <div class="col">
+                <div class="category-quick-stat">
+                  <i class="fas fa-running position-relative text-warning"></i>
+                  <br>
+                  <small class="fw-bold">RUSHING</small>
+                  <br>
+                  <small class="<%= game.team1.categories.rushing.winner ? 'text-success' : (game.team2.categories.rushing.winner ? 'text-primary' : 'text-muted') %>">
+                    <%= game.team1.categories.rushing.winner ? game.team1.name.split(' ')[0] : (game.team2.categories.rushing.winner ? game.team2.name.split(' ')[0] : 'TIE') %>
+                  </small>
+                </div>
+              </div>
+              <div class="col">
+                <div class="category-quick-stat">
+                  <i class="fas fa-hands-catching position-relative text-success"></i>
+                  <br>
+                  <small class="fw-bold">RECEIVING</small>
+                  <br>
+                  <small class="<%= game.team1.categories.receiving.winner ? 'text-success' : (game.team2.categories.receiving.winner ? 'text-primary' : 'text-muted') %>">
+                    <%= game.team1.categories.receiving.winner ? game.team1.name.split(' ')[0] : (game.team2.categories.receiving.winner ? game.team2.name.split(' ')[0] : 'TIE') %>
+                  </small>
+                </div>
+              </div>
+              <div class="col">
+                <div class="category-quick-stat">
+                  <i class="fas fa-bullseye position-relative text-info"></i>
+                  <br>
+                  <small class="fw-bold">KICKING</small>
+                  <br>
+                  <small class="<%= game.team1.categories.kicking.winner ? 'text-success' : (game.team2.categories.kicking.winner ? 'text-primary' : 'text-muted') %>">
+                    <%= game.team1.categories.kicking.winner ? game.team1.name.split(' ')[0] : (game.team2.categories.kicking.winner ? game.team2.name.split(' ')[0] : 'TIE') %>
+                  </small>
+                </div>
+              </div>
+              <div class="col">
+                <div class="category-quick-stat">
+                  <i class="fas fa-shield-alt position-relative text-secondary"></i>
+                  <br>
+                  <small class="fw-bold">DEFENSE</small>
+                  <br>
+                  <small class="<%= game.team1.categories.defense.winner ? 'text-success' : (game.team2.categories.defense.winner ? 'text-primary' : 'text-muted') %>">
+                    <%= game.team1.categories.defense.winner ? game.team1.name.split(' ')[0] : (game.team2.categories.defense.winner ? game.team2.name.split(' ')[0] : 'TIE') %>
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

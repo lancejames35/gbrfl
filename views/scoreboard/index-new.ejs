@@ -1,0 +1,495 @@
+<%- contentFor('head') %>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="/css/scoreboard.css" rel="stylesheet">
+
+<%- contentFor('body') %>
+<div class="scoreboard-container">
+  <!-- Navigation Header -->
+  <div class="scoreboard-nav">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <div class="d-flex align-items-center">
+            <div class="me-3">
+              <label for="season" class="form-label text-white small">Season</label>
+              <select class="form-select form-select-sm" id="season" name="season" onchange="updateScoreboard()">
+                <% seasons.forEach(s => { %>
+                  <option value="<%= s %>" <%= s == season ? 'selected' : '' %>><%= s %></option>
+                <% }); %>
+              </select>
+            </div>
+            
+            <div class="me-3">
+              <label for="week" class="form-label text-white small">Week</label>
+              <select class="form-select form-select-sm" id="week" name="week" onchange="updateScoreboard()">
+                <% weeks.forEach(w => { %>
+                  <option value="<%= w %>" <%= w == week ? 'selected' : '' %>>Week <%= w %></option>
+                <% }); %>
+              </select>
+            </div>
+            
+            <div class="me-3">
+              <label for="gameType" class="form-label text-white small">Game Type</label>
+              <select class="form-select form-select-sm" id="gameType" name="gameType" onchange="updateScoreboard()">
+                <% gameTypes.forEach(gt => { %>
+                  <option value="<%= gt %>" <%= gt == gameType ? 'selected' : '' %>><%= gt.charAt(0).toUpperCase() + gt.slice(1) %></option>
+                <% }); %>
+              </select>
+            </div>
+            
+            <div class="me-3">
+              <label for="layoutType" class="form-label text-white small">Layout</label>
+              <select class="form-select form-select-sm" id="layoutType" name="layout" onchange="updateScoreboard()">
+                <option value="enhanced" <%= (typeof viewType !== 'undefined' && viewType == 'enhanced') ? 'selected' : '' %>>Enhanced</option>
+                <option value="classic" <%= (typeof viewType === 'undefined' || viewType == 'classic') ? 'selected' : '' %>>Classic</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-6 text-end">
+          <% if (matchups && matchups.length > 1) { %>
+            <div class="game-navigation">
+              <button class="btn btn-outline-light btn-sm me-2" onclick="previousGame()" id="prevBtn">
+                <i class="fas fa-chevron-left"></i> Previous
+              </button>
+              <span class="text-white">Game <span id="currentGameNum">1</span> of <%= matchups.length %></span>
+              <button class="btn btn-outline-light btn-sm ms-2" onclick="nextGame()" id="nextBtn">
+                Next <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Scoreboard Display -->
+  <div class="container-fluid mt-4" id="scoreboardDisplay">
+    <% if (matchups && matchups.length > 0) { %>
+      <% const matchup = matchups[0]; %>
+      
+      <!-- Team Headers with Final Scores -->
+      <div class="game-header mb-4">
+        <div class="card">
+          <div class="card-body p-4">
+            <div class="row align-items-center">
+              <!-- Team 1 -->
+              <div class="col-md-5 text-center">
+                <h2 class="team-name"><%= matchup.team1_name %></h2>
+                <p class="owner-name mb-2"><%= matchup.team1_owner %></p>
+                <div class="final-score <%= matchup.winner === 'team1' ? 'winning' : 'losing' %>">
+                  <%= parseFloat(matchup.team1_final_score).toFixed(1) %>
+                  <% if (matchup.winner === 'team1') { %><i class="fas fa-trophy ms-2 text-warning"></i><% } %>
+                </div>
+              </div>
+              
+              <!-- VS Section -->
+              <div class="col-md-2 text-center">
+                <div class="vs-circle">
+                  <span class="vs-text">VS</span>
+                </div>
+                <div class="mt-2">
+                  <small class="text-muted">Week <%= week %> - <%= gameType.charAt(0).toUpperCase() + gameType.slice(1) %></small>
+                </div>
+              </div>
+              
+              <!-- Team 2 -->
+              <div class="col-md-5 text-center">
+                <h2 class="team-name"><%= matchup.team2_name %></h2>
+                <p class="owner-name mb-2"><%= matchup.team2_owner %></p>
+                <div class="final-score <%= matchup.winner === 'team2' ? 'winning' : 'losing' %>">
+                  <%= parseFloat(matchup.team2_final_score).toFixed(1) %>
+                  <% if (matchup.winner === 'team2') { %><i class="fas fa-trophy ms-2 text-warning"></i><% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- New Layout: Players on Sides, Categories in Middle -->
+      <div class="row">
+        <!-- Team 1 Player Column -->
+        <div class="col-md-3">
+          <div class="player-column">
+            <h5 class="text-center mb-3 team-players-header">
+              <i class="fas fa-users me-2"></i><%= matchup.team1_name %> Players
+            </h5>
+            <div id="team1Players">
+              <!-- Players will be loaded here via JavaScript -->
+              <div class="text-center">
+                <div class="spinner-border spinner-border-sm" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="small mt-2">Loading players...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Category Results Column -->
+        <div class="col-md-6">
+          <div class="categories-section">
+            <h5 class="text-center mb-3">
+              <i class="fas fa-chart-bar me-2"></i>Category Breakdown
+            </h5>
+            
+            <% 
+            const categories = {
+              'passing': { icon: 'fa-football', name: 'Passing', color: 'danger' },
+              'rushing': { icon: 'fa-running', name: 'Rushing', color: 'warning' },
+              'receiving': { icon: 'fa-hands-catching', name: 'Receiving', color: 'info' },
+              'kicking': { icon: 'fa-bullseye', name: 'Kicking', color: 'success' },
+              'defense': { icon: 'fa-shield', name: 'Defense', color: 'dark' },
+              'cumulative': { icon: 'fa-chart-line', name: 'Special', color: 'secondary' }
+            };
+            
+            if (matchup.category_results && typeof matchup.category_results === 'object') {
+              Object.keys(categories).forEach(categoryKey => {
+                if (matchup.category_results[categoryKey] && typeof matchup.category_results[categoryKey] === 'object') {
+            %>
+            
+            <div class="category-card mb-3">
+              <div class="card">
+                <div class="card-header category-header bg-<%= categories[categoryKey].color %> text-white">
+                  <div class="row align-items-center">
+                    <div class="col-4 text-center">
+                      <% 
+                      let team1CategoryPoints = 0;
+                      let team2CategoryPoints = 0;
+                      let team1CategoryBonus = 0;
+                      let team2CategoryBonus = 0;
+                      
+                      Object.values(matchup.category_results[categoryKey]).forEach(stat => {
+                        if (stat.team1_wins === true) team1CategoryPoints += stat.h2h_points;
+                        else if (stat.team1_wins === false) team2CategoryPoints += stat.h2h_points;
+                        team1CategoryBonus += stat.team1_bonus || 0;
+                        team2CategoryBonus += stat.team2_bonus || 0;
+                      });
+                      
+                      const team1CategoryWins = team1CategoryPoints > team2CategoryPoints;
+                      const team2CategoryWins = team2CategoryPoints > team1CategoryPoints;
+                      %>
+                      
+                      <div class="category-score <%= team1CategoryWins ? 'winner' : '' %>">
+                        <strong><%= team1CategoryPoints %></strong>
+                        <% if (team1CategoryBonus > 0) { %>
+                          <small>+<%= team1CategoryBonus %></small>
+                        <% } %>
+                        <% if (team1CategoryWins) { %>
+                          <i class="fas fa-trophy ms-1"></i>
+                        <% } %>
+                      </div>
+                    </div>
+                    
+                    <div class="col-4 text-center">
+                      <h6 class="mb-0">
+                        <i class="fas <%= categories[categoryKey].icon %> me-2"></i>
+                        <%= categories[categoryKey].name %>
+                      </h6>
+                    </div>
+                    
+                    <div class="col-4 text-center">
+                      <div class="category-score <%= team2CategoryWins ? 'winner' : '' %>">
+                        <strong><%= team2CategoryPoints %></strong>
+                        <% if (team2CategoryBonus > 0) { %>
+                          <small>+<%= team2CategoryBonus %></small>
+                        <% } %>
+                        <% if (team2CategoryWins) { %>
+                          <i class="fas fa-trophy ms-1"></i>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-sm category-stats-table">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Stat</th>
+                          <th class="text-center"><%= matchup.team1_name %></th>
+                          <th class="text-center"><%= matchup.team2_name %></th>
+                          <th class="text-center">H2H</th>
+                          <th class="text-center">Bonus</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% Object.entries(matchup.category_results[categoryKey]).forEach(([statName, result]) => { %>
+                          <tr>
+                            <td><strong><%= statName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) %></strong></td>
+                            <td class="text-center <%= result.team1_wins === true ? 'stat-winner' : '' %>">
+                              <%= result.team1_value %>
+                              <% if (result.team1_wins === true) { %><i class="fas fa-check text-success ms-1"></i><% } %>
+                            </td>
+                            <td class="text-center <%= result.team1_wins === false ? 'stat-winner' : '' %>">
+                              <%= result.team2_value %>
+                              <% if (result.team1_wins === false) { %><i class="fas fa-check text-success ms-1"></i><% } %>
+                            </td>
+                            <td class="text-center">
+                              <% if (result.team1_wins === true) { %>
+                                <span class="text-success fw-bold">+<%= result.h2h_points %></span>
+                              <% } else if (result.team1_wins === false) { %>
+                                <span class="text-danger fw-bold">+<%= result.h2h_points %></span>
+                              <% } else { %>
+                                <span class="text-muted">Tie</span>
+                              <% } %>
+                            </td>
+                            <td class="text-center">
+                              <% if ((result.team1_bonus || 0) > 0) { %>
+                                <span class="badge bg-warning text-dark">+<%= result.team1_bonus %></span>
+                              <% } %>
+                              <% if ((result.team2_bonus || 0) > 0) { %>
+                                <span class="badge bg-warning text-dark">+<%= result.team2_bonus %></span>
+                              <% } %>
+                              <% if (result.bonus_threshold) { %>
+                                <br><small class="text-muted">@ <%= result.bonus_threshold %></small>
+                              <% } %>
+                            </td>
+                          </tr>
+                        <% }); %>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <% 
+                }
+              });
+            }
+            %>
+          </div>
+        </div>
+        
+        <!-- Team 2 Player Column -->
+        <div class="col-md-3">
+          <div class="player-column">
+            <h5 class="text-center mb-3 team-players-header">
+              <i class="fas fa-users me-2"></i><%= matchup.team2_name %> Players
+            </h5>
+            <div id="team2Players">
+              <!-- Players will be loaded here via JavaScript -->
+              <div class="text-center">
+                <div class="spinner-border spinner-border-sm" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="small mt-2">Loading players...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    <% } else { %>
+      <div class="alert alert-info text-center">
+        <h4>No Matchup Available</h4>
+        <p>No games found for Week <%= week %> <%= gameType %> games.</p>
+        <p>Try selecting a different week or game type.</p>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- contentFor('scripts') %>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let allMatchups = <%- JSON.stringify(matchups || []) %>;
+let currentMatchupIndex = 0;
+const currentSeason = <%= season %>;
+const currentWeek = <%= week %>;
+const currentGameType = '<%= gameType %>';
+
+// Load player data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (allMatchups.length > 0) {
+        loadPlayerData(allMatchups[currentMatchupIndex]);
+        updateNavigation();
+    }
+});
+
+function updateScoreboard() {
+    const season = document.getElementById('season').value;
+    const week = document.getElementById('week').value;
+    const gameType = document.getElementById('gameType').value;
+    const layout = document.getElementById('layoutType').value;
+    
+    const url = `/scoreboard?season=${season}&week=${week}&game_type=${gameType}&layout=${layout}`;
+    window.location.href = url;
+}
+
+function nextGame() {
+    if (currentMatchupIndex < allMatchups.length - 1) {
+        currentMatchupIndex++;
+        displayMatchup(allMatchups[currentMatchupIndex]);
+    }
+}
+
+function previousGame() {
+    if (currentMatchupIndex > 0) {
+        currentMatchupIndex--;
+        displayMatchup(allMatchups[currentMatchupIndex]);
+    }
+}
+
+function displayMatchup(matchup) {
+    // Update team names and scores
+    updateTeamHeaders(matchup);
+    
+    // Load new player data
+    loadPlayerData(matchup);
+    
+    // Update navigation
+    updateNavigation();
+}
+
+function updateTeamHeaders(matchup) {
+    // Update team names, scores, etc.
+    // This would update the header section without a full page reload
+    location.reload(); // For now, just reload - can optimize later
+}
+
+function loadPlayerData(matchup) {
+    // Clear existing players
+    document.getElementById('team1Players').innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div><p class="small mt-2">Loading...</p></div>';
+    document.getElementById('team2Players').innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm" role="status"></div><p class="small mt-2">Loading...</p></div>';
+    
+    // Load both teams' player data
+    console.log('Loading player data for teams:', matchup.team1_id, matchup.team2_id);
+    Promise.all([
+        fetch(`/api/scoreboard/team-breakdown?team_id=${matchup.team1_id}&week=${currentWeek}&season=${currentSeason}&game_type=${currentGameType}`)
+            .then(response => {
+                console.log('Team 1 response status:', response.status);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            }),
+        fetch(`/api/scoreboard/team-breakdown?team_id=${matchup.team2_id}&week=${currentWeek}&season=${currentSeason}&game_type=${currentGameType}`)
+            .then(response => {
+                console.log('Team 2 response status:', response.status);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            })
+    ])
+    .then(([team1Data, team2Data]) => {
+        console.log('Team 1 data:', team1Data);
+        console.log('Team 2 data:', team2Data);
+        
+        if (team1Data.success && team2Data.success) {
+            displayPlayerData('team1Players', team1Data.data);
+            displayPlayerData('team2Players', team2Data.data);
+        } else {
+            console.error('API call failed:', { team1Data, team2Data });
+            document.getElementById('team1Players').innerHTML = `<div class="alert alert-warning">Failed to load player data<br><small>Error: ${team1Data.error || 'Unknown error'}</small></div>`;
+            document.getElementById('team2Players').innerHTML = `<div class="alert alert-warning">Failed to load player data<br><small>Error: ${team2Data.error || 'Unknown error'}</small></div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading player data:', error);
+        document.getElementById('team1Players').innerHTML = `<div class="alert alert-danger">Error loading data: ${error.message}</div>`;
+        document.getElementById('team2Players').innerHTML = `<div class="alert alert-danger">Error loading data: ${error.message}</div>`;
+    });
+}
+
+function displayPlayerData(containerId, teamData) {
+    console.log('Displaying player data for', containerId, ':', teamData);
+    
+    if (!teamData || !teamData.player_breakdown) {
+        // Show a sample for demonstration purposes
+        document.getElementById(containerId).innerHTML = `
+            <div class="alert alert-warning mb-3">No player data available</div>
+            <div class="position-group mb-3">
+                <h6 class="position-header">Sample Data</h6>
+                <div class="player-card mb-2">
+                    <div class="player-name">Sample Player <span class="team-badge">NFL</span></div>
+                    <div class="player-stats"><small>No stats available</small></div>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    const positions = ['quarterbacks', 'running_backs', 'receivers', 'place_kickers', 'defense'];
+    const positionLabels = {
+        'quarterbacks': 'Quarterbacks',
+        'running_backs': 'Running Backs', 
+        'receivers': 'Receivers',
+        'place_kickers': 'Kickers',
+        'defense': 'Defense'
+    };
+    
+    positions.forEach(position => {
+        if (teamData.player_breakdown[position] && teamData.player_breakdown[position].length > 0) {
+            html += `<div class="position-group mb-3">`;
+            html += `<h6 class="position-header">${positionLabels[position]}</h6>`;
+            
+            teamData.player_breakdown[position].forEach(playerData => {
+                const player = playerData.player;
+                const stats = playerData.stats;
+                
+                html += `<div class="player-card mb-2">`;
+                html += `<div class="player-name">${player.display_name || 'N/A'}`;
+                
+                if (player.nfl_team_id || stats?.team) {
+                    html += ` <span class="team-badge">${stats?.team || 'N/A'}</span>`;
+                }
+                
+                html += `</div>`;
+                html += `<div class="player-stats">`;
+                
+                // Display relevant stats based on position
+                if (position === 'quarterbacks' && stats) {
+                    html += `<small>${stats.pass_completions || 0}/${stats.pass_attempts || 0}, ${stats.pass_yards || 0} yds, ${stats.pass_touchdowns || 0} TD`;
+                    if (stats.interceptions) html += `, ${stats.interceptions} INT`;
+                    if (stats.rush_yards) html += `<br>Rush: ${stats.rush_yards} yds, ${stats.rush_touchdowns || 0} TD`;
+                    html += `</small>`;
+                } else if (position === 'running_backs' && stats) {
+                    html += `<small>Rush: ${stats.rush_attempts || 0} att, ${stats.rush_yards || 0} yds, ${stats.rush_touchdowns || 0} TD`;
+                    if (stats.receptions) html += `<br>Rec: ${stats.receptions} rec, ${stats.receiving_yards || 0} yds, ${stats.receiving_touchdowns || 0} TD`;
+                    html += `</small>`;
+                } else if (position === 'receivers' && stats) {
+                    html += `<small>${stats.receptions || 0} rec, ${stats.receiving_yards || 0} yds, ${stats.receiving_touchdowns || 0} TD`;
+                    if (stats.rush_yards) html += `<br>Rush: ${stats.rush_yards} yds, ${stats.rush_touchdowns || 0} TD`;
+                    html += `</small>`;
+                } else if (position === 'place_kickers' && stats) {
+                    const totalFG = (stats.fg_under_30 || 0) + (stats.fg_30_39 || 0) + (stats.fg_40_49 || 0) + (stats.fg_50_plus || 0);
+                    html += `<small>${totalFG} FG, ${stats.extra_points_made || 0} XP`;
+                    if (stats.fg_50_plus) html += `, ${stats.fg_50_plus} from 50+`;
+                    html += `</small>`;
+                } else if (position === 'defense' && stats) {
+                    html += `<small>${stats.points_allowed || 0} PA, ${stats.total_yards_allowed || 0} YA`;
+                    if (stats.sacks) html += `, ${stats.sacks} sacks`;
+                    if (stats.interceptions) html += `, ${stats.interceptions} INT`;
+                    html += `</small>`;
+                }
+                
+                html += `</div>`;
+                html += `</div>`;
+            });
+            
+            html += `</div>`;
+        }
+    });
+    
+    if (html === '') {
+        html = '<div class="alert alert-info">No active players found</div>';
+    }
+    
+    document.getElementById(containerId).innerHTML = html;
+}
+
+function updateNavigation() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const gameNum = document.getElementById('currentGameNum');
+    
+    if (prevBtn) prevBtn.disabled = (currentMatchupIndex <= 0);
+    if (nextBtn) nextBtn.disabled = (currentMatchupIndex >= allMatchups.length - 1);
+    if (gameNum) gameNum.textContent = currentMatchupIndex + 1;
+}
+</script>

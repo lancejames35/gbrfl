@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <!-- Add Bootstrap CSS (optional) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="bg-primary text-white py-3">
+        <div class="container">
+            <h1 class="display-4">George Blanda Rotisserie Football League</h1>
+            <p class="lead">Fantasy Football at its finest</p>
+        </div>
+    </header>
+
+    <main class="container my-4">
+        <!-- Flash Messages -->
+        <% if(typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+            <div class="alert alert-success">
+                <%= success_msg %>
+            </div>
+        <% } %>
+
+        <% if(typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+            <div class="alert alert-danger">
+                <%= error_msg %>
+            </div>
+        <% } %>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">Welcome to the GBRFL Web Application</h2>
+                <p class="card-text">
+                    This new platform will help manage the league, including:
+                </p>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item">User management</li>
+                    <li class="list-group-item">Team roster management</li>
+                    <li class="list-group-item">Player database with proper standardization</li>
+                    <li class="list-group-item">Draft system</li>
+                    <li class="list-group-item">Keeper selection</li>
+                    <li class="list-group-item">Trading system</li>
+                </ul>
+                <p class="card-text">
+                    This application is currently under development.
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-dark text-white py-3 mt-5">
+        <div class="container">
+            <p class="mb-0 text-center">&copy; <%= new Date().getFullYear() %> George Blanda Rotisserie Football League</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS and dependencies (optional) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Your custom JS -->
+    <script src="/js/main.js"></script>
+</body>
+</html>

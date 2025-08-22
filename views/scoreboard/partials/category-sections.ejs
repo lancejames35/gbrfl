@@ -1,0 +1,385 @@
+<!-- Category Sections for Desktop -->
+<div class="category-sections">
+  
+  <!-- PASSING CATEGORY -->
+  <div class="category-section mb-4" data-category="passing">
+    <div class="card shadow-sm">
+      <div class="category-header" onclick="toggleCategory('passing')">
+        <div class="card-header bg-danger text-white">
+          <div class="row align-items-center">
+            <div class="col-8">
+              <h5 class="mb-0">
+                <i class="fas fa-football me-2"></i>
+                PASSING (6 points)
+                <% if (game.team1.categories.passing.winner) { %>
+                  <span class="badge bg-light text-dark ms-2">
+                    <i class="fas fa-trophy"></i> <%= game.team1.name.toUpperCase() %> WINS
+                  </span>
+                <% } else if (game.team2.categories.passing.winner) { %>
+                  <span class="badge bg-light text-dark ms-2">
+                    <i class="fas fa-trophy"></i> <%= game.team2.name.toUpperCase() %> WINS
+                  </span>
+                <% } %>
+              </h5>
+            </div>
+            <div class="col-4 text-end">
+              <button class="btn btn-sm btn-outline-light expand-btn" type="button">
+                <i class="fas fa-chevron-down expand-icon"></i> Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="category-content" id="passing-content">
+        <div class="card-body">
+          <div class="row">
+            <!-- Team 1 Stats -->
+            <div class="col-6">
+              <div class="team-stats">
+                <h6 class="team-name text-end"><%= game.team1.name %></h6>
+                <div class="stats-grid">
+                  <div class="stat-row">
+                    <span class="stat-label">Total Yards:</span>
+                    <span class="stat-value <%= game.team1.categories.passing.stats.yards > game.team2.categories.passing.stats.yards ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.passing.stats.yards %>
+                      <% if (game.team1.categories.passing.stats.yards > game.team2.categories.passing.stats.yards) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-label">Total TDs:</span>
+                    <span class="stat-value <%= game.team1.categories.passing.stats.tds > game.team2.categories.passing.stats.tds ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.passing.stats.tds %>
+                      <% if (game.team1.categories.passing.stats.tds > game.team2.categories.passing.stats.tds) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-label">Completion %:</span>
+                    <span class="stat-value <%= game.team1.categories.passing.stats.completion > game.team2.categories.passing.stats.completion ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.passing.stats.completion %>%
+                      <% if (game.team1.categories.passing.stats.completion > game.team2.categories.passing.stats.completion) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-label">Fewer INTs:</span>
+                    <span class="stat-value <%= game.team1.categories.passing.stats.ints < game.team2.categories.passing.stats.ints ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.passing.stats.ints %>
+                      <% if (game.team1.categories.passing.stats.ints < game.team2.categories.passing.stats.ints) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Team 2 Stats -->
+            <div class="col-6">
+              <div class="team-stats">
+                <h6 class="team-name"><%= game.team2.name %></h6>
+                <div class="stats-grid">
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.passing.stats.yards > game.team1.categories.passing.stats.yards ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.passing.stats.yards > game.team1.categories.passing.stats.yards) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.passing.stats.yards %>
+                    </span>
+                    <span class="stat-label">:Total Yards</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.passing.stats.tds > game.team1.categories.passing.stats.tds ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.passing.stats.tds > game.team1.categories.passing.stats.tds) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.passing.stats.tds %>
+                    </span>
+                    <span class="stat-label">:Total TDs</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.passing.stats.completion > game.team1.categories.passing.stats.completion ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.passing.stats.completion > game.team1.categories.passing.stats.completion) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.passing.stats.completion %>%
+                    </span>
+                    <span class="stat-label">:Completion %</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.passing.stats.ints < game.team1.categories.passing.stats.ints ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.passing.stats.ints < game.team1.categories.passing.stats.ints) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.passing.stats.ints %>
+                    </span>
+                    <span class="stat-label">:Fewer INTs</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Player Breakdown Toggle -->
+          <div class="row mt-3">
+            <div class="col-12 text-center">
+              <button class="btn btn-outline-primary btn-sm" onclick="togglePlayerBreakdown('passing')">
+                <i class="fas fa-users"></i> Show Player Breakdown
+              </button>
+            </div>
+          </div>
+          
+          <!-- Player Breakdown (Initially Hidden) -->
+          <div class="player-breakdown mt-3" id="passing-players" style="display: none;">
+            <%- include('player-breakdown', { 
+              game: game, 
+              category: 'passing', 
+              team1Players: [game.team1.lineup.qb1, game.team1.lineup.qb2], 
+              team2Players: [game.team2.lineup.qb1, game.team2.lineup.qb2] 
+            }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RUSHING CATEGORY -->
+  <div class="category-section mb-4" data-category="rushing">
+    <div class="card shadow-sm">
+      <div class="category-header" onclick="toggleCategory('rushing')">
+        <div class="card-header bg-warning text-dark">
+          <div class="row align-items-center">
+            <div class="col-8">
+              <h5 class="mb-0">
+                <i class="fas fa-running me-2"></i>
+                RUSHING (6 points)
+                <% if (game.team1.categories.rushing.winner) { %>
+                  <span class="badge bg-dark text-white ms-2">
+                    <i class="fas fa-trophy"></i> <%= game.team1.name.toUpperCase() %> WINS
+                  </span>
+                <% } else if (game.team2.categories.rushing.winner) { %>
+                  <span class="badge bg-dark text-white ms-2">
+                    <i class="fas fa-trophy"></i> <%= game.team2.name.toUpperCase() %> WINS
+                  </span>
+                <% } %>
+              </h5>
+            </div>
+            <div class="col-4 text-end">
+              <button class="btn btn-sm btn-outline-dark expand-btn" type="button">
+                <i class="fas fa-chevron-down expand-icon"></i> Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="category-content" id="rushing-content">
+        <div class="card-body">
+          <div class="row">
+            <!-- Team 1 Stats -->
+            <div class="col-6">
+              <div class="team-stats">
+                <h6 class="team-name text-end"><%= game.team1.name %></h6>
+                <div class="stats-grid">
+                  <div class="stat-row">
+                    <span class="stat-label">Total Yards:</span>
+                    <span class="stat-value <%= game.team1.categories.rushing.stats.yards > game.team2.categories.rushing.stats.yards ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.rushing.stats.yards %>
+                      <% if (game.team1.categories.rushing.stats.yards > game.team2.categories.rushing.stats.yards) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-label">Total TDs:</span>
+                    <span class="stat-value <%= game.team1.categories.rushing.stats.tds > game.team2.categories.rushing.stats.tds ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.rushing.stats.tds %>
+                      <% if (game.team1.categories.rushing.stats.tds > game.team2.categories.rushing.stats.tds) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-label">Yards Per Carry:</span>
+                    <span class="stat-value <%= game.team1.categories.rushing.stats.ypc > game.team2.categories.rushing.stats.ypc ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.rushing.stats.ypc %>
+                      <% if (game.team1.categories.rushing.stats.ypc > game.team2.categories.rushing.stats.ypc) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Team 2 Stats -->
+            <div class="col-6">
+              <div class="team-stats">
+                <h6 class="team-name"><%= game.team2.name %></h6>
+                <div class="stats-grid">
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.rushing.stats.yards > game.team1.categories.rushing.stats.yards ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.rushing.stats.yards > game.team1.categories.rushing.stats.yards) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.rushing.stats.yards %>
+                    </span>
+                    <span class="stat-label">:Total Yards</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.rushing.stats.tds > game.team1.categories.rushing.stats.tds ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.rushing.stats.tds > game.team1.categories.rushing.stats.tds) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.rushing.stats.tds %>
+                    </span>
+                    <span class="stat-label">:Total TDs</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.rushing.stats.ypc > game.team1.categories.rushing.stats.ypc ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.rushing.stats.ypc > game.team1.categories.rushing.stats.ypc) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.rushing.stats.ypc %>
+                    </span>
+                    <span class="stat-label">:Yards Per Carry</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Player Breakdown Toggle -->
+          <div class="row mt-3">
+            <div class="col-12 text-center">
+              <button class="btn btn-outline-warning btn-sm" onclick="togglePlayerBreakdown('rushing')">
+                <i class="fas fa-users"></i> Show Player Breakdown
+              </button>
+            </div>
+          </div>
+          
+          <!-- Player Breakdown (Initially Hidden) -->
+          <div class="player-breakdown mt-3" id="rushing-players" style="display: none;">
+            <%- include('player-breakdown', { 
+              game: game, 
+              category: 'rushing', 
+              team1Players: [game.team1.lineup.rb1, game.team1.lineup.rb2], 
+              team2Players: [game.team2.lineup.rb1, game.team2.lineup.rb2] 
+            }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEIVING CATEGORY -->
+  <div class="category-section mb-4" data-category="receiving">
+    <div class="card shadow-sm">
+      <div class="category-header" onclick="toggleCategory('receiving')">
+        <div class="card-header bg-success text-white">
+          <div class="row align-items-center">
+            <div class="col-8">
+              <h5 class="mb-0">
+                <i class="fas fa-hands-catching me-2"></i>
+                RECEIVING (6 points)
+                <% if (game.team1.categories.receiving.winner) { %>
+                  <span class="badge bg-light text-dark ms-2">
+                    <i class="fas fa-trophy"></i> <%= game.team1.name.toUpperCase() %> WINS
+                  </span>
+                <% } else if (game.team2.categories.receiving.winner) { %>
+                  <span class="badge bg-light text-dark ms-2">
+                    <i class="fas fa-trophy"></i> <%= game.team2.name.toUpperCase() %> WINS
+                  </span>
+                <% } %>
+              </h5>
+            </div>
+            <div class="col-4 text-end">
+              <button class="btn btn-sm btn-outline-light expand-btn" type="button">
+                <i class="fas fa-chevron-down expand-icon"></i> Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="category-content" id="receiving-content">
+        <div class="card-body">
+          <div class="row">
+            <!-- Team 1 Stats -->
+            <div class="col-6">
+              <div class="team-stats">
+                <h6 class="team-name text-end"><%= game.team1.name %></h6>
+                <div class="stats-grid">
+                  <div class="stat-row">
+                    <span class="stat-label">Total Yards:</span>
+                    <span class="stat-value <%= game.team1.categories.receiving.stats.yards > game.team2.categories.receiving.stats.yards ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.receiving.stats.yards %>
+                      <% if (game.team1.categories.receiving.stats.yards > game.team2.categories.receiving.stats.yards) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-label">Total TDs:</span>
+                    <span class="stat-value <%= game.team1.categories.receiving.stats.tds > game.team2.categories.receiving.stats.tds ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.receiving.stats.tds %>
+                      <% if (game.team1.categories.receiving.stats.tds > game.team2.categories.receiving.stats.tds) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-label">Receptions:</span>
+                    <span class="stat-value <%= game.team1.categories.receiving.stats.receptions > game.team2.categories.receiving.stats.receptions ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.receiving.stats.receptions %>
+                      <% if (game.team1.categories.receiving.stats.receptions > game.team2.categories.receiving.stats.receptions) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-label">Yards Per Reception:</span>
+                    <span class="stat-value <%= game.team1.categories.receiving.stats.ypr > game.team2.categories.receiving.stats.ypr ? 'winning-stat' : '' %>">
+                      <%= game.team1.categories.receiving.stats.ypr %>
+                      <% if (game.team1.categories.receiving.stats.ypr > game.team2.categories.receiving.stats.ypr) { %><i class="fas fa-trophy text-warning ms-1"></i><% } %>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Team 2 Stats -->
+            <div class="col-6">
+              <div class="team-stats">
+                <h6 class="team-name"><%= game.team2.name %></h6>
+                <div class="stats-grid">
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.receiving.stats.yards > game.team1.categories.receiving.stats.yards ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.receiving.stats.yards > game.team1.categories.receiving.stats.yards) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.receiving.stats.yards %>
+                    </span>
+                    <span class="stat-label">:Total Yards</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.receiving.stats.tds > game.team1.categories.receiving.stats.tds ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.receiving.stats.tds > game.team1.categories.receiving.stats.tds) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.receiving.stats.tds %>
+                    </span>
+                    <span class="stat-label">:Total TDs</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.receiving.stats.receptions > game.team1.categories.receiving.stats.receptions ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.receiving.stats.receptions > game.team1.categories.receiving.stats.receptions) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.receiving.stats.receptions %>
+                    </span>
+                    <span class="stat-label">:Receptions</span>
+                  </div>
+                  <div class="stat-row">
+                    <span class="stat-value <%= game.team2.categories.receiving.stats.ypr > game.team1.categories.receiving.stats.ypr ? 'winning-stat' : '' %>">
+                      <% if (game.team2.categories.receiving.stats.ypr > game.team1.categories.receiving.stats.ypr) { %><i class="fas fa-trophy text-warning me-1"></i><% } %>
+                      <%= game.team2.categories.receiving.stats.ypr %>
+                    </span>
+                    <span class="stat-label">:Yards Per Reception</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Player Breakdown Toggle -->
+          <div class="row mt-3">
+            <div class="col-12 text-center">
+              <button class="btn btn-outline-success btn-sm" onclick="togglePlayerBreakdown('receiving')">
+                <i class="fas fa-users"></i> Show Player Breakdown
+              </button>
+            </div>
+          </div>
+          
+          <!-- Player Breakdown (Initially Hidden) -->
+          <div class="player-breakdown mt-3" id="receiving-players" style="display: none;">
+            <%- include('player-breakdown', { 
+              game: game, 
+              category: 'receiving', 
+              team1Players: [game.team1.lineup.wr1, game.team1.lineup.wr2, game.team1.lineup.wr3], 
+              team2Players: [game.team2.lineup.wr1, game.team2.lineup.wr2, game.team2.lineup.wr3] 
+            }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Category JavaScript functionality is handled in scoreboard.js -->

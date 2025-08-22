@@ -1,0 +1,1798 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.css">
+<style>
+    /* Container constraints for desktop */
+    .lineup-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    
+    @media (min-width: 1400px) {
+        .lineup-container {
+            max-width: 1100px;
+        }
+    }
+    
+    @media (min-width: 1600px) {
+        .lineup-container {
+            max-width: 1000px;
+        }
+    }
+
+    /* Lineup specific styles */
+    .lineup-header {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .week-selector {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .week-nav-btn {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .week-nav-btn:hover {
+        background: rgba(255,255,255,0.3);
+        color: white;
+        text-decoration: none;
+    }
+
+    .week-nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .current-week {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0 20px;
+    }
+
+    .game-type-tabs {
+        margin-bottom: 15px;
+    }
+
+    .game-type-tabs .nav-link {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: rgba(255,255,255,0.8);
+        margin-right: 5px;
+        border-radius: 5px 5px 0 0;
+    }
+
+    .game-type-tabs .nav-link.active {
+        background: rgba(255,255,255,0.3);
+        color: white;
+        border-bottom-color: transparent;
+    }
+
+    .status-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255,255,255,0.1);
+        padding: 10px 15px;
+        border-radius: 5px;
+        font-size: 0.9rem;
+    }
+
+    .lineup-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .status-draft {
+        background: #ffc107;
+        color: #000;
+    }
+
+    .status-submitted {
+        background: #28a745;
+        color: white;
+    }
+
+    .status-locked {
+        background: #dc3545;
+        color: white;
+    }
+
+    .lock-timer {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .position-section {
+        background: white;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .position-header {
+        background: #f8f9fa;
+        padding: 15px 20px;
+        border-bottom: 2px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .position-title {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #333;
+        margin: 0;
+    }
+
+    .position-requirement {
+        font-size: 0.9rem;
+        color: #666;
+        background: #e9ecef;
+        padding: 4px 8px;
+        border-radius: 15px;
+    }
+
+    .position-players {
+        min-height: 60px;
+    }
+
+    .position-players.sortable-ghost {
+        opacity: 0.4;
+    }
+
+    .starter-section {
+        background: #f8fff8;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .backup-section {
+        background: #fafafa;
+    }
+
+    .section-label {
+        font-size: 0.8rem;
+        font-weight: bold;
+        color: #666;
+        padding: 8px 20px;
+        background: #e9ecef;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .starter-label {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .backup-label {
+        background: #e2e3e5;
+        color: #495057;
+    }
+
+    .player-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        border-bottom: 1px solid #eee;
+        cursor: grab;
+        transition: all 0.2s ease;
+        background: white;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+    }
+
+    .player-item:active {
+        cursor: grabbing;
+    }
+
+    .player-item:last-child {
+        border-bottom: none;
+    }
+
+    .player-item:hover {
+        background: #f5f5f5;
+        transform: translateX(3px);
+    }
+
+    /* Starter highlighting */
+    .starter-player {
+        background: #f8fff8;
+        border-left: 4px solid #28a745;
+    }
+
+    .starter-player:hover {
+        background: #f0f8f0;
+    }
+
+    .backup-player {
+        background: white;
+        border-left: 4px solid transparent;
+    }
+
+    /* Pending waiver players */
+    .pending-player {
+        background: #fff8e1;
+        border-left: 4px solid #ff9800;
+        opacity: 0.8;
+    }
+
+    .pending-player:hover {
+        background: #fff3c4;
+        opacity: 1;
+    }
+
+    .pending-badge {
+        background: #ff9800;
+        color: white;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 500;
+        margin: 0 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Missing starter spots */
+    .missing-starter {
+        background: #fff5f5;
+        border-left: 4px solid #dc3545;
+        border: 2px dashed #dc3545;
+        color: #721c24;
+        font-style: italic;
+        text-align: center;
+        padding: 20px;
+        margin: 5px 0;
+    }
+
+    .missing-starter:hover {
+        background: #ffeaea;
+    }
+
+    .player-item.sortable-chosen {
+        background: #e3f2fd;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .player-item.sortable-drag {
+        transform: rotate(5deg);
+        opacity: 0.8;
+    }
+
+    .drag-handle {
+        font-size: 1.1rem;
+        color: #999;
+        margin-right: 10px;
+        cursor: grab;
+        padding: 5px;
+    }
+
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+
+    /* Sortable.js styles */
+    .sortable-ghost {
+        opacity: 0.4;
+        background: #f8f9fa;
+        border: 2px dashed #007bff;
+    }
+
+    .sortable-chosen {
+        box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+        transform: scale(1.02);
+    }
+
+    .sortable-drag {
+        opacity: 0.8;
+        background: white;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        transform: rotate(2deg);
+    }
+
+    /* Compact header styles */
+    .lineup-header {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header-main {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .week-nav-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .week-dropdown {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 8px 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        cursor: pointer;
+        min-width: 100px;
+    }
+
+    .week-dropdown:hover {
+        background: #e9ecef;
+    }
+
+    .week-dropdown:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    }
+
+    .nav-btn {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #495057;
+        padding: 8px 10px;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        font-size: 1rem;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .nav-btn:hover:not(.disabled) {
+        background: #e9ecef;
+        color: #495057;
+        text-decoration: none;
+    }
+
+    .nav-btn.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .header-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        min-width: 400px;
+    }
+
+    .toggle-container {
+        min-width: 160px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .game-selector-container {
+        min-width: 140px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .single-game-week {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-style: italic;
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 200px;
+        justify-content: flex-end;
+    }
+
+    .copy-container {
+        min-width: 100px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .lock-container {
+        min-width: 80px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .lock-status {
+        font-size: 0.9rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .lock-status.locked {
+        color: #dc3545;
+        font-weight: 500;
+    }
+
+    /* Modern toggle switch */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 28px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 34px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+        background-color: #007bff;
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(32px);
+    }
+
+    .toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+        color: #495057;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .game-type-selector {
+        display: flex;
+        gap: 5px;
+        margin-left: 15px;
+    }
+
+    .game-select-btn {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        color: #495057;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .game-select-btn.active {
+        background: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+
+    .game-select-btn:hover:not(.active) {
+        background: #e9ecef;
+    }
+
+    .game-type-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+        color: #495057;
+    }
+
+    .copy-btn {
+        background: #17a2b8;
+        border: none;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .copy-btn:hover {
+        background: #138496;
+    }
+
+    .bonus-unavailable {
+        color: #6c757d;
+        font-style: italic;
+        font-size: 0.85rem;
+    }
+
+    /* Position section styling */
+    .position-section {
+        background: white;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border: 1px solid #e0e0e0;
+        overflow: hidden;
+        position: relative;
+    }
+
+
+    .position-number {
+        font-weight: bold;
+        color: #666;
+        min-width: 20px;
+        text-align: center;
+        margin-right: 10px;
+    }
+
+    .player-info {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0; /* Allow text truncation */
+    }
+
+    .player-name {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 250px;
+    }
+
+    .player-team {
+        color: #666;
+        font-size: 0.85rem;
+        white-space: nowrap;
+    }
+
+    .player-position {
+        background: #007bff;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+
+    .role-indicator {
+        font-size: 0.8rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 500;
+    }
+
+    .role-starter {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .role-backup {
+        background: #e2e3e5;
+        color: #495057;
+    }
+
+    .empty-position {
+        padding: 20px;
+        text-align: center;
+        color: #999;
+        font-style: italic;
+        border: 2px dashed #ddd;
+        margin: 10px 20px;
+        border-radius: 5px;
+    }
+
+
+    .auto-save-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 10px 15px;
+        background: #28a745;
+        color: white;
+        border-radius: 5px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 1000;
+    }
+
+    .auto-save-indicator.show {
+        opacity: 1;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        .lineup-container {
+            padding: 0 10px;
+        }
+        
+        .lineup-header {
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .header-main {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .week-nav-group {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .header-center {
+            width: 100%;
+            justify-content: center;
+            min-width: auto;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toggle-container {
+            min-width: auto;
+        }
+
+        .game-selector-container {
+            min-width: auto;
+        }
+
+        .header-right {
+            width: 100%;
+            justify-content: center;
+            min-width: auto;
+            flex-direction: row;
+        }
+
+        .copy-container,
+        .lock-container {
+            min-width: auto;
+        }
+
+        .week-dropdown {
+            min-width: 120px;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        .toggle-label {
+            font-size: 0.85rem;
+        }
+
+        .info-bar {
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .copy-actions {
+            justify-content: center;
+        }
+
+        .position-header {
+            padding: 12px 15px;
+        }
+
+        .player-item {
+            padding: 12px 10px;
+            cursor: default;
+        }
+        
+        .player-name {
+            max-width: 150px;
+            font-size: 0.9rem;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            font-size: 1.5rem;
+            padding: 8px;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .week-nav {
+            gap: 10px;
+        }
+
+        .nav-btn {
+            font-size: 0.9rem;
+            padding: 10px 12px;
+        }
+
+        .current-info h2 {
+            font-size: 1.3rem;
+        }
+
+        .game-type-btn {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        /* Continue mobile drag handle behavior */
+        .player-item {
+            cursor: default;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            padding: 10px; /* Larger touch target on small screens */
+        }
+    }
+
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        .lineup-header {
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .week-selector {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .current-week {
+            font-size: 1.3rem;
+            margin: 10px 0;
+        }
+
+        .status-bar {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .player-item {
+            padding: 15px;
+        }
+
+        .drag-handle {
+            font-size: 1.5rem;
+            margin-right: 20px;
+        }
+
+
+
+        .position-header {
+            padding: 12px 15px;
+        }
+
+        .section-label {
+            padding: 6px 15px;
+        }
+    }
+
+    /* Touch optimizations */
+    @media (hover: none) and (pointer: coarse) {
+        .player-item {
+            padding: 18px 15px;
+            touch-action: manipulation;
+        }
+
+        .drag-handle {
+            font-size: 1.8rem;
+            padding: 10px;
+            margin-right: 10px;
+        }
+
+        .btn-lineup {
+            padding: 15px 20px;
+            min-height: 48px;
+        }
+    }
+</style>
+
+<!-- Lineup Container -->
+<div class="lineup-container">
+    <!-- Auto-save indicator -->
+    <div id="autoSaveIndicator" class="auto-save-indicator">
+        <i class="bi bi-check-circle"></i> Lineup saved
+    </div>
+
+    <!-- Compact lineup header -->
+    <div class="lineup-header">
+        <!-- Main control row -->
+        <div class="header-main">
+            <!-- Left: Week navigation -->
+            <div class="week-nav-group">
+                <a href="/lineups/week/<%= weekNumber > 1 ? weekNumber - 1 : 1 %><%= gameType === 'bonus' ? '/bonus' : '' %>?team=<%= selectedTeam.team_id %>" 
+                   class="nav-btn <%= weekNumber <= 1 ? 'disabled' : '' %>" title="Previous Week">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                <select id="weekSelector" class="week-dropdown">
+                    <% for (let week = 1; week <= 17; week++) { %>
+                    <option value="<%= week %>" <%= week === weekNumber ? 'selected' : '' %>>
+                        Week <%= week %>
+                    </option>
+                    <% } %>
+                </select>
+                <a href="/lineups/week/<%= weekNumber < 17 ? weekNumber + 1 : 17 %><%= gameType === 'bonus' ? '/bonus' : '' %>?team=<%= selectedTeam.team_id %>" 
+                   class="nav-btn <%= weekNumber >= 17 ? 'disabled' : '' %>" title="Next Week">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+            
+            <!-- Center: Fixed game controls -->
+            <div class="header-center">
+                <!-- Always present toggle (hidden for single game weeks) -->
+                <div class="toggle-container">
+                    <% if (hasBonusGames) { %>
+                        <label class="toggle-label" id="separateLineupsLabel">
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="separateLineupsToggle">
+                                <span class="toggle-slider"></span>
+                            </div>
+                            <span>Separate Lineups</span>
+                        </label>
+                    <% } else { %>
+                        <span class="single-game-week">Single Game Week</span>
+                    <% } %>
+                </div>
+                
+                <!-- Always present game selector space -->
+                <div class="game-selector-container">
+                    <% if (hasBonusGames) { %>
+                        <div class="game-type-selector" id="gameTypeSelector" style="visibility: hidden;">
+                            <button class="game-select-btn <%= gameType === 'primary' ? 'active' : '' %>" 
+                                    id="primaryGameBtn">Primary</button>
+                            <button class="game-select-btn <%= gameType === 'bonus' ? 'active' : '' %>" 
+                                    id="bonusGameBtn">Bonus</button>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+            
+            <!-- Right: Fixed action space -->
+            <div class="header-right">
+                <!-- Always present copy button space -->
+                <div class="copy-container">
+                    <% if (weekNumber > 1) { %>
+                        <button class="copy-btn" id="copyFromPreviousBtn" 
+                                title="Copy from Week <%= weekNumber - 1 %>"
+                                style="<%= gameType === 'bonus' ? 'visibility: hidden;' : '' %>">
+                            <i class="bi bi-files"></i> Week <%= weekNumber - 1 %>
+                        </button>
+                    <% } %>
+                </div>
+                
+                <!-- Always present lock status space -->
+                <div class="lock-container">
+                    <% if (lockStatus.current_status !== 'locked' && lockStatus.lock_time) { %>
+                        <div class="lock-status">
+                            <i class="bi bi-clock"></i> <span id="lockTime"><%= lockStatus.minutes_until_lock %> min</span>
+                        </div>
+                    <% } else if (lockStatus.current_status === 'locked') { %>
+                        <div class="lock-status locked">
+                            <i class="bi bi-lock-fill"></i> Locked
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<!-- Head Coach (Read-only) -->
+<div class="position-section">
+    <div class="position-header">
+        <h3 class="position-title">
+            <i class="bi bi-person-badge"></i> Head Coach
+        </h3>
+        <span class="position-requirement">Team Assignment</span>
+    </div>
+    <div class="player-item">
+        <div class="position-number">1.</div>
+        <div class="player-info">
+            <span class="player-name"><%= selectedTeam.team_name %> Head Coach</span>
+            <span class="player-team">(<%= selectedTeam.team_name %>)</span>
+            <span class="role-indicator role-starter">Head Coach</span>
+        </div>
+    </div>
+</div>
+
+<!-- Quarterback Section -->
+<div class="position-section" data-position="quarterback">
+    <div class="position-header">
+        <h3 class="position-title">
+            QB
+        </h3>
+        <span class="position-requirement">2 Required</span>
+    </div>
+    
+    <div class="position-players" id="qb-players" data-position="quarterback">
+        <% 
+        const qbPlayers = rosterByPosition.quarterback || [];
+        const qbRequired = 2;
+        
+        // Show actual players
+        for (let i = 0; i < qbPlayers.length; i++) {
+            const player = qbPlayers[i];
+            const isStarter = i < qbRequired;
+        %>
+        <div class="player-item <%= isStarter ? 'starter-player' : 'backup-player' %> <%= player.player_status === 'pending_waiver' ? 'pending-player' : '' %>" 
+             data-player-id="<%= player.player_id %>" 
+             data-position="quarterback"
+             data-player-status="<%= player.player_status || 'rostered' %>"
+             data-waiver-request-id="<%= player.waiver_request_id || '' %>">
+            <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
+            <div class="position-number"><%= i + 1 %>.</div>
+            <div class="player-info">
+                <span class="player-name">
+                    <%= player.first_name %> <%= player.last_name %>
+                    <% if (player.player_status === 'pending_waiver') { %>
+                        <span class="pending-badge">PENDING</span>
+                    <% } %>
+                </span>
+                <span class="player-team">(<%= player.team_abbrev %>)</span>
+                <span class="player-position">QB</span>
+                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                    <%= isStarter ? 'Starter' : 'Backup' %>
+                </span>
+            </div>
+        </div>
+        <% } 
+        
+        // Show missing starter spots
+        for (let i = qbPlayers.length; i < qbRequired; i++) { %>
+        <div class="missing-starter">
+            <i class="bi bi-exclamation-triangle"></i> Missing Quarterback Starter #<%= i + 1 %>
+        </div>
+        <% } %>
+        
+        <% if (qbPlayers.length === 0) { %>
+        <div class="empty-position">
+            <i class="bi bi-plus-circle"></i> No quarterbacks on roster
+        </div>
+        <% } %>
+        
+    </div>
+</div>
+
+<!-- Running Back Section -->
+<div class="position-section" data-position="running_back">
+    <div class="position-header">
+        <h3 class="position-title">
+            RB
+        </h3>
+        <span class="position-requirement">3 Required</span>
+    </div>
+    
+    <div class="position-players" id="rb-players" data-position="running_back">
+        <% 
+        const rbPlayers = rosterByPosition.running_back || [];
+        const rbRequired = 3;
+        
+        // Show actual players
+        for (let i = 0; i < rbPlayers.length; i++) {
+            const player = rbPlayers[i];
+            const isStarter = i < rbRequired;
+        %>
+        <div class="player-item <%= isStarter ? 'starter-player' : 'backup-player' %> <%= player.player_status === 'pending_waiver' ? 'pending-player' : '' %>" 
+             data-player-id="<%= player.player_id %>" 
+             data-position="running_back"
+             data-player-status="<%= player.player_status || 'rostered' %>"
+             data-waiver-request-id="<%= player.waiver_request_id || '' %>">
+            <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
+            <div class="position-number"><%= i + 1 %>.</div>
+            <div class="player-info">
+                <span class="player-name"><%= player.first_name %> <%= player.last_name %></span>
+                <span class="player-team">(<%= player.team_abbrev %>)</span>
+                <span class="player-position">RB</span>
+                <% if (player.player_status === 'pending_waiver') { %>
+                <span class="pending-badge">Pending</span>
+                <% } %>
+                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                    <%= isStarter ? 'Starter' : 'Backup' %>
+                </span>
+            </div>
+        </div>
+        <% } 
+        
+        // Show missing starter spots
+        for (let i = rbPlayers.length; i < rbRequired; i++) { %>
+        <div class="missing-starter">
+            <i class="bi bi-exclamation-triangle"></i> Missing Running Back Starter #<%= i + 1 %>
+        </div>
+        <% } %>
+        
+        <% if (rbPlayers.length === 0) { %>
+        <div class="empty-position">
+            <i class="bi bi-plus-circle"></i> No running backs on roster
+        </div>
+        <% } %>
+        
+    </div>
+</div>
+
+<!-- Receiver Section -->
+<div class="position-section" data-position="receiver">
+    <div class="position-header">
+        <h3 class="position-title">
+            RC
+        </h3>
+        <span class="position-requirement">3 Required</span>
+    </div>
+    
+    <div class="position-players" id="rc-players" data-position="receiver">
+        <% 
+        const rcPlayers = rosterByPosition.receiver || [];
+        const rcRequired = 3;
+        
+        // Show actual players
+        for (let i = 0; i < rcPlayers.length; i++) {
+            const player = rcPlayers[i];
+            const isStarter = i < rcRequired;
+        %>
+        <div class="player-item <%= isStarter ? 'starter-player' : 'backup-player' %> <%= player.player_status === 'pending_waiver' ? 'pending-player' : '' %>" 
+             data-player-id="<%= player.player_id %>" 
+             data-position="receiver"
+             data-player-status="<%= player.player_status || 'rostered' %>"
+             data-waiver-request-id="<%= player.waiver_request_id || '' %>">
+            <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
+            <div class="position-number"><%= i + 1 %>.</div>
+            <div class="player-info">
+                <span class="player-name"><%= player.first_name %> <%= player.last_name %></span>
+                <span class="player-team">(<%= player.team_abbrev %>)</span>
+                <span class="player-position">RC</span>
+                <% if (player.player_status === 'pending_waiver') { %>
+                <span class="pending-badge">Pending</span>
+                <% } %>
+                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                    <%= isStarter ? 'Starter' : 'Backup' %>
+                </span>
+            </div>
+        </div>
+        <% } 
+        
+        // Show missing starter spots
+        for (let i = rcPlayers.length; i < rcRequired; i++) { %>
+        <div class="missing-starter">
+            <i class="bi bi-exclamation-triangle"></i> Missing Receiver Starter #<%= i + 1 %>
+        </div>
+        <% } %>
+        
+        <% if (rcPlayers.length === 0) { %>
+        <div class="empty-position">
+            <i class="bi bi-plus-circle"></i> No receivers on roster
+        </div>
+        <% } %>
+        
+    </div>
+</div>
+
+<!-- Place Kicker Section -->
+<div class="position-section" data-position="place_kicker">
+    <div class="position-header">
+        <h3 class="position-title">
+            PK
+        </h3>
+        <span class="position-requirement">1 Required</span>
+    </div>
+    
+    <div class="position-players" id="pk-players" data-position="place_kicker">
+        <% 
+        const pkPlayers = rosterByPosition.place_kicker || [];
+        const pkRequired = 1;
+        
+        // Show actual players
+        for (let i = 0; i < pkPlayers.length; i++) {
+            const player = pkPlayers[i];
+            const isStarter = i < pkRequired;
+        %>
+        <div class="player-item <%= isStarter ? 'starter-player' : 'backup-player' %> <%= player.player_status === 'pending_waiver' ? 'pending-player' : '' %>" 
+             data-player-id="<%= player.player_id %>" 
+             data-position="place_kicker"
+             data-player-status="<%= player.player_status || 'rostered' %>"
+             data-waiver-request-id="<%= player.waiver_request_id || '' %>">
+            <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
+            <div class="position-number"><%= i + 1 %>.</div>
+            <div class="player-info">
+                <span class="player-name"><%= player.first_name %> <%= player.last_name %></span>
+                <span class="player-team">(<%= player.team_abbrev %>)</span>
+                <span class="player-position">PK</span>
+                <% if (player.player_status === 'pending_waiver') { %>
+                <span class="pending-badge">Pending</span>
+                <% } %>
+                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                    <%= isStarter ? 'Starter' : 'Backup' %>
+                </span>
+            </div>
+        </div>
+        <% } 
+        
+        // Show missing starter spots
+        for (let i = pkPlayers.length; i < pkRequired; i++) { %>
+        <div class="missing-starter">
+            <i class="bi bi-exclamation-triangle"></i> Missing Place Kicker
+        </div>
+        <% } %>
+        
+        <% if (pkPlayers.length === 0) { %>
+        <div class="empty-position">
+            <i class="bi bi-plus-circle"></i> No kickers on roster
+        </div>
+        <% } %>
+    </div>
+</div>
+
+<!-- Defense Section -->
+<div class="position-section" data-position="defense">
+    <div class="position-header">
+        <h3 class="position-title">
+            DU
+        </h3>
+        <span class="position-requirement">1 Required</span>
+    </div>
+    
+    <div class="position-players" id="def-players" data-position="defense">
+        <% 
+        const defPlayers = rosterByPosition.defense || [];
+        const defRequired = 1;
+        
+        // Show actual players
+        for (let i = 0; i < defPlayers.length; i++) {
+            const defense = defPlayers[i];
+            const isStarter = i < defRequired;
+        %>
+        <div class="player-item <%= isStarter ? 'starter-player' : 'backup-player' %> <%= defense.player_status === 'pending_waiver' ? 'pending-player' : '' %>" 
+             data-team-id="<%= defense.team_id %>" 
+             data-player-id="<%= defense.player_id %>"
+             data-position="defense"
+             data-player-status="<%= defense.player_status || 'rostered' %>"
+             data-waiver-request-id="<%= defense.waiver_request_id || '' %>">
+            <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
+            <div class="position-number"><%= i + 1 %>.</div>
+            <div class="player-info">
+                <span class="player-name"><%= defense.first_name %> <%= defense.last_name %></span>
+                <span class="player-team">(<%= defense.team_abbrev %>)</span>
+                <span class="player-position">DU</span>
+                <% if (defense.player_status === 'pending_waiver') { %>
+                <span class="pending-badge">Pending</span>
+                <% } %>
+                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                    <%= isStarter ? 'Starter' : 'Backup' %>
+                </span>
+            </div>
+        </div>
+        <% } 
+        
+        // Show missing starter spots
+        for (let i = defPlayers.length; i < defRequired; i++) { %>
+        <div class="missing-starter">
+            <i class="bi bi-exclamation-triangle"></i> Missing Defense
+        </div>
+        <% } %>
+        
+        <% if (defPlayers.length === 0) { %>
+        <div class="empty-position">
+            <i class="bi bi-plus-circle"></i> No defenses on roster
+        </div>
+        <% } %>
+    </div>
+</div>
+</div> <!-- End lineup-container -->
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+// Global lineup management object
+const LineupManager = {
+    lineupId: <%= lineup.lineup_id %>,
+    teamId: <%= selectedTeam.team_id %>,
+    weekNumber: <%= weekNumber %>,
+    gameType: '<%= gameType %>',
+    seasonYear: <%= seasonYear %>,
+    hasBonusGames: <%= hasBonusGames ? 'true' : 'false' %>,
+    isDirty: false,
+    autoSaveTimer: null,
+    lockTime: '<%= lockStatus.lock_time %>',
+    isLocked: <%= lockStatus.current_status === 'locked' ? 'true' : 'false' %>,
+    sortableInstances: [],
+
+    // Position requirements
+    positionRequirements: {
+        quarterback: 2,
+        running_back: 3,
+        receiver: 3,
+        place_kicker: 1,
+        defense: 1
+    },
+
+    // Initialize the lineup manager
+    init() {
+        this.initDragAndDrop();
+        this.initLockCountdown();
+        this.initWeekSelector();
+        this.initResizeHandler();
+        this.initCopyButtons();
+        this.initGameTypeDisplay();
+        this.initCopyButtonVisibility();
+        
+        console.log('Lineup Manager initialized for', this.gameType, 'with bonus games:', this.hasBonusGames);
+    },
+
+    // Initialize copy button event handlers
+    initCopyButtons() {
+        // Separate lineups toggle
+        const separateToggle = document.getElementById('separateLineupsToggle');
+        if (separateToggle) {
+            // Load saved preference from localStorage for this specific week
+            const weekKey = `lineupSeparateMode_week_${this.weekNumber}`;
+            const isSeparateMode = localStorage.getItem(weekKey) === 'true';
+            separateToggle.checked = isSeparateMode;
+            
+            // Show/hide game type selector based on mode
+            this.updateGameTypeSelector(isSeparateMode);
+            
+            separateToggle.addEventListener('change', (e) => {
+                const isSeparate = e.target.checked;
+                // Save preference for this specific week
+                localStorage.setItem(weekKey, isSeparate.toString());
+                this.updateGameTypeSelector(isSeparate);
+                
+                if (!isSeparate) {
+                    // Switching to shared mode - sync lineups
+                    this.syncToSharedMode();
+                }
+            });
+        }
+
+        // Game type selector buttons
+        const primaryBtn = document.getElementById('primaryGameBtn');
+        const bonusBtn = document.getElementById('bonusGameBtn');
+        
+        if (primaryBtn) {
+            primaryBtn.addEventListener('click', () => {
+                if (this.gameType !== 'primary') {
+                    window.location.href = `/lineups/week/${this.weekNumber}?team=${this.teamId}`;
+                }
+            });
+        }
+        
+        if (bonusBtn) {
+            bonusBtn.addEventListener('click', () => {
+                if (this.gameType !== 'bonus') {
+                    window.location.href = `/lineups/week/${this.weekNumber}/bonus?team=${this.teamId}`;
+                }
+            });
+        }
+
+        // Copy from Previous Week button (only for primary)
+        const copyFromPreviousBtn = document.getElementById('copyFromPreviousBtn');
+        if (copyFromPreviousBtn) {
+            copyFromPreviousBtn.addEventListener('click', () => {
+                this.copyFromPreviousWeek();
+            });
+        }
+    },
+
+    // Handle window resize to reinitialize drag and drop
+    initResizeHandler() {
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                console.log('Window resized, reinitializing drag and drop');
+                this.initDragAndDrop();
+            }, 250);
+        });
+    },
+
+    // Initialize week selector dropdown
+    initWeekSelector() {
+        const weekSelector = document.getElementById('weekSelector');
+        if (weekSelector) {
+            weekSelector.addEventListener('change', (e) => {
+                const selectedWeek = e.target.value;
+                // When changing weeks, check if the target week has separate mode enabled
+                const targetWeekKey = `lineupSeparateMode_week_${selectedWeek}`;
+                const targetWeekSeparateMode = localStorage.getItem(targetWeekKey) === 'true';
+                
+                // If target week has separate mode and we're currently on bonus, stay on bonus
+                // Otherwise, default to primary
+                let gameTypeParam = '';
+                if (targetWeekSeparateMode && this.gameType === 'bonus') {
+                    gameTypeParam = '/bonus';
+                }
+                
+                const newUrl = `/lineups/week/${selectedWeek}${gameTypeParam}?team=${this.teamId}`;
+                window.location.href = newUrl;
+            });
+        }
+    },
+
+    // Initialize drag and drop functionality
+    initDragAndDrop() {
+        const self = this;
+        
+        // Destroy existing sortable instances
+        this.sortableInstances.forEach(instance => {
+            if (instance && instance.destroy) {
+                instance.destroy();
+            }
+        });
+        this.sortableInstances = [];
+        
+        // Check if we're on mobile
+        const isMobile = window.innerWidth <= 768;
+        
+        // Position requirements for starter highlighting
+        const starterRequirements = {
+            quarterback: 2,
+            running_back: 3,
+            receiver: 3,
+            place_kicker: 1,
+            defense: 1
+        };
+        
+        // Initialize sortable for each position section
+        const positionMappings = {
+            'quarterback': 'qb-players',
+            'running_back': 'rb-players', 
+            'receiver': 'rc-players',
+            'place_kicker': 'pk-players',
+            'defense': 'def-players'
+        };
+        
+        ['quarterback', 'running_back', 'receiver', 'place_kicker', 'defense'].forEach(position => {
+            const playersEl = document.getElementById(positionMappings[position]);
+            
+            if (playersEl) {
+                console.log('Initializing sortable for:', position, 'element:', playersEl, 'mobile:', isMobile);
+                
+                const sortableConfig = {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    dragClass: 'sortable-drag',
+                    filter: '.missing-starter, .empty-position',
+                    preventOnFilter: false,
+                    onStart: (evt) => {
+                        console.log('Drag started for position:', position, 'element:', evt.item);
+                    },
+                    onEnd: (evt) => {
+                        console.log('Drag ended for position:', position, 'from:', evt.oldIndex, 'to:', evt.newIndex);
+                        if (evt.oldIndex !== evt.newIndex) {
+                            self.handlePositionReorder(position, evt);
+                            self.updateStarterHighlighting(position, starterRequirements[position]);
+                            // Auto-save lineup after each movement
+                            self.saveLineupAfterMove();
+                        }
+                    }
+                };
+                
+                // On mobile, only allow dragging by the handle
+                if (isMobile) {
+                    sortableConfig.handle = '.drag-handle';
+                }
+                
+                const sortable = new Sortable(playersEl, sortableConfig);
+                this.sortableInstances.push(sortable);
+                
+                console.log('Sortable initialized:', sortable, 'with handle:', isMobile ? 'yes' : 'no');
+            } else {
+                console.error('Could not find element for position:', position, 'with ID:', positionMappings[position]);
+            }
+        });
+    },
+
+    // Handle position reordering after drag and drop
+    handlePositionReorder(positionType, evt) {
+        const container = evt.to;
+        const playerItems = container.querySelectorAll('.player-item:not(.empty-position)');
+        const newOrder = Array.from(playerItems).map((item, index) => ({
+            player_id: item.getAttribute('data-player-id') || item.getAttribute('data-team-id'),
+            sort_order: index + 1,
+            player_status: item.getAttribute('data-player-status') || 'rostered',
+            waiver_request_id: item.getAttribute('data-waiver-request-id') || null
+        }));
+
+        // Update position numbers visually
+        this.updatePositionNumbers(positionType);
+    },
+
+    // Update starter/backup highlighting after reorder
+    updateStarterHighlighting(positionType, starterCount) {
+        const positionMappings = {
+            'quarterback': 'qb-players',
+            'running_back': 'rb-players', 
+            'receiver': 'rc-players',
+            'place_kicker': 'pk-players',
+            'defense': 'def-players'
+        };
+        
+        const playersEl = document.getElementById(positionMappings[positionType]);
+        
+        if (playersEl) {
+            const playerItems = playersEl.querySelectorAll('.player-item:not(.empty-position)');
+            
+            playerItems.forEach((item, index) => {
+                const isStarter = index < starterCount;
+                const roleIndicator = item.querySelector('.role-indicator');
+                
+                // Update CSS classes
+                item.classList.toggle('starter-player', isStarter);
+                item.classList.toggle('backup-player', !isStarter);
+                
+                // Update role indicator
+                if (roleIndicator) {
+                    roleIndicator.textContent = isStarter ? 'Starter' : 'Backup';
+                    roleIndicator.className = `role-indicator ${isStarter ? 'role-starter' : 'role-backup'}`;
+                }
+            });
+        }
+    },
+
+    // Update position numbers after reordering
+    updatePositionNumbers(positionType) {
+        const positionMappings = {
+            'quarterback': 'qb-players',
+            'running_back': 'rb-players', 
+            'receiver': 'rc-players',
+            'place_kicker': 'pk-players',
+            'defense': 'def-players'
+        };
+        
+        const playersEl = document.getElementById(positionMappings[positionType]);
+        
+        if (playersEl) {
+            const playerItems = playersEl.querySelectorAll('.player-item:not(.empty-position) .position-number');
+            playerItems.forEach((numEl, index) => {
+                numEl.textContent = (index + 1) + '.';
+            });
+        }
+    },
+
+    // Save lineup after player movement
+    async saveLineupAfterMove() {
+        try {
+            // Collect all current player positions
+            const positions = this.collectAllPositions();
+            
+            console.log('Auto-saving lineup after movement:', positions);
+            
+            const response = await fetch('/lineups/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    lineup_id: this.lineupId,
+                    fantasy_team_id: this.teamId,
+                    week_number: this.weekNumber,
+                    game_type: this.gameType,
+                    season_year: this.seasonYear,
+                    positions: positions
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                console.log('Lineup auto-saved successfully');
+                this.showSuccess('Lineup saved');
+                
+                // If in shared mode, sync with the other lineup
+                this.syncSharedLineup(positions);
+            } else {
+                console.error('Error auto-saving lineup:', result.message);
+                this.showError('Error saving lineup: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error auto-saving lineup:', error);
+            this.showError('Network error saving lineup');
+        }
+    },
+
+    // Collect all current player positions from DOM
+    collectAllPositions() {
+        const positions = [];
+        const positionTypes = ['quarterback', 'running_back', 'receiver', 'place_kicker', 'defense'];
+        const positionMappings = {
+            'quarterback': 'qb-players',
+            'running_back': 'rb-players', 
+            'receiver': 'rc-players',
+            'place_kicker': 'pk-players',
+            'defense': 'def-players'
+        };
+        
+        positionTypes.forEach(positionType => {
+            const playersEl = document.getElementById(positionMappings[positionType]);
+            if (playersEl) {
+                const playerItems = playersEl.querySelectorAll('.player-item:not(.empty-position)');
+                playerItems.forEach((item, index) => {
+                    const playerId = item.getAttribute('data-player-id');
+                    const teamId = item.getAttribute('data-team-id');
+                    
+                    positions.push({
+                        position_type: positionType,
+                        player_id: playerId || null,
+                        nfl_team_id: teamId || null,
+                        sort_order: index + 1
+                    });
+                });
+            }
+        });
+        
+        return positions;
+    },
+
+    // Initialize lock countdown
+    initLockCountdown() {
+        if (this.lockTime && this.lockTime !== 'null') {
+            this.updateLockCountdown();
+            setInterval(() => {
+                this.updateLockCountdown();
+            }, 1000);
+        }
+    },
+
+    // Update lock countdown display
+    updateLockCountdown() {
+        const lockTimeEl = document.getElementById('lockTime');
+        if (!lockTimeEl || this.isLocked) return;
+
+        const now = new Date();
+        const lockTime = new Date(this.lockTime);
+        const timeDiff = lockTime - now;
+
+        if (timeDiff <= 0) {
+            lockTimeEl.textContent = 'Locked';
+            this.isLocked = true;
+            this.disableControls();
+            return;
+        }
+
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+        lockTimeEl.textContent = `${hours}h ${minutes}m ${seconds}s`;
+    },
+
+    // Disable controls when locked
+    disableControls() {
+        document.querySelectorAll('.drag-handle').forEach(handle => {
+            handle.style.cursor = 'not-allowed';
+            handle.onclick = () => false;
+        });
+    },
+
+    // Show success message  
+    showSuccess(message) {
+        console.log('Success:', message);
+    },
+
+    // Show error message
+    showError(message) {
+        console.error('Error:', message);
+        alert(message);
+    },
+
+    // Copy lineup from previous week (only available for primary)
+    copyFromPreviousWeek() {
+        const previousWeek = this.weekNumber - 1;
+        if (previousWeek < 1) {
+            this.showError('No previous week available');
+            return;
+        }
+
+        if (confirm(`This will replace your current lineup with your Week ${previousWeek} ${this.gameType} lineup. Continue?`)) {
+            fetch('/lineups/copy-previous', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    target_lineup_id: this.lineupId,
+                    fantasy_team_id: this.teamId,
+                    current_week: this.weekNumber,
+                    game_type: this.gameType,
+                    season_year: this.seasonYear
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccess(data.message);
+                    // Reload the page to show the copied lineup
+                    window.location.reload();
+                } else {
+                    this.showError(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error copying from previous week:', error);
+                this.showError('Failed to copy lineup from previous week');
+            });
+        }
+    },
+
+    // Sync lineups when switching to shared mode
+    syncToSharedMode() {
+        // When switching to shared mode, copy primary to bonus
+        if (this.hasBonusGames) {
+            fetch('/lineups/copy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    source_week: this.weekNumber,
+                    source_game_type: 'primary',
+                    target_lineup_id: null,
+                    fantasy_team_id: this.teamId,
+                    season_year: this.seasonYear,
+                    target_game_type: 'bonus'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Synced lineups to shared mode');
+                    this.showSuccess('Lineups synchronized');
+                    // If we're currently on bonus, reload to show synced lineup
+                    if (this.gameType === 'bonus') {
+                        setTimeout(() => window.location.reload(), 500);
+                    }
+                } else {
+                    console.error('Failed to sync lineups:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error syncing lineups:', error);
+            });
+        }
+    },
+
+    // Initialize game type display and interactions
+    initGameTypeDisplay() {
+        // Check if we're in separate mode for this specific week
+        const weekKey = `lineupSeparateMode_week_${this.weekNumber}`;
+        const isSeparateMode = localStorage.getItem(weekKey) === 'true';
+        
+        // Update UI based on mode
+        this.updateGameTypeSelector(isSeparateMode);
+    },
+
+    // Initialize copy button visibility on page load
+    initCopyButtonVisibility() {
+        const copyBtn = document.getElementById('copyFromPreviousBtn');
+        if (copyBtn) {
+            const shouldShowCopy = this.gameType === 'primary';
+            copyBtn.style.visibility = shouldShowCopy ? 'visible' : 'hidden';
+        }
+    },
+    
+    // Update game type selector visibility
+    updateGameTypeSelector(isSeparateMode) {
+        const gameTypeSelector = document.getElementById('gameTypeSelector');
+        const copyBtn = document.getElementById('copyFromPreviousBtn');
+        
+        if (gameTypeSelector) {
+            gameTypeSelector.style.visibility = isSeparateMode ? 'visible' : 'hidden';
+        }
+        
+        // Update copy button visibility based on game type and separate mode
+        if (copyBtn) {
+            const shouldShowCopy = this.gameType === 'primary';
+            copyBtn.style.visibility = shouldShowCopy ? 'visible' : 'hidden';
+        }
+    },
+
+    // Sync lineup changes to the other game type when in shared mode
+    async syncSharedLineup(positions) {
+        // Check if we're in separate mode for this specific week
+        const weekKey = `lineupSeparateMode_week_${this.weekNumber}`;
+        const isSeparateMode = localStorage.getItem(weekKey) === 'true';
+        if (isSeparateMode) {
+            return; // In separate mode, no sync needed
+        }
+
+        // Only sync if bonus games exist
+        if (!this.hasBonusGames) {
+            return;
+        }
+
+        // Determine the target game type
+        const targetGameType = this.gameType === 'primary' ? 'bonus' : 'primary';
+        
+        try {
+            // Copy current lineup to the other game type
+            await fetch('/lineups/copy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    source_week: this.weekNumber,
+                    source_game_type: this.gameType,
+                    target_lineup_id: null,
+                    fantasy_team_id: this.teamId,
+                    season_year: this.seasonYear,
+                    target_game_type: targetGameType
+                })
+            });
+
+            console.log(`Lineup auto-synced to ${targetGameType} (shared mode)`);
+        } catch (error) {
+            console.error('Error syncing shared lineup:', error);
+        }
+    }
+};
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    LineupManager.init();
+});
+</script>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="bg-primary text-white py-3">
+        <div class="container">
+            <h1>George Blanda Rotisserie Football League</h1>
+        </div>
+    </header>
+
+    <main class="container my-5">
+        <div class="row">
+            <div class="col-md-8 mx-auto text-center">
+                <h1 class="display-1 text-danger">Error</h1>
+                <p class="lead mb-4"><%= message %></p>
+                
+                <% if (process.env.NODE_ENV !== 'production' && error && error.stack) { %>
+                    <div class="card mb-4">
+                        <div class="card-header bg-danger text-white">
+                            Error Details
+                        </div>
+                        <div class="card-body">
+                            <pre class="text-start mb-0"><%= error.stack %></pre>
+                        </div>
+                    </div>
+                <% } %>
+                
+                <div class="mt-4">
+                    <a href="/" class="btn btn-primary">Return to Homepage</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-dark text-white py-3 fixed-bottom">
+        <div class="container">
+            <p class="mb-0 text-center">&copy; <%= new Date().getFullYear() %> George Blanda Rotisserie Football League</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

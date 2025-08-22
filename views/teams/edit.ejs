@@ -1,0 +1,95 @@
+<!-- Page title breadcrumb -->
+<div class="row mb-4">
+    <div class="col-md-8">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-2">
+          <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="/teams">Teams</a></li>
+          <li class="breadcrumb-item"><a href="/teams/<%= team.team_id %>"><%= team.team_name %></a></li>
+          <li class="breadcrumb-item active" aria-current="page">Edit</li>
+        </ol>
+      </nav>
+      <h1 class="mb-0">Edit Team</h1>
+    </div>
+    <div class="col-md-4 text-md-end">
+      <a href="/teams/<%= team.team_id %>" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Team
+      </a>
+    </div>
+  </div>
+  
+  <!-- Validation Errors -->
+  <% if(typeof errors !== 'undefined' && errors.length > 0) { %>
+    <div class="alert alert-danger">
+      <h6>Please correct the following errors:</h6>
+      <ul class="mb-0">
+        <% errors.forEach(error => { %>
+          <li><%= error.msg %></li>
+        <% }); %>
+      </ul>
+    </div>
+  <% } %>
+  
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Team Information</h5>
+        </div>
+        <div class="card-body">
+          <form action="/teams/<%= team.team_id %>" method="POST" class="needs-validation" novalidate>
+            <div class="mb-3">
+              <label for="teamName" class="form-label">Team Name</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="teamName" 
+                name="teamName" 
+                value="<%= team.team_name %>" 
+                required
+                maxlength="100"
+              >
+              <div class="form-text">Choose a unique name for your team (maximum 100 characters).</div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Owner</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                value="<%= team.owner_username %>" 
+                readonly
+                disabled
+              >
+              <div class="form-text">Team ownership cannot be changed.</div>
+            </div>
+  
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+              <a href="/teams/<%= team.team_id %>" class="btn btn-outline-secondary me-md-2">Cancel</a>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Form validation script
+    document.addEventListener('DOMContentLoaded', function() {
+      const forms = document.querySelectorAll('.needs-validation');
+      
+      Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          
+          form.classList.add('was-validated');
+        }, false);
+      });
+    });
+  </script>

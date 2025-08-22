@@ -1,0 +1,900 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-12">
+        <h1 class="mb-0">NFL Players</h1>
+    </div>
+</div>
+
+<!-- Filter Section for Desktop -->
+<div class="card mb-3 d-none d-lg-block">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Filter Players</h5>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary" id="playerCount"><%= pagination.totalCount %> Players</span>
+            <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()" title="Reset all filters">
+                <i class="bi bi-arrow-clockwise"></i> Reset
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <form id="playerFilterForm" action="/players" method="GET" class="row g-3">
+            <!-- Availability Filter -->
+            <div class="col-md-3">
+                <label for="availability" class="form-label">Show Players</label>
+                <select class="form-select" id="availability" name="availability">
+                    <option value="available" <%= filters.availability === 'available' ? 'selected' : (filters.availability === undefined ? 'selected' : '') %>>Available Players</option>
+                    <option value="all" <%= filters.availability === 'all' ? 'selected' : '' %>>All Players</option>
+                    <option value="taken" <%= filters.availability === 'taken' ? 'selected' : '' %>>Players on Teams</option>
+                </select>
+            </div>
+            
+            <!-- Position Filter -->
+            <div class="col-md-2">
+                <label for="position" class="form-label">Position</label>
+                <select class="form-select" id="position" name="position">
+                    <option value="">All Positions</option>
+                    <option value="QB" <%= filters.position === 'QB' ? 'selected' : '' %>>QB</option>
+                    <option value="RB" <%= filters.position === 'RB' ? 'selected' : '' %>>RB</option>
+                    <option value="RC" <%= filters.position === 'RC' ? 'selected' : '' %>>RC</option>
+                    <option value="PK" <%= filters.position === 'PK' ? 'selected' : '' %>>PK</option>
+                    <option value="DU" <%= filters.position === 'DU' ? 'selected' : '' %>>DU</option>
+                </select>
+            </div>
+            
+            <!-- Team Filter -->
+            <div class="col-md-3">
+                <label for="team" class="form-label">NFL Team</label>
+                <select class="form-select" id="team" name="team">
+                    <option value="">All Teams</option>
+                    <% 
+                    // Sort teams alphabetically
+                    const sortedTeams = [...teams].sort((a, b) => 
+                        a.team_name.localeCompare(b.team_name)
+                    );
+                    
+                    // Add the sorted teams
+                    sortedTeams.forEach(team => { %>
+                        <option value="<%= team.nfl_team_id %>" <%= filters.team == team.nfl_team_id ? 'selected' : '' %>>
+                            <%= team.team_name %>
+                        </option>
+                    <% }); %>
+                    <!-- Add Free Agents at the end -->
+                    <option value="null" <%= filters.team === 'null' ? 'selected' : '' %>>Free Agents</option>
+                </select>
+            </div>
+            
+            <!-- Name Search -->
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Name</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="search" name="search" placeholder="Search by name" value="<%= filters.search || '' %>">
+                    <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Filter Section for Mobile (Collapsible) -->
+<div class="card mb-3 d-lg-none">
+    <div class="card-header filter-toggle-header" onclick="toggleMobileFilters()">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-funnel me-1"></i>
+                Filter Players
+            </h6>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-primary" id="playerCountMobile"><%= pagination.totalCount %> Players</span>
+                <i class="bi bi-chevron-down filter-chevron" id="mobileFilterChevron"></i>
+            </div>
+        </div>
+    </div>
+    <div class="card-body filter-content hidden" id="mobileFilterContent">
+        <form id="playerFilterFormMobile" action="/players" method="GET" class="row g-3">
+            <!-- Availability Filter -->
+            <div class="col-6">
+                <label for="availabilityMobile" class="form-label">Show Players</label>
+                <select class="form-select form-select-sm" id="availabilityMobile" name="availability">
+                    <option value="available" <%= filters.availability === 'available' ? 'selected' : (filters.availability === undefined ? 'selected' : '') %>>Available</option>
+                    <option value="all" <%= filters.availability === 'all' ? 'selected' : '' %>>All</option>
+                    <option value="taken" <%= filters.availability === 'taken' ? 'selected' : '' %>>On Teams</option>
+                </select>
+            </div>
+            
+            <!-- Position Filter -->
+            <div class="col-6">
+                <label for="positionMobile" class="form-label">Position</label>
+                <select class="form-select form-select-sm" id="positionMobile" name="position">
+                    <option value="">All</option>
+                    <option value="QB" <%= filters.position === 'QB' ? 'selected' : '' %>>QB</option>
+                    <option value="RB" <%= filters.position === 'RB' ? 'selected' : '' %>>RB</option>
+                    <option value="RC" <%= filters.position === 'RC' ? 'selected' : '' %>>RC</option>
+                    <option value="PK" <%= filters.position === 'PK' ? 'selected' : '' %>>PK</option>
+                    <option value="DU" <%= filters.position === 'DU' ? 'selected' : '' %>>DU</option>
+                </select>
+            </div>
+            
+            <!-- Team Filter -->
+            <div class="col-12">
+                <label for="teamMobile" class="form-label">NFL Team</label>
+                <select class="form-select form-select-sm" id="teamMobile" name="team">
+                    <option value="">All Teams</option>
+                    <% sortedTeams.forEach(team => { %>
+                        <option value="<%= team.nfl_team_id %>" <%= filters.team == team.nfl_team_id ? 'selected' : '' %>>
+                            <%= team.team_name %>
+                        </option>
+                    <% }); %>
+                    <option value="null" <%= filters.team === 'null' ? 'selected' : '' %>>Free Agents</option>
+                </select>
+            </div>
+            
+            <!-- Name Search -->
+            <div class="col-12">
+                <label for="searchMobile" class="form-label">Search Name</label>
+                <div class="input-group">
+                    <input type="text" class="form-control form-control-sm" id="searchMobile" name="search" placeholder="Search by name" value="<%= filters.search || '' %>">
+                    <button class="btn btn-outline-secondary btn-sm" type="button" id="clearSearchMobile">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="col-12">
+                <button class="btn btn-outline-secondary btn-sm" type="button" onclick="resetFilters()" title="Reset all filters">
+                    <i class="bi bi-arrow-clockwise"></i> Reset
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Players List -->
+<div class="card d-flex flex-column" style="height: calc(100vh - 330px);">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Players List</h5>
+    </div>
+    
+    <div class="card-body p-0 flex-grow-1 overflow-hidden">
+        <% if (players.length === 0) { %>
+            <div class="p-3">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    No players found matching your criteria.
+                </div>
+            </div>
+        <% } else { %>
+            <div class="table-responsive" style="height: 100%; overflow-y: auto;">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>NFL Team</th>
+                            <th>Fantasy Team</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% players.forEach(player => { %>
+                            <tr>
+                                <td>
+                                    <% if (!player.is_rostered && typeof user !== 'undefined') { %>
+                                        <a href="#" class="text-decoration-none waiver-request-link" 
+                                           data-player-id="<%= player.player_id %>"
+                                           data-player-name="<%= player.display_name %>"
+                                           data-player-position="<%= player.position %>"
+                                           data-player-team="<%= player.team_code || 'FA' %>"
+                                           title="Click to submit waiver request">
+                                            <%= player.display_name %>
+                                            <% if (player.is_rookie) { %>
+                                                <span class="badge bg-warning text-dark">R</span>
+                                            <% } %>
+                                            <i class="bi bi-plus-circle text-primary ms-1"></i>
+                                        </a>
+                                    <% } else { %>
+                                        <a href="/players/<%= player.player_id %>" class="text-decoration-none">
+                                            <%= player.display_name %>
+                                            <% if (player.is_rookie) { %>
+                                                <span class="badge bg-warning text-dark">R</span>
+                                            <% } %>
+                                        </a>
+                                    <% } %>
+                                </td>
+                                <td><%= player.position %></td>
+                                <td>
+                                    <% if (player.team_code) { %>
+                                        <%= player.team_name %>
+                                    <% } else { %>
+                                        <span class="text-muted">Free Agent</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (player.is_rostered) { %>
+                                        <a href="/teams/<%= player.fantasy_team_id %>" class="text-decoration-none">
+                                            <span class="badge bg-success"><%= player.fantasy_team_name %></span>
+                                        </a>
+                                    <% } else { %>
+                                        <span class="badge bg-secondary">Available 
+                                            <% if (typeof user !== 'undefined') { %>
+                                                <i class="bi bi-hand-index ms-1" title="Click name to request"></i>
+                                            <% } %>
+                                        </span>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Pagination -->
+    <% if (pagination.totalPages > 1) { %>
+        <div class="card-footer bg-white border-top">
+            <nav aria-label="Player pagination">
+                <ul class="pagination justify-content-center mb-0">
+                    <!-- Previous page -->
+                    <% if (pagination.hasPrev) { %>
+                        <li class="page-item">
+                            <a class="page-link" href="/players?page=<%= pagination.currentPage - 1 %>&<%= new URLSearchParams(filters).toString() %>">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    <% } else { %>
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#"><span aria-hidden="true">&laquo;</span></a>
+                        </li>
+                    <% } %>
+                    
+                    <!-- Page numbers -->
+                    <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+                        <% if (i === 1 || i === pagination.totalPages || (i >= pagination.currentPage - 2 && i <= pagination.currentPage + 2)) { %>
+                            <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+                                <a class="page-link" href="/players?page=<%= i %>&<%= new URLSearchParams(filters).toString() %>"><%= i %></a>
+                            </li>
+                        <% } else if (i === pagination.currentPage - 3 || i === pagination.currentPage + 3) { %>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">...</a>
+                            </li>
+                        <% } %>
+                    <% } %>
+                    
+                    <!-- Next page -->
+                    <% if (pagination.hasNext) { %>
+                        <li class="page-item">
+                            <a class="page-link" href="/players?page=<%= pagination.currentPage + 1 %>&<%= new URLSearchParams(filters).toString() %>">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    <% } else { %>
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#"><span aria-hidden="true">&raquo;</span></a>
+                        </li>
+                    <% } %>
+                </ul>
+            </nav>
+        </div>
+    <% } %>
+</div>
+
+<style>
+    /* Mobile filter toggle styles */
+    .filter-toggle-header {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .filter-toggle-header:hover {
+        background-color: #f8f9fa;
+    }
+
+    .filter-chevron {
+        transition: transform 0.3s ease;
+    }
+
+    .filter-chevron.rotated {
+        transform: rotate(180deg);
+    }
+
+    .filter-content.hidden {
+        display: none;
+    }
+
+    /* Modal fixes - grey background with clickable modal */
+    .modal {
+        z-index: 9999 !important;
+    }
+    
+    .modal.show {
+        background: rgba(0, 0, 0, 0.5) !important; /* Grey backdrop */
+        display: block !important;
+    }
+    
+    .modal-dialog {
+        z-index: 10000 !important;
+        position: relative;
+        pointer-events: auto !important;
+    }
+    
+    .modal-content {
+        z-index: 10001 !important;
+        position: relative;
+        background: white !important;
+        border: 1px solid #dee2e6 !important;
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+        pointer-events: auto !important;
+    }
+    
+    /* Hide Bootstrap's problematic backdrop */
+    .modal-backdrop {
+        display: none !important;
+    }
+</style>
+
+<!-- Waiver Request Modal -->
+<% if (typeof user !== 'undefined') { %>
+<div class="modal fade" id="waiverRequestModal" tabindex="-1" aria-labelledby="waiverRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="waiverRequestModalLabel">
+                    <i class="bi bi-arrow-repeat"></i> Submit Waiver Request
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="waiverRequestForm">
+                    <!-- Pickup Player Card -->
+                    <div class="card border-success mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <i class="bi bi-plus-circle"></i> Player to Add
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-auto">
+                                    <i class="bi bi-person-plus display-6 text-success"></i>
+                                </div>
+                                <div class="col">
+                                    <h5 class="mb-1" id="pickupPlayerName"></h5>
+                                    <div class="text-muted" id="pickupPlayerDetails"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Drop Player Selection -->
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h6 class="mb-0">
+                                <i class="bi bi-dash-circle"></i> Player to Drop
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="dropPlayerSelect" class="form-label">Select a player from your roster to drop</label>
+                                <select class="form-select form-select-lg" id="dropPlayerSelect" name="drop_player_id" required>
+                                    <option value="">-- Loading your roster --</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i> 
+                                    Both players will be swapped when the waiver processes.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="pickupPlayerId" name="pickup_player_id">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="submitWaiverRequest" disabled>
+                    <i class="bi bi-check-circle"></i> Submit Waiver Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Mobile filter toggle function
+        function toggleMobileFilters() {
+            const filterContent = document.getElementById('mobileFilterContent');
+            const chevron = document.getElementById('mobileFilterChevron');
+            
+            if (filterContent && chevron) {
+                if (filterContent.classList.contains('hidden')) {
+                    // Currently hidden - show it
+                    filterContent.classList.remove('hidden');
+                    chevron.classList.remove('rotated');
+                } else {
+                    // Currently visible - hide it
+                    filterContent.classList.add('hidden');
+                    chevron.classList.add('rotated');
+                }
+            }
+        }
+
+        // Reset all filters function
+        function resetFilters() {
+            // Reset desktop form elements
+            document.getElementById('availability').value = 'available';
+            document.getElementById('position').value = '';
+            document.getElementById('team').value = '';
+            document.getElementById('search').value = '';
+            
+            // Reset mobile form elements
+            document.getElementById('availabilityMobile').value = 'available';
+            document.getElementById('positionMobile').value = '';
+            document.getElementById('teamMobile').value = '';
+            document.getElementById('searchMobile').value = '';
+            
+            // Submit the form to reload with reset filters
+            document.getElementById('playerFilterForm').submit();
+        }
+
+        // Make functions available globally
+        window.toggleMobileFilters = toggleMobileFilters;
+        window.resetFilters = resetFilters;
+        
+        // Clear search button handlers
+        document.getElementById('clearSearch').addEventListener('click', function() {
+            document.getElementById('search').value = '';
+            document.getElementById('playerFilterForm').submit();
+        });
+        
+        document.getElementById('clearSearchMobile').addEventListener('click', function() {
+            document.getElementById('searchMobile').value = '';
+            document.getElementById('playerFilterFormMobile').submit();
+        });
+        
+        // Auto-submit forms when filters change
+        document.querySelectorAll('#availability, #position, #team').forEach(element => {
+            element.addEventListener('change', function() {
+                document.getElementById('playerFilterForm').submit();
+            });
+        });
+
+        // Real-time search with AJAX for desktop
+        document.getElementById('search').addEventListener('input', function() {
+            updatePlayerList();
+        });
+
+        // Real-time search with AJAX for mobile
+        document.getElementById('searchMobile').addEventListener('input', function() {
+            updatePlayerListMobile();
+        });
+
+        function updatePlayerList() {
+            const form = document.getElementById('playerFilterForm');
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+            params.append('ajax', 'true');
+            
+            fetch(`/players?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateTableContent(data.players);
+                    updatePlayerCounter(data.pagination.totalCount);
+                    updatePagination(data.pagination);
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function updatePlayerListMobile() {
+            const form = document.getElementById('playerFilterFormMobile');
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+            params.append('ajax', 'true');
+            
+            fetch(`/players?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateTableContent(data.players);
+                    updatePlayerCounter(data.pagination.totalCount);
+                    updatePagination(data.pagination);
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function updateTableContent(players) {
+            const tbody = document.querySelector('tbody');
+            tbody.innerHTML = players.map(player => `
+                <tr>
+                    <td>
+                        ${!player.is_rostered ? 
+                            `<a href="#" class="text-decoration-none waiver-request-link" 
+                               data-player-id="${player.player_id}"
+                               data-player-name="${player.display_name}"
+                               data-player-position="${player.position}"
+                               data-player-team="${player.team_code || 'FA'}"
+                               title="Click to submit waiver request">
+                                ${player.display_name}
+                                ${player.is_rookie ? '<span class="badge bg-warning text-dark">R</span>' : ''}
+                                <i class="bi bi-plus-circle text-primary ms-1"></i>
+                            </a>` :
+                            `<a href="/players/${player.player_id}" class="text-decoration-none">
+                                ${player.display_name}
+                                ${player.is_rookie ? '<span class="badge bg-warning text-dark">R</span>' : ''}
+                            </a>`
+                        }
+                    </td>
+                    <td>${player.position}</td>
+                    <td>${player.team_code ? player.team_name : '<span class="text-muted">Free Agent</span>'}</td>
+                    <td>
+                        ${player.is_rostered ? 
+                            `<a href="/teams/${player.fantasy_team_id}" class="text-decoration-none"><span class="badge bg-success">${player.fantasy_team_name}</span></a>` : 
+                            '<span class="badge bg-secondary">Available <i class="bi bi-hand-index ms-1" title="Click name to request"></i></span>'
+                        }
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Re-attach event listeners for new links
+            attachWaiverLinkListeners();
+        }
+
+        function updatePlayerCounter(totalCount) {
+            // Update desktop counter
+            const playerCountElement = document.getElementById('playerCount');
+            if (playerCountElement) {
+                playerCountElement.textContent = `${totalCount} Players`;
+            }
+            
+            // Update mobile counter
+            const playerCountMobileElement = document.getElementById('playerCountMobile');
+            if (playerCountMobileElement) {
+                playerCountMobileElement.textContent = `${totalCount} Players`;
+            }
+        }
+
+        function updatePagination(pagination) {
+            const paginationContainer = document.querySelector('.card-footer');
+            
+            if (pagination.totalPages <= 1) {
+                // Hide pagination if only one page or less
+                if (paginationContainer) {
+                    paginationContainer.style.display = 'none';
+                }
+                return;
+            }
+            
+            // Show pagination if it was hidden
+            if (paginationContainer) {
+                paginationContainer.style.display = 'block';
+            }
+            
+            // Build pagination HTML
+            let paginationHTML = '<nav aria-label="Player pagination"><ul class="pagination justify-content-center mb-0">';
+            
+            // Previous page
+            if (pagination.hasPrev) {
+                paginationHTML += `<li class="page-item">
+                    <a class="page-link" href="/players?page=${pagination.currentPage - 1}&${getCurrentFiltersAsURLParams()}">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>`;
+            } else {
+                paginationHTML += '<li class="page-item disabled"><a class="page-link" href="#"><span aria-hidden="true">&laquo;</span></a></li>';
+            }
+            
+            // Page numbers
+            for (let i = 1; i <= pagination.totalPages; i++) {
+                if (i === 1 || i === pagination.totalPages || (i >= pagination.currentPage - 2 && i <= pagination.currentPage + 2)) {
+                    const isActive = i === pagination.currentPage ? 'active' : '';
+                    paginationHTML += `<li class="page-item ${isActive}">
+                        <a class="page-link" href="/players?page=${i}&${getCurrentFiltersAsURLParams()}">${i}</a>
+                    </li>`;
+                } else if (i === pagination.currentPage - 3 || i === pagination.currentPage + 3) {
+                    paginationHTML += '<li class="page-item disabled"><a class="page-link" href="#">...</a></li>';
+                }
+            }
+            
+            // Next page
+            if (pagination.hasNext) {
+                paginationHTML += `<li class="page-item">
+                    <a class="page-link" href="/players?page=${pagination.currentPage + 1}&${getCurrentFiltersAsURLParams()}">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>`;
+            } else {
+                paginationHTML += '<li class="page-item disabled"><a class="page-link" href="#"><span aria-hidden="true">&raquo;</span></a></li>';
+            }
+            
+            paginationHTML += '</ul></nav>';
+            
+            // Update pagination content
+            if (paginationContainer) {
+                paginationContainer.innerHTML = paginationHTML;
+            }
+        }
+
+        function getCurrentFiltersAsURLParams() {
+            const form = document.getElementById('playerFilterForm');
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+            return params.toString();
+        }
+        
+        document.querySelectorAll('#availabilityMobile, #positionMobile, #teamMobile').forEach(element => {
+            element.addEventListener('change', function() {
+                document.getElementById('playerFilterFormMobile').submit();
+            });
+        });
+
+        // Waiver request functionality
+        const waiverModal = document.getElementById('waiverRequestModal');
+        const pickupPlayerName = document.getElementById('pickupPlayerName');
+        const pickupPlayerDetails = document.getElementById('pickupPlayerDetails');
+        const pickupPlayerId = document.getElementById('pickupPlayerId');
+        const dropPlayerSelect = document.getElementById('dropPlayerSelect');
+        const submitWaiverRequest = document.getElementById('submitWaiverRequest');
+
+        function attachWaiverLinkListeners() {
+            const waiverRequestLinks = document.querySelectorAll('.waiver-request-link');
+            console.log('DEBUG: Found', waiverRequestLinks.length, 'waiver request links');
+            
+            waiverRequestLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('DEBUG: Waiver link clicked!');
+                    
+                    const playerId = this.getAttribute('data-player-id');
+                    const playerName = this.getAttribute('data-player-name');
+                    const playerPosition = this.getAttribute('data-player-position');
+                    const playerTeam = this.getAttribute('data-player-team');
+                    
+                    console.log('DEBUG: Player data:', { playerId, playerName, playerPosition, playerTeam });
+                    
+                    // Set pickup player info
+                    if (pickupPlayerName) pickupPlayerName.textContent = playerName;
+                    if (pickupPlayerDetails) pickupPlayerDetails.textContent = `${playerPosition} - ${playerTeam === 'FA' ? 'Free Agent' : playerTeam}`;
+                    if (pickupPlayerId) pickupPlayerId.value = playerId;
+                    
+                    // Reset and load user's roster for dropdown
+                    resetModal();
+                    loadUserRoster();
+                    
+                    console.log('DEBUG: Modal element:', waiverModal);
+                    console.log('DEBUG: Bootstrap available:', typeof bootstrap !== 'undefined');
+                    console.log('DEBUG: jQuery available:', typeof $ !== 'undefined');
+                    
+                    // Show the modal using jQuery/Bootstrap
+                    if (typeof bootstrap !== 'undefined') {
+                        console.log('DEBUG: Using Bootstrap 5 modal');
+                        try {
+                            const modal = new bootstrap.Modal(waiverModal, {
+                                backdrop: false,  // Disable backdrop completely
+                                keyboard: true,
+                                focus: true
+                            });
+                            modal.show();
+                            console.log('DEBUG: Bootstrap modal.show() called');
+                            
+                            // Debug check after modal is shown
+                            setTimeout(() => {
+                                const backdrop = document.querySelector('.modal-backdrop');
+                                console.log('DEBUG: Modal backdrop found:', backdrop);
+                                console.log('DEBUG: Modal classes:', waiverModal.className);
+                                console.log('DEBUG: Modal style:', waiverModal.style.cssText);
+                                
+                                // Check if modal failed to show properly and fix it manually
+                                if (!waiverModal.classList.contains('show') || waiverModal.style.display !== 'block') {
+                                    console.log('DEBUG: Modal not showing properly, forcing manual show');
+                                    
+                                    // Manually show the modal
+                                    waiverModal.classList.add('show');
+                                    waiverModal.style.display = 'block';
+                                    waiverModal.setAttribute('aria-modal', 'true');
+                                    waiverModal.setAttribute('role', 'dialog');
+                                    waiverModal.removeAttribute('aria-hidden');
+                                    document.body.classList.add('modal-open');
+                                    
+                                    console.log('DEBUG: Manual modal show applied');
+                                }
+                                
+                                // Force modal to be interactive
+                                waiverModal.style.pointerEvents = 'auto';
+                                const modalDialog = waiverModal.querySelector('.modal-dialog');
+                                if (modalDialog) {
+                                    modalDialog.style.pointerEvents = 'auto';
+                                    modalDialog.style.zIndex = '10000';
+                                }
+                                const modalContent = waiverModal.querySelector('.modal-content');
+                                if (modalContent) {
+                                    modalContent.style.pointerEvents = 'auto';
+                                    modalContent.style.zIndex = '10001';
+                                }
+                                console.log('DEBUG: Forced modal to be interactive');
+                            }, 100);
+                            
+                        } catch (error) {
+                            console.error('DEBUG: Bootstrap modal error:', error);
+                        }
+                    } else if (typeof $ !== 'undefined') {
+                        console.log('DEBUG: Using jQuery modal');
+                        try {
+                            $(waiverModal).modal('show');
+                            console.log('DEBUG: jQuery modal show called');
+                        } catch (error) {
+                            console.error('DEBUG: jQuery modal error:', error);
+                        }
+                    } else {
+                        console.log('DEBUG: Using manual modal');
+                        // Fallback - manually show modal
+                        waiverModal.classList.add('show');
+                        waiverModal.style.display = 'block';
+                        document.body.classList.add('modal-open');
+                        
+                        // Create backdrop
+                        const backdrop = document.createElement('div');
+                        backdrop.className = 'modal-backdrop fade show';
+                        backdrop.id = 'modal-backdrop-custom';
+                        document.body.appendChild(backdrop);
+                        console.log('DEBUG: Manual modal setup complete');
+                    }
+                });
+            });
+        }
+
+        function resetModal() {
+            dropPlayerSelect.innerHTML = '<option value="">-- Loading your roster --</option>';
+            submitWaiverRequest.disabled = true;
+        }
+
+        // Modal close function
+        function closeModal() {
+            if (typeof bootstrap !== 'undefined') {
+                const modal = bootstrap.Modal.getInstance(waiverModal);
+                if (modal) modal.hide();
+            } else if (typeof $ !== 'undefined') {
+                $(waiverModal).modal('hide');
+            } else {
+                // Fallback - manually hide modal
+                waiverModal.classList.remove('show');
+                waiverModal.style.display = 'none';
+                document.body.classList.remove('modal-open');
+                
+                // Remove custom backdrop
+                const backdrop = document.getElementById('modal-backdrop-custom');
+                if (backdrop) backdrop.remove();
+            }
+        }
+
+        console.log('DEBUG: Initializing waiver functionality');
+        console.log('DEBUG: waiverModal element:', waiverModal);
+        console.log('DEBUG: pickupPlayerName element:', pickupPlayerName);
+        console.log('DEBUG: dropPlayerSelect element:', dropPlayerSelect);
+        console.log('DEBUG: submitWaiverRequest element:', submitWaiverRequest);
+        
+        // Initial attachment of waiver link listeners
+        if (waiverModal) {
+            console.log('DEBUG: Modal found, attaching listeners');
+            attachWaiverLinkListeners();
+
+            // Enable submit button when player is selected
+            dropPlayerSelect.addEventListener('change', function() {
+                submitWaiverRequest.disabled = !this.value;
+            });
+
+            // Handle modal close button
+            const modalCloseButton = waiverModal.querySelector('.btn-close');
+            const modalCancelButton = waiverModal.querySelector('.btn-secondary');
+            
+            if (modalCloseButton) modalCloseButton.addEventListener('click', closeModal);
+            if (modalCancelButton) modalCancelButton.addEventListener('click', closeModal);
+
+            // Submit waiver request
+            submitWaiverRequest.addEventListener('click', function() {
+                const formData = new FormData(document.getElementById('waiverRequestForm'));
+                
+                if (!formData.get('drop_player_id')) {
+                    alert('Please select a player to drop.');
+                    return;
+                }
+
+                // Disable submit button
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...';
+
+                fetch('/waivers/request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pickup_player_id: parseInt(formData.get('pickup_player_id')),
+                        drop_player_id: parseInt(formData.get('drop_player_id'))
+                    })
+                })
+                .then(response => {
+                    console.log('DEBUG: Response status:', response.status);
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            console.error('DEBUG: Server error response:', text);
+                            throw new Error(`Server error (${response.status}): ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('DEBUG: Success response:', data);
+                    if (data.success) {
+                        alert(data.message);
+                        // Close modal
+                        closeModal();
+                        // Refresh the page to update the button state
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error submitting waiver request. Please try again.');
+                })
+                .finally(() => {
+                    // Re-enable submit button
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-check-circle"></i> Submit Request';
+                });
+            });
+        }
+
+        function loadUserRoster() {
+            dropPlayerSelect.innerHTML = '<option value="">-- Loading your roster --</option>';
+            submitWaiverRequest.disabled = true;
+            
+            fetch('/api/teams/my-roster')
+                .then(response => response.json())
+                .then(data => {
+                    dropPlayerSelect.innerHTML = '<option value="">-- Select a player to drop --</option>';
+                    
+                    if (data.success && data.players && data.players.length > 0) {
+                        // Group players by position
+                        const playersByPosition = {};
+                        data.players.forEach(player => {
+                            if (!playersByPosition[player.position]) {
+                                playersByPosition[player.position] = [];
+                            }
+                            playersByPosition[player.position].push(player);
+                        });
+                        
+                        // Add players grouped by position
+                        const positions = ['QB', 'RB', 'RC', 'PK', 'DU'];
+                        positions.forEach(position => {
+                            if (playersByPosition[position] && playersByPosition[position].length > 0) {
+                                const optgroup = document.createElement('optgroup');
+                                optgroup.label = position;
+                                
+                                playersByPosition[position].forEach(player => {
+                                    const option = document.createElement('option');
+                                    option.value = player.player_id;
+                                    option.textContent = `${player.display_name} (${player.team_code || 'FA'})`;
+                                    optgroup.appendChild(option);
+                                });
+                                
+                                dropPlayerSelect.appendChild(optgroup);
+                            }
+                        });
+                    } else {
+                        dropPlayerSelect.innerHTML = '<option value="">No players on your roster</option>';
+                        submitWaiverRequest.disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading roster:', error);
+                    dropPlayerSelect.innerHTML = '<option value="">Error loading roster - please try again</option>';
+                    submitWaiverRequest.disabled = true;
+                });
+        }
+    });
+</script>

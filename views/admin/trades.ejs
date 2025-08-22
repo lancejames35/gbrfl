@@ -1,0 +1,119 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-0">Trade Approvals</h1>
+        <p class="text-muted">Review and approve pending trade proposals</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm">Pending</button>
+            <button class="btn btn-outline-secondary btn-sm">Approved</button>
+            <button class="btn btn-outline-secondary btn-sm">Rejected</button>
+        </div>
+    </div>
+</div>
+
+<!-- Trade Status Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-clock display-4 text-warning"></i>
+                <h5 class="card-title mt-3">Pending Review</h5>
+                <h3 class="text-warning">3</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle display-4 text-success"></i>
+                <h5 class="card-title mt-3">Approved</h5>
+                <h3 class="text-success">12</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-x-circle display-4 text-danger"></i>
+                <h5 class="card-title mt-3">Rejected</h5>
+                <h3 class="text-danger">2</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-arrow-left-right display-4 text-info"></i>
+                <h5 class="card-title mt-3">Total Trades</h5>
+                <h3 class="text-info">17</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pending Trades -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0 text-warning">
+            <i class="bi bi-clock me-2"></i>Pending Trade Approvals
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>3 trades</strong> are waiting for your review and approval.
+        </div>
+        
+        <!-- Trade Entry -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-5">
+                        <h6 class="text-primary">Team Alpha</h6>
+                        <div class="trade-players">
+                            <span class="badge bg-light text-dark me-1">Tom Brady (QB)</span>
+                            <span class="badge bg-light text-dark me-1">Christian McCaffrey (RB)</span>
+                        </div>
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <i class="bi bi-arrow-left-right display-6 text-muted"></i>
+                        <br><small class="text-muted">for</small>
+                    </div>
+                    <div class="col-md-5">
+                        <h6 class="text-success">Team Beta</h6>
+                        <div class="trade-players">
+                            <span class="badge bg-light text-dark me-1">Aaron Rodgers (QB)</span>
+                            <span class="badge bg-light text-dark me-1">Alvin Kamara (RB)</span>
+                            <span class="badge bg-light text-dark me-1">2024 Draft Pick</span>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-calendar me-1"></i>Proposed: Oct 15, 2024
+                        <i class="bi bi-person ms-3 me-1"></i>By: Team Alpha
+                    </small>
+                    <div class="btn-group">
+                        <button class="btn btn-success btn-sm">
+                            <i class="bi bi-check"></i> Approve
+                        </button>
+                        <button class="btn btn-danger btn-sm">
+                            <i class="bi bi-x"></i> Reject
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-eye"></i> Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- More trade entries would be here -->
+        <div class="text-center">
+            <button class="btn btn-outline-primary">Load More Trades</button>
+        </div>
+    </div>
+</div>

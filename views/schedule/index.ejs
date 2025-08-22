@@ -1,0 +1,438 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-0">League Schedule</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <span class="badge bg-info fs-6" id="currentWeekBadge">Current Week: <%= currentWeek %></span>
+    </div>
+</div>
+
+<!-- Controls Section -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="btn-group" role="group" aria-label="View toggle">
+                    <input type="radio" class="btn-check" name="viewMode" id="leagueView" value="league" checked>
+                    <label class="btn btn-outline-primary" for="leagueView">Week Schedule</label>
+                    
+                    <input type="radio" class="btn-check" name="viewMode" id="teamView" value="team">
+                    <label class="btn btn-outline-primary" for="teamView">Team Schedule</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- League View Controls -->
+        <div class="row g-3" id="leagueControls">
+            <div class="col-md-4">
+                <label for="weekSelect" class="form-label">Select Week</label>
+                <select class="form-select" id="weekSelect">
+                    <% for (let i = 1; i <= 17; i++) { %>
+                        <option value="<%= i %>" <%= i === currentWeek ? 'selected' : '' %>>Week <%= i %></option>
+                    <% } %>
+                </select>
+            </div>
+            <div class="col-md-8 d-flex align-items-end">
+                <button class="btn btn-primary" onclick="goToCurrentWeek()">
+                    <i class="bi bi-calendar-check"></i> Current Week
+                </button>
+            </div>
+        </div>
+        
+        <!-- Team View Controls -->
+        <div class="row g-3 d-none" id="teamControls">
+            <div class="col-md-6">
+                <label for="teamSelect" class="form-label">Select Team</label>
+                <select class="form-select" id="teamSelect">
+                    <% if (userTeam) { %>
+                        <option value="<%= userTeam.team_id %>" selected>My Team (<%= userTeam.team_name %>)</option>
+                    <% } %>
+                    <% teams.forEach(team => { %>
+                        <% if (!userTeam || team.team_id !== userTeam.team_id) { %>
+                            <option value="<%= team.team_id %>"><%= team.team_name %></option>
+                        <% } %>
+                    <% }); %>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Schedule Content -->
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" id="scheduleTitle">Week <%= currentWeek %> Schedule</h5>
+            <div id="scheduleStats" class="text-muted small">
+                <!-- Stats will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="text-center py-4 d-none">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading schedule...</p>
+        </div>
+        
+        <!-- Schedule Content -->
+        <div id="scheduleContent">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+        
+        <!-- No Data Message -->
+        <div id="noDataMessage" class="text-center py-4 d-none">
+            <i class="bi bi-calendar-x text-muted" style="font-size: 3rem;"></i>
+            <h5 class="text-muted mt-3">No Schedule Data</h5>
+            <p class="text-muted">No games found for the selected criteria.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .game-card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: box-shadow 0.15s ease-in-out;
+    }
+    
+    .game-card:hover {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .game-card.completed {
+        background-color: #f8f9fa;
+        border-color: #28a745;
+    }
+    
+    .team-name {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .vs-separator {
+        color: #6c757d;
+        font-weight: 500;
+        margin: 0 0.5rem;
+    }
+    
+    
+    .game-result {
+        font-weight: bold;
+    }
+    
+    .win {
+        color: #28a745;
+    }
+    
+    .loss {
+        color: #dc3545;
+    }
+    
+    .team-schedule-row {
+        border-bottom: 1px solid #dee2e6;
+        padding: 0.75rem 0;
+    }
+    
+    .team-schedule-row:last-child {
+        border-bottom: none;
+    }
+    
+    .week-number {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .opponent-name {
+        font-weight: 500;
+    }
+    
+    .user-game {
+        border: 2px solid #0d6efd;
+        background-color: #f8f9ff;
+        box-shadow: 0 0.25rem 0.5rem rgba(13, 110, 253, 0.15);
+    }
+    
+    .user-team {
+        color: #0d6efd;
+        font-weight: 700;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize page
+        const currentWeek = <%= currentWeek %>;
+        let currentView = 'league';
+        let currentWeekSelected = currentWeek;
+        let currentTeamSelected = <%= userTeam ? userTeam.team_id : 'null' %>;
+        
+        // Event listeners
+        document.querySelectorAll('input[name="viewMode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                currentView = this.value;
+                toggleViewControls();
+                loadScheduleData();
+            });
+        });
+        
+        document.getElementById('weekSelect').addEventListener('change', function() {
+            currentWeekSelected = parseInt(this.value);
+            loadScheduleData();
+        });
+        
+        document.getElementById('teamSelect').addEventListener('change', function() {
+            currentTeamSelected = parseInt(this.value);
+            loadScheduleData();
+        });
+        
+        // Functions
+        function toggleViewControls() {
+            const leagueControls = document.getElementById('leagueControls');
+            const teamControls = document.getElementById('teamControls');
+            
+            if (currentView === 'league') {
+                leagueControls.classList.remove('d-none');
+                teamControls.classList.add('d-none');
+            } else {
+                leagueControls.classList.add('d-none');
+                teamControls.classList.remove('d-none');
+            }
+        }
+        
+        function showLoading() {
+            document.getElementById('loadingIndicator').classList.remove('d-none');
+            document.getElementById('scheduleContent').classList.add('d-none');
+            document.getElementById('noDataMessage').classList.add('d-none');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingIndicator').classList.add('d-none');
+            document.getElementById('scheduleContent').classList.remove('d-none');
+        }
+        
+        function showNoData() {
+            document.getElementById('loadingIndicator').classList.add('d-none');
+            document.getElementById('scheduleContent').classList.add('d-none');
+            document.getElementById('noDataMessage').classList.remove('d-none');
+        }
+        
+        function loadScheduleData() {
+            showLoading();
+            
+            const params = new URLSearchParams({
+                view: currentView,
+                seasonYear: 2025
+            });
+            
+            if (currentView === 'league') {
+                params.append('week', currentWeekSelected);
+            } else if (currentView === 'team' && currentTeamSelected) {
+                params.append('team', currentTeamSelected);
+            }
+            
+            fetch(`/schedule/data?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderScheduleData(data);
+                    } else {
+                        console.error('Error loading schedule:', data.message);
+                        showNoData();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching schedule:', error);
+                    showNoData();
+                });
+        }
+        
+        function renderScheduleData(data) {
+            const scheduleContent = document.getElementById('scheduleContent');
+            const scheduleTitle = document.getElementById('scheduleTitle');
+            
+            if (!data.data || data.data.length === 0) {
+                showNoData();
+                return;
+            }
+            
+            hideLoading();
+            
+            if (currentView === 'league') {
+                renderLeagueSchedule(data.data, data.week);
+                scheduleTitle.textContent = `Week ${data.week} Schedule`;
+            } else {
+                renderTeamSchedule(data.data);
+                const teamName = document.getElementById('teamSelect').selectedOptions[0].text;
+                scheduleTitle.textContent = `${teamName} Schedule`;
+            }
+        }
+        
+        function renderLeagueSchedule(games, week) {
+            const scheduleContent = document.getElementById('scheduleContent');
+            const userTeamId = <%= userTeam ? userTeam.team_id : 'null' %>;
+            
+            // Helper function to check if user's team is in the game
+            function isUserGame(game) {
+                return userTeamId && (game.team_1.team_id === userTeamId || game.team_2.team_id === userTeamId);
+            }
+            
+            // Separate and sort primary games (user's games first)
+            const allPrimaryGames = games.filter(game => game.game_type === 'primary');
+            const userPrimaryGames = allPrimaryGames.filter(isUserGame).sort((a, b) => a.schedule_id - b.schedule_id);
+            const otherPrimaryGames = allPrimaryGames.filter(game => !isUserGame(game)).sort((a, b) => a.schedule_id - b.schedule_id);
+            const primaryGames = [...userPrimaryGames, ...otherPrimaryGames];
+            
+            // Separate and sort bonus games (user's games first)
+            const allBonusGames = games.filter(game => game.game_type === 'bonus');
+            const userBonusGames = allBonusGames.filter(isUserGame).sort((a, b) => a.schedule_id - b.schedule_id);
+            const otherBonusGames = allBonusGames.filter(game => !isUserGame(game)).sort((a, b) => a.schedule_id - b.schedule_id);
+            const bonusGames = [...userBonusGames, ...otherBonusGames];
+            
+            let html = '<div class="row">';
+            
+            // Desktop layout: Primary games on left, bonus games on right
+            html += '<div class="col-lg-6 d-none d-lg-block">';
+            html += '<h6 class="fw-bold text-primary mb-3">Primary Games</h6>';
+            primaryGames.forEach(game => {
+                html += renderGameCard(game, 'col-12', week, userTeamId);
+            });
+            html += '</div>';
+            
+            if (bonusGames.length > 0) {
+                html += '<div class="col-lg-6 d-none d-lg-block">';
+                html += '<h6 class="fw-bold text-success mb-3">Bonus Games</h6>';
+                bonusGames.forEach(game => {
+                    html += renderGameCard(game, 'col-12', week, userTeamId);
+                });
+                html += '</div>';
+            }
+            
+            // Mobile layout: Primary games first, then bonus games
+            html += '<div class="d-lg-none">';
+            html += '<h6 class="fw-bold text-primary mb-3">Primary Games</h6>';
+            primaryGames.forEach(game => {
+                html += renderGameCard(game, 'col-12', week, userTeamId);
+            });
+            if (bonusGames.length > 0) {
+                html += '<h6 class="fw-bold text-success mb-3 mt-4">Bonus Games</h6>';
+                bonusGames.forEach(game => {
+                    html += renderGameCard(game, 'col-12', week, userTeamId);
+                });
+            }
+            html += '</div>';
+            
+            html += '</div>';
+            scheduleContent.innerHTML = html;
+        }
+        
+        function renderGameCard(game, colClass, weekNumber, userTeamId) {
+            const isCompleted = game.is_completed;
+            const isUserGame = userTeamId && (game.team_1.team_id === userTeamId || game.team_2.team_id === userTeamId);
+            let resultsContent = '';
+            
+            // Use the same logic as team schedule for results
+            if (weekNumber < currentWeek) {
+                resultsContent = '<span class="fw-bold text-success">Completed</span>';
+            } else if (weekNumber === currentWeek) {
+                resultsContent = '<span class="fw-bold text-warning">Live</span>';
+            } else {
+                resultsContent = '<span class="fw-bold text-secondary">Upcoming</span>';
+            }
+            
+            // Add highlighting classes for user's games
+            const highlightClass = isUserGame ? 'user-game' : '';
+            const cardClass = `game-card ${isCompleted ? 'completed' : ''} ${highlightClass}`;
+            
+            return `
+                <div class="${colClass} mb-3">
+                    <div class="${cardClass}">
+                        <div class="text-center">
+                            <div class="d-flex justify-content-center align-items-center">
+                                <div class="text-center">
+                                    <div class="team-name ${game.team_1.team_id === userTeamId ? 'user-team' : ''}">${game.team_1.team_name}</div>
+                                    <small class="text-muted">${game.team_1.username || ''}</small>
+                                    ${isCompleted ? `<div class="game-result ${game.team_1_score === 'W' ? 'win' : 'loss'}">${game.team_1_score}</div>` : ''}
+                                </div>
+                                <div class="vs-separator">vs</div>
+                                <div class="text-center">
+                                    <div class="team-name ${game.team_2.team_id === userTeamId ? 'user-team' : ''}">${game.team_2.team_name}</div>
+                                    <small class="text-muted">${game.team_2.username || ''}</small>
+                                    ${isCompleted ? `<div class="game-result ${game.team_2_score === 'W' ? 'win' : 'loss'}">${game.team_2_score}</div>` : ''}
+                                </div>
+                            </div>
+                            <div class="mt-2">${resultsContent}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderTeamSchedule(games) {
+            const scheduleContent = document.getElementById('scheduleContent');
+            
+            let html = '<div class="table-responsive"><table class="table table-hover">';
+            html += `
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 15%;">Week</th>
+                        <th style="width: 45%;">Opponent</th>
+                        <th style="width: 20%;">Game Type</th>
+                        <th style="width: 20%;">Results</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+            
+            games.forEach(game => {
+                let gameTypeContent = '';
+                let resultsContent = '';
+                
+                // Better readable game type styling
+                if (game.game_type === 'primary') {
+                    gameTypeContent = '<span class="fw-bold text-primary">PRIMARY</span>';
+                } else {
+                    gameTypeContent = '<span class="fw-bold text-success">BONUS</span>';
+                }
+                
+                // Better readable results styling
+                if (game.week_number < currentWeek) {
+                    // TODO: Replace with actual game results when scoring system is implemented
+                    resultsContent = '<span class="fw-bold text-success">Completed</span>';
+                } else if (game.week_number === currentWeek) {
+                    resultsContent = '<span class="fw-bold text-warning">Live</span>';
+                } else {
+                    resultsContent = '<span class="fw-bold text-secondary">Upcoming</span>';
+                }
+                
+                html += `
+                    <tr class="team-schedule-row">
+                        <td><span class="week-number">Week ${game.week_number}</span></td>
+                        <td><span class="opponent-name">${game.opponent.team_name}</span><br><small class="text-muted">${game.opponent.username || ''}</small></td>
+                        <td>${gameTypeContent}</td>
+                        <td>${resultsContent}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            scheduleContent.innerHTML = html;
+        }
+        
+        // Global functions
+        window.goToCurrentWeek = function() {
+            document.getElementById('weekSelect').value = currentWeek;
+            currentWeekSelected = currentWeek;
+            loadScheduleData();
+        };
+        
+        // Load initial data
+        loadScheduleData();
+    });
+</script>

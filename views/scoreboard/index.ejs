@@ -1,0 +1,706 @@
+<%- contentFor('head') %>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="/css/scoreboard-enhanced.css" rel="stylesheet">
+
+<%- contentFor('body') %>
+<div class="scoreboard">
+    <!-- Navigation Header -->
+    <div class="scoreboard-nav">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <label for="season" class="form-label text-white small">Season</label>
+                            <select class="form-select form-select-sm" id="season" name="season" onchange="updateScoreboard()">
+                                <% seasons.forEach(s => { %>
+                                    <option value="<%= s %>" <%= s == season ? 'selected' : '' %>><%= s %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        
+                        <div class="me-3">
+                            <label for="week" class="form-label text-white small">Week</label>
+                            <select class="form-select form-select-sm" id="week" name="week" onchange="updateScoreboard()">
+                                <% weeks.forEach(w => { %>
+                                    <option value="<%= w %>" <%= w == week ? 'selected' : '' %>>Week <%= w %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        
+                        <div class="me-3">
+                            <label for="gameType" class="form-label text-white small">Game Type</label>
+                            <select class="form-select form-select-sm" id="gameType" name="gameType" onchange="updateScoreboard()">
+                                <% gameTypes.forEach(gt => { %>
+                                    <option value="<%= gt %>" <%= gt == gameType ? 'selected' : '' %>><%= gt.charAt(0).toUpperCase() + gt.slice(1) %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 text-end">
+                    <% if (matchups && matchups.length > 1) { %>
+                        <div class="game-navigation">
+                            <button class="btn btn-outline-light btn-sm me-2" onclick="previousGame()" id="prevBtn">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </button>
+                            <span class="text-white">Game <span id="currentGameNum">1</span> of <%= matchups.length %></span>
+                            <button class="btn btn-outline-light btn-sm ms-2" onclick="nextGame()" id="nextBtn">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <% if (matchups && matchups.length > 0) { %>
+        <div id="scoreboardDisplay">
+            <!-- This will be populated by JavaScript -->
+        </div>
+    <% } else { %>
+        <div class="text-center p-5">
+            <h3>No matchups found</h3>
+            <p>No matchups available for Week <%= week %> of the <%= season %> season.</p>
+        </div>
+    <% } %>
+</div>
+
+<script>
+// Global variables
+let allMatchups = <%- JSON.stringify(matchups || []) %>;
+let currentMatchupIndex = 0;
+let currentSeason = <%= season %>;
+let currentWeek = <%= week %>;
+let currentGameType = '<%= gameType %>';
+
+// Initialize the scoreboard
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Scoreboard loaded with', allMatchups.length, 'matchups');
+    if (allMatchups.length > 0) {
+        displayMatchup(allMatchups[0]);
+        updateNavigationButtons();
+    }
+});
+
+function displayMatchup(matchup) {
+    console.log('Displaying matchup:', matchup);
+    
+    const display = document.getElementById('scoreboardDisplay');
+    if (!display || !matchup) return;
+    
+    // Get category results
+    const categoryResults = matchup.category_results || {};
+    
+    display.innerHTML = `
+        <!-- Header with Team Names and Scores -->
+        <div class="header">
+            <div class="team-header">
+                <div class="team-name">${matchup.team1_name}</div>
+                <div class="owner-name">${matchup.team1_owner || ''}</div>
+                <div class="total-score-box ${matchup.winner === 'team1' ? 'winning' : ''}">
+                    <div class="total-score-label">Total Score</div>
+                    <div class="total-score ${matchup.winner === 'team1' ? 'winning' : ''}">${parseFloat(matchup.team1_final_score || 0).toFixed(1)}</div>
+                </div>
+            </div>
+            <div class="vs">
+                VS
+                <div class="week-info">Week ${currentWeek} - ${currentGameType.charAt(0).toUpperCase() + currentGameType.slice(1)}</div>
+            </div>
+            <div class="team-header">
+                <div class="team-name">${matchup.team2_name}</div>
+                <div class="owner-name">${matchup.team2_owner || ''}</div>
+                <div class="total-score-box ${matchup.winner === 'team2' ? 'winning' : ''}">
+                    <div class="total-score-label">Total Score</div>
+                    <div class="total-score ${matchup.winner === 'team2' ? 'winning' : ''}">${parseFloat(matchup.team2_final_score || 0).toFixed(1)}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Table -->
+        ${generateSummaryTable(categoryResults)}
+
+        <!-- Team Details -->
+        <div id="team1Details">
+            <div class="team-details-header">${matchup.team1_name}</div>
+            <div class="text-center p-3">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading player stats...</p>
+            </div>
+        </div>
+
+        <div id="team2Details">
+            <div class="team-details-header">${matchup.team2_name}</div>
+            <div class="text-center p-3">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading player stats...</p>
+            </div>
+        </div>
+    `;
+    
+    // Load detailed player data
+    loadPlayerDetails(matchup);
+}
+
+function generateSummaryTable(categoryResults) {
+    const categories = [
+        { key: 'passing', subcats: ['yards', 'touchdowns', 'interceptions', 'completion_percentage'], name: 'Pass', color: 'passing-category' },
+        { key: 'rushing', subcats: ['yards', 'touchdowns', 'yards_per_attempt'], name: 'Rush', color: 'rushing-category' },
+        { key: 'receiving', subcats: ['yards', 'touchdowns', 'receptions', 'yards_per_reception'], name: 'Rec', color: 'receiving-category' },
+        { key: 'kicking', subcats: ['total_points', 'field_goals_40_49', 'field_goals_10_29', 'field_goals_30_39', 'field_goals_50_plus'], name: 'Kick', color: 'kicking-category' },
+        { key: 'defense', subcats: ['points_allowed', 'yards_allowed', 'sacks', 'interceptions', 'fumble_recoveries', 'defensive_touchdowns'], name: 'Def', color: 'defense-category' },
+        { key: 'other', subcats: ['two_point_conversions', 'fumbles_lost'], name: 'Other', color: 'other-category' }
+    ];
+
+    const statNames = {
+        'yards': 'Yards', 'touchdowns': "TD's", 'interceptions': "INT's", 'completion_percentage': 'Comp %',
+        'yards_per_attempt': 'Yds/Rush', 'receptions': 'Receptions', 'yards_per_reception': 'Yds/Rec',
+        'total_points': 'Kick Points', 'field_goals_40_49': '40-49 FGs', 'field_goals_10_29': '10-29 FGs',
+        'field_goals_30_39': '30-39 FGs', 'field_goals_50_plus': '50+ FGs',
+        'points_allowed': 'Pts Allowed', 'yards_allowed': 'Yds Allowed', 'sacks': 'Sacks',
+        'fumble_recoveries': 'Fum Rec', 'defensive_touchdowns': 'Def Pts Scored',
+        'two_point_conversions': '2pt. Conv.', 'fumbles_lost': 'Fum Lost'
+    };
+
+    let tableHtml = `
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th>Total</th>
+                    <th>Points</th>
+                    <th>Bonus</th>
+                    <th>Category</th>
+                    <th>Bonus</th>
+                    <th>Points</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    categories.forEach(category => {
+        const catData = categoryResults[category.key];
+        if (!catData) return;
+
+        category.subcats.forEach(subcat => {
+            const stat = catData[subcat];
+            if (!stat) return;
+
+            const team1Value = stat.team1_value || 0;
+            const team2Value = stat.team2_value || 0;
+            const team1Points = stat.team1_wins ? (stat.h2h_points || 0) : 0;
+            const team2Points = stat.team1_wins === false ? (stat.h2h_points || 0) : 0;
+            const team1Bonus = stat.team1_bonus || 0;
+            const team2Bonus = stat.team2_bonus || 0;
+
+            let team1Class = 'tie-stat';
+            let team2Class = 'tie-stat';
+            
+            if (stat.team1_wins === true) {
+                team1Class = 'winning-stat';
+                team2Class = 'losing-stat';
+            } else if (stat.team1_wins === false) {
+                team1Class = 'losing-stat';
+                team2Class = 'winning-stat';
+            }
+
+            const statName = statNames[subcat] || subcat.replace('_', ' ');
+            const categoryName = category.name === 'Pass' && subcat === 'yards' ? 'Pass Yards' :
+                               category.name === 'Pass' && subcat === 'touchdowns' ? 'Pass TD\'s' :
+                               category.name === 'Rush' && subcat === 'yards' ? 'Rush Yards' :
+                               category.name === 'Rush' && subcat === 'touchdowns' ? 'Rush TD\'s' :
+                               category.name === 'Rec' && subcat === 'yards' ? 'Rec Yards' :
+                               category.name === 'Rec' && subcat === 'touchdowns' ? 'Rec TD\'s' :
+                               statName;
+
+            tableHtml += `
+                <tr>
+                    <td class="${team1Class}">${team1Value}</td>
+                    <td class="points-cell ${team1Points > 0 ? 'points-earned' : ''}">${team1Points || ''}</td>
+                    <td class="bonus-cell ${team1Bonus > 0 ? 'points-earned' : ''}">${team1Bonus || ''}</td>
+                    <td class="category-cell ${category.color}">${categoryName}</td>
+                    <td class="bonus-cell ${team2Bonus > 0 ? 'points-earned' : ''}">${team2Bonus || ''}</td>
+                    <td class="points-cell ${team2Points > 0 ? 'points-earned' : ''}">${team2Points || ''}</td>
+                    <td class="${team2Class}">${team2Value}</td>
+                </tr>
+            `;
+        });
+    });
+
+    tableHtml += `
+            </tbody>
+        </table>
+    `;
+
+    return tableHtml;
+}
+
+function loadPlayerDetails(matchup) {
+    // Set a timeout to show fallback data if API takes too long
+    const timeoutId = setTimeout(() => {
+        console.log('API timeout - showing sample player data');
+        displaySamplePlayerData('team1Details', matchup.team1_name);
+        displaySamplePlayerData('team2Details', matchup.team2_name);
+    }, 3000);
+
+    // Load both teams' player data
+    Promise.all([
+        fetch(`/api/scoreboard/team-breakdown?team_id=${matchup.team1_id}&week=${currentWeek}&season=${currentSeason}&game_type=${currentGameType}`, {
+            credentials: 'same-origin'
+        }).then(response => response.ok ? response.json() : Promise.reject('API Error')),
+        fetch(`/api/scoreboard/team-breakdown?team_id=${matchup.team2_id}&week=${currentWeek}&season=${currentSeason}&game_type=${currentGameType}`, {
+            credentials: 'same-origin'
+        }).then(response => response.ok ? response.json() : Promise.reject('API Error'))
+    ])
+    .then(([team1Data, team2Data]) => {
+        clearTimeout(timeoutId);
+        console.log('Team 1 API response:', team1Data);
+        console.log('Team 2 API response:', team2Data);
+        
+        if (team1Data && team1Data.success && team1Data.data) {
+            console.log('Team 1 data structure:', team1Data.data);
+            displayRealPlayerData('team1Details', team1Data.data, matchup.team1_name);
+        } else {
+            console.log('Team 1 data invalid or unsuccessful, showing sample');
+            displaySamplePlayerData('team1Details', matchup.team1_name);
+        }
+        
+        if (team2Data && team2Data.success && team2Data.data) {
+            console.log('Team 2 data structure:', team2Data.data);
+            displayRealPlayerData('team2Details', team2Data.data, matchup.team2_name);
+        } else {
+            console.log('Team 2 data invalid or unsuccessful, showing sample');
+            displaySamplePlayerData('team2Details', matchup.team2_name);
+        }
+    })
+    .catch(error => {
+        clearTimeout(timeoutId);
+        console.error('Error loading player data:', error);
+        displaySamplePlayerData('team1Details', matchup.team1_name);
+        displaySamplePlayerData('team2Details', matchup.team2_name);
+    });
+}
+
+function displaySamplePlayerData(containerId, teamName) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Sample player data structure - replace with your real data structure
+    container.innerHTML = `
+        <div class="team-details">
+            <!-- Offensive Stats Table -->
+            <h4 style="margin-bottom: 10px; color: #495057;">Offensive Stats</h4>
+            <div class="stats-table-container">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Pass<br>Comp</th>
+                            <th>Pass<br>Att</th>
+                            <th>Pass<br>Yds</th>
+                            <th>Pass<br>TD</th>
+                            <th>Int</th>
+                            <th>Rush<br>Att</th>
+                            <th>Rush<br>Yds</th>
+                            <th>Yds Per<br>Rush</th>
+                            <th>Rush<br>TD</th>
+                            <th>Rec</th>
+                            <th>Rec<br>Yds</th>
+                            <th>Yds Per<br>Rec</th>
+                            <th>Rec<br>TD</th>
+                            <th>Fum<br>Lost</th>
+                            <th>2Pt<br>Conv</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="position-row">
+                            <td class="player-name" colspan="16"><strong>QUARTERBACKS</strong></td>
+                        </tr>
+                        <tr class="qb-row">
+                            <td class="player-name">Sample QB1</td>
+                            <td>20</td><td>30</td><td>250</td><td>2</td><td>1</td><td>5</td><td>25</td><td>5.0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+                        </tr>
+                        <tr class="qb-row">
+                            <td class="player-name">Sample QB2</td>
+                            <td>15</td><td>25</td><td>180</td><td>1</td><td>0</td><td>3</td><td>15</td><td>5.0</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+                        </tr>
+                        
+                        <tr class="position-row">
+                            <td class="player-name" colspan="16"><strong>RUNNING BACKS</strong></td>
+                        </tr>
+                        <tr class="rb-row">
+                            <td class="player-name">Sample RB1</td>
+                            <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>18</td><td>85</td><td>4.7</td><td>1</td><td>3</td><td>25</td><td>8.3</td><td>0</td><td>0</td><td>0</td>
+                        </tr>
+                        <tr class="rb-row">
+                            <td class="player-name">Sample RB2</td>
+                            <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>12</td><td>60</td><td>5.0</td><td>0</td><td>2</td><td>15</td><td>7.5</td><td>0</td><td>0</td><td>0</td>
+                        </tr>
+                        <tr class="rb-row">
+                            <td class="player-name">Sample RB3</td>
+                            <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>8</td><td>35</td><td>4.4</td><td>0</td><td>1</td><td>8</td><td>8.0</td><td>0</td><td>0</td><td>0</td>
+                        </tr>
+
+                        <tr class="position-row">
+                            <td class="player-name" colspan="16"><strong>RECEIVERS</strong></td>
+                        </tr>
+                        <tr class="rc-row">
+                            <td class="player-name">Sample WR1</td>
+                            <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>6</td><td>95</td><td>15.8</td><td>1</td><td>0</td><td>0</td>
+                        </tr>
+                        <tr class="rc-row">
+                            <td class="player-name">Sample WR2</td>
+                            <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>4</td><td>60</td><td>15.0</td><td>0</td><td>0</td><td>0</td>
+                        </tr>
+                        <tr class="rc-row">
+                            <td class="player-name">Sample TE</td>
+                            <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>3</td><td>35</td><td>11.7</td><td>0</td><td>0</td><td>0</td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td class="player-name"><strong>OFFENSIVE TOTAL</strong></td>
+                            <td><strong>35</strong></td>
+                            <td><strong>55</strong></td>
+                            <td><strong>430</strong></td>
+                            <td><strong>3</strong></td>
+                            <td><strong>1</strong></td>
+                            <td><strong>46</strong></td>
+                            <td><strong>220</strong></td>
+                            <td><strong>4.8</strong></td>
+                            <td><strong>2</strong></td>
+                            <td><strong>19</strong></td>
+                            <td><strong>238</strong></td>
+                            <td><strong>12.5</strong></td>
+                            <td><strong>1</strong></td>
+                            <td><strong>0</strong></td>
+                            <td><strong>0</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Kicking Stats Table -->
+            <h4 style="margin: 20px 0 10px 0; color: #495057;">Kicking Stats</h4>
+            <div class="stats-table-container">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>FG<br>Made</th>
+                            <th>FG<br>Att</th>
+                            <th>XP<br>Made</th>
+                            <th>XP<br>Att</th>
+                            <th>Total<br>Points</th>
+                            <th>Long<br>FG</th>
+                            <th>10-29<br>FG</th>
+                            <th>30-39<br>FG</th>
+                            <th>40-49<br>FG</th>
+                            <th>50+<br>FG</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="pk-row">
+                            <td class="player-name">Sample Kicker</td>
+                            <td>2</td>
+                            <td>3</td>
+                            <td>3</td>
+                            <td>3</td>
+                            <td>9</td>
+                            <td>45</td>
+                            <td>1</td>
+                            <td>0</td>
+                            <td>1</td>
+                            <td>0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Defense Stats Table -->
+            <h4 style="margin: 20px 0 10px 0; color: #495057;">Defense Stats</h4>
+            <div class="stats-table-container">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>Points<br>Allowed</th>
+                            <th>Yards<br>Allowed</th>
+                            <th>Sacks</th>
+                            <th>Interceptions</th>
+                            <th>Fumble<br>Recoveries</th>
+                            <th>Points<br>Scored</th>
+                            <th>Total<br>TOs</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="du-row">
+                            <td class="player-name">Sample Defense</td>
+                            <td>21</td>
+                            <td>350</td>
+                            <td>2</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>0</td>
+                            <td>2</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+function displayRealPlayerData(containerId, data, teamName) {
+    console.log('Processing real player data for', teamName, ':', data);
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Check if we have player breakdown data
+    if (!data || !data.player_breakdown) {
+        console.log('No player breakdown data, showing sample');
+        displaySamplePlayerData(containerId, teamName);
+        return;
+    }
+
+    // Handle different data structures
+    let playerBreakdown = data.player_breakdown;
+    if (!Array.isArray(playerBreakdown)) {
+        // If it's an object, try to convert it to an array
+        if (typeof playerBreakdown === 'object') {
+            playerBreakdown = Object.values(playerBreakdown);
+        } else {
+            console.log('Invalid player breakdown format, showing sample');
+            displaySamplePlayerData(containerId, teamName);
+            return;
+        }
+    }
+
+    let html = '<div class="team-details">';
+    
+    // Group players by position
+    const positions = {
+        'QB': [], 'RB': [], 'WR': [], 'TE': [], 'PK': [], 'DU': []
+    };
+    
+    // Process player breakdown
+    playerBreakdown.forEach(player => {
+        if (player.position in positions) {
+            positions[player.position].push(player);
+        } else if (player.position === 'RC' || player.position === 'TE') {
+            positions['WR'].push(player); // Group receivers together
+        }
+    });
+
+    // Build offensive stats table
+    html += `
+        <h4 style="margin-bottom: 10px; color: #495057;">Offensive Stats</h4>
+        <div class="stats-table-container">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Pass<br>Comp</th>
+                        <th>Pass<br>Att</th>
+                        <th>Pass<br>Yds</th>
+                        <th>Pass<br>TD</th>
+                        <th>Int</th>
+                        <th>Rush<br>Att</th>
+                        <th>Rush<br>Yds</th>
+                        <th>Yds Per<br>Rush</th>
+                        <th>Rush<br>TD</th>
+                        <th>Rec</th>
+                        <th>Rec<br>Yds</th>
+                        <th>Yds Per<br>Rec</th>
+                        <th>Rec<br>TD</th>
+                        <th>Fum<br>Lost</th>
+                        <th>2Pt<br>Conv</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+    // Add QBs
+    if (positions.QB.length > 0) {
+        html += '<tr class="position-row"><td class="player-name" colspan="16"><strong>QUARTERBACKS</strong></td></tr>';
+        positions.QB.forEach(player => {
+            const stats = player.stats || {};
+            html += `<tr class="qb-row">
+                <td class="player-name">${player.player_name || 'Unknown'}</td>
+                <td>${stats.completions || 0}</td>
+                <td>${stats.attempts || 0}</td>
+                <td>${stats.passing_yards || 0}</td>
+                <td>${stats.passing_tds || 0}</td>
+                <td>${stats.interceptions || 0}</td>
+                <td>${stats.rushing_attempts || 0}</td>
+                <td>${stats.rushing_yards || 0}</td>
+                <td>${stats.rushing_attempts > 0 ? (stats.rushing_yards / stats.rushing_attempts).toFixed(2) : 0}</td>
+                <td>${stats.rushing_tds || 0}</td>
+                <td>${stats.receptions || 0}</td>
+                <td>${stats.receiving_yards || 0}</td>
+                <td>${stats.receptions > 0 ? (stats.receiving_yards / stats.receptions).toFixed(2) : 0}</td>
+                <td>${stats.receiving_tds || 0}</td>
+                <td>${stats.fumbles_lost || 0}</td>
+                <td>${stats.two_point_conversions || 0}</td>
+            </tr>`;
+        });
+    }
+
+    // Add RBs
+    if (positions.RB.length > 0) {
+        html += '<tr class="position-row"><td class="player-name" colspan="16"><strong>RUNNING BACKS</strong></td></tr>';
+        positions.RB.forEach(player => {
+            const stats = player.stats || {};
+            html += `<tr class="rb-row">
+                <td class="player-name">${player.player_name || 'Unknown'}</td>
+                <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+                <td>${stats.rushing_attempts || 0}</td>
+                <td>${stats.rushing_yards || 0}</td>
+                <td>${stats.rushing_attempts > 0 ? (stats.rushing_yards / stats.rushing_attempts).toFixed(2) : 0}</td>
+                <td>${stats.rushing_tds || 0}</td>
+                <td>${stats.receptions || 0}</td>
+                <td>${stats.receiving_yards || 0}</td>
+                <td>${stats.receptions > 0 ? (stats.receiving_yards / stats.receptions).toFixed(2) : 0}</td>
+                <td>${stats.receiving_tds || 0}</td>
+                <td>${stats.fumbles_lost || 0}</td>
+                <td>${stats.two_point_conversions || 0}</td>
+            </tr>`;
+        });
+    }
+
+    // Add WRs/TEs
+    if (positions.WR.length > 0) {
+        html += '<tr class="position-row"><td class="player-name" colspan="16"><strong>RECEIVERS</strong></td></tr>';
+        positions.WR.forEach(player => {
+            const stats = player.stats || {};
+            html += `<tr class="rc-row">
+                <td class="player-name">${player.player_name || 'Unknown'}</td>
+                <td>0</td><td>0</td><td>0</td><td>0</td><td>0</td>
+                <td>${stats.rushing_attempts || 0}</td>
+                <td>${stats.rushing_yards || 0}</td>
+                <td>${stats.rushing_attempts > 0 ? (stats.rushing_yards / stats.rushing_attempts).toFixed(2) : 0}</td>
+                <td>${stats.rushing_tds || 0}</td>
+                <td>${stats.receptions || 0}</td>
+                <td>${stats.receiving_yards || 0}</td>
+                <td>${stats.receptions > 0 ? (stats.receiving_yards / stats.receptions).toFixed(2) : 0}</td>
+                <td>${stats.receiving_tds || 0}</td>
+                <td>${stats.fumbles_lost || 0}</td>
+                <td>${stats.two_point_conversions || 0}</td>
+            </tr>`;
+        });
+    }
+
+    html += '</tbody></table></div>';
+
+    // Add Kicking stats if we have kickers
+    if (positions.PK.length > 0) {
+        html += `
+            <h4 style="margin: 20px 0 10px 0; color: #495057;">Kicking Stats</h4>
+            <div class="stats-table-container">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>FG<br>Made</th>
+                            <th>FG<br>Att</th>
+                            <th>XP<br>Made</th>
+                            <th>XP<br>Att</th>
+                            <th>Total<br>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        
+        positions.PK.forEach(player => {
+            const stats = player.stats || {};
+            html += `<tr class="pk-row">
+                <td class="player-name">${player.player_name || 'Unknown'}</td>
+                <td>${stats.field_goals_made || 0}</td>
+                <td>${stats.field_goals_attempted || 0}</td>
+                <td>${stats.extra_points_made || 0}</td>
+                <td>${stats.extra_points_attempted || 0}</td>
+                <td>${(stats.field_goals_made || 0) * 3 + (stats.extra_points_made || 0)}</td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table></div>';
+    }
+
+    // Add Defense stats if we have defense
+    if (positions.DU.length > 0) {
+        html += `
+            <h4 style="margin: 20px 0 10px 0; color: #495057;">Defense Stats</h4>
+            <div class="stats-table-container">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>Points<br>Allowed</th>
+                            <th>Yards<br>Allowed</th>
+                            <th>Sacks</th>
+                            <th>Interceptions</th>
+                            <th>Fumble<br>Recoveries</th>
+                            <th>Points<br>Scored</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        
+        positions.DU.forEach(player => {
+            const stats = player.stats || {};
+            html += `<tr class="du-row">
+                <td class="player-name">${player.player_name || 'Unknown Defense'}</td>
+                <td>${stats.points_allowed || 0}</td>
+                <td>${stats.yards_allowed || 0}</td>
+                <td>${stats.sacks || 0}</td>
+                <td>${stats.interceptions || 0}</td>
+                <td>${stats.fumble_recoveries || 0}</td>
+                <td>${stats.defensive_touchdowns || 0}</td>
+            </tr>`;
+        });
+        
+        html += '</tbody></table></div>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function updateScoreboard() {
+    const season = document.getElementById('season').value;
+    const week = document.getElementById('week').value;
+    const gameType = document.getElementById('gameType').value;
+    
+    const url = `/scoreboard?season=${season}&week=${week}&game_type=${gameType}`;
+    window.location.href = url;
+}
+
+function nextGame() {
+    if (currentMatchupIndex < allMatchups.length - 1) {
+        currentMatchupIndex++;
+        displayMatchup(allMatchups[currentMatchupIndex]);
+        updateNavigationButtons();
+    }
+}
+
+function previousGame() {
+    if (currentMatchupIndex > 0) {
+        currentMatchupIndex--;
+        displayMatchup(allMatchups[currentMatchupIndex]);
+        updateNavigationButtons();
+    }
+}
+
+function updateNavigationButtons() {
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const currentNum = document.getElementById('currentGameNum');
+    
+    if (prevBtn) prevBtn.disabled = currentMatchupIndex === 0;
+    if (nextBtn) nextBtn.disabled = currentMatchupIndex === allMatchups.length - 1;
+    if (currentNum) currentNum.textContent = currentMatchupIndex + 1;
+}
+</script>

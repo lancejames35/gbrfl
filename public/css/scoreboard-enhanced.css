@@ -1,0 +1,398 @@
+/* Enhanced Scoreboard Styles - High Specificity to Override Bootstrap */
+
+/* Main Container */
+div.scoreboard {
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    overflow: hidden !important;
+}
+
+/* Navigation Header */
+div.scoreboard-nav {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
+    padding: 15px 20px !important;
+    color: white !important;
+}
+
+div.scoreboard-nav label {
+    color: white !important;
+}
+
+/* Header Section */
+div.header {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    padding: 20px !important;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    border-bottom: 2px solid #dee2e6 !important;
+    align-items: center !important;
+    gap: 40px !important;
+}
+
+div.team-header {
+    text-align: center !important;
+}
+
+div.team-name {
+    font-size: 1.3em !important;
+    font-weight: bold !important;
+    color: #495057 !important;
+    margin-bottom: 10px !important;
+}
+
+div.owner-name {
+    font-size: 0.9em !important;
+    color: #6c757d !important;
+    margin-bottom: 15px !important;
+}
+
+div.total-score-box {
+    border: 3px solid #007bff !important;
+    background: white !important;
+    padding: 8px 16px !important;
+    text-align: center !important;
+    border-radius: 8px !important;
+}
+
+div.total-score-box.winning {
+    border-color: #28a745 !important;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
+}
+
+div.total-score-label {
+    font-size: 0.9em !important;
+    color: #666 !important;
+    margin-bottom: 2px !important;
+}
+
+div.total-score {
+    font-size: 2em !important;
+    font-weight: bold !important;
+    color: #007bff !important;
+}
+
+div.total-score.winning {
+    color: #28a745 !important;
+}
+
+div.vs {
+    font-size: 1.5em !important;
+    font-weight: bold !important;
+    color: #666 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+div.week-info {
+    font-size: 0.8em !important;
+    color: #6c757d !important;
+    text-align: center !important;
+}
+
+/* Summary Table Styles */
+table.summary-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 20px 0 !important;
+}
+
+table.summary-table th,
+table.summary-table td {
+    border: 1px solid #dee2e6 !important;
+    padding: 8px !important;
+    text-align: center !important;
+    font-weight: bold !important;
+}
+
+table.summary-table th {
+    background: #f8f9fa !important;
+    color: #495057 !important;
+    font-size: 0.9em !important;
+}
+
+td.category-cell {
+    color: white !important;
+    font-weight: bold !important;
+    font-size: 0.9em !important;
+}
+
+/* Category Colors - High Specificity */
+td.passing-category { 
+    background: #dc3545 !important; 
+    color: white !important;
+}
+td.rushing-category { 
+    background: #28a745 !important; 
+    color: white !important;
+}
+td.receiving-category { 
+    background: #ffc107 !important; 
+    color: #212529 !important;
+}
+td.kicking-category { 
+    background: #fd7e14 !important; 
+    color: white !important;
+}
+td.defense-category { 
+    background: #6f42c1 !important; 
+    color: white !important;
+}
+td.other-category { 
+    background: #17a2b8 !important; 
+    color: white !important;
+}
+
+td.total-cell {
+    background: #e3f2fd !important;
+    color: #1565c0 !important;
+    font-weight: bold !important;
+}
+
+td.points-cell {
+    background: #e8f5e8 !important;
+    color: transparent !important;
+    font-weight: bold !important;
+}
+
+td.bonus-cell {
+    background: #fff3e0 !important;
+    color: transparent !important;
+    font-weight: bold !important;
+}
+
+/* Win/Loss/Tie Styling - Very High Specificity */
+table.summary-table td.winning-stat {
+    background: #c8e6c9 !important;
+    color: #2e7d32 !important;
+    font-weight: bold !important;
+}
+
+table.summary-table td.losing-stat {
+    background: #ffcdd2 !important;
+    color: #c62828 !important;
+    font-weight: bold !important;
+}
+
+table.summary-table td.tie-stat {
+    background: #f8f9fa !important;
+    color: #495057 !important;
+    font-weight: bold !important;
+}
+
+td.points-cell.points-earned,
+td.bonus-cell.points-earned {
+    color: #2e7d32 !important;
+    font-weight: bold !important;
+}
+
+/* Team Details Section */
+div.team-details {
+    padding: 20px !important;
+}
+
+div.team-details-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    padding: 15px 20px !important;
+    font-weight: bold !important;
+    font-size: 1.1em !important;
+    color: #495057 !important;
+    border-left: 4px solid #007bff !important;
+    margin-bottom: 20px !important;
+}
+
+/* Stats Table Container */
+div.stats-table-container {
+    overflow-x: auto !important;
+    margin-bottom: 20px !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 8px !important;
+}
+
+/* Stats Table */
+table.stats-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 0.85em !important;
+    min-width: 800px !important;
+}
+
+table.stats-table th {
+    background: #f8f9fa !important;
+    padding: 6px 4px !important;
+    text-align: center !important;
+    font-weight: bold !important;
+    color: #495057 !important;
+    border: 1px solid #dee2e6 !important;
+    font-size: 0.8em !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+}
+
+table.stats-table td {
+    padding: 4px !important;
+    text-align: center !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+/* Player Name Column */
+td.player-name {
+    text-align: left !important;
+    font-weight: 500 !important;
+    padding-left: 8px !important;
+    min-width: 140px !important;
+    position: sticky !important;
+    left: 0 !important;
+    background: white !important;
+    z-index: 5 !important;
+}
+
+/* Position Row Styling */
+tr.position-row {
+    background: #e9ecef !important;
+}
+
+tr.position-row td {
+    background: #e9ecef !important;
+    font-weight: bold !important;
+    color: #495057 !important;
+}
+
+/* Total Row Styling */
+tr.total-row {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+}
+
+tr.total-row td {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+    font-weight: bold !important;
+    color: #1565c0 !important;
+}
+
+/* Position-based Row Colors */
+tr.qb-row { 
+    background: #ffebee !important; 
+}
+tr.qb-row td.player-name { 
+    background: #ffebee !important; 
+}
+
+tr.rb-row { 
+    background: #e8f5e8 !important; 
+}
+tr.rb-row td.player-name { 
+    background: #e8f5e8 !important; 
+}
+
+tr.rc-row { 
+    background: #e3f2fd !important; 
+}
+tr.rc-row td.player-name { 
+    background: #e3f2fd !important; 
+}
+
+tr.pk-row { 
+    background: #fff8e1 !important; 
+}
+tr.pk-row td.player-name { 
+    background: #fff8e1 !important; 
+}
+
+tr.du-row { 
+    background: #f3e5f5 !important; 
+}
+tr.du-row td.player-name { 
+    background: #f3e5f5 !important; 
+}
+
+/* Game Navigation */
+div.game-navigation {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    div.header {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+        text-align: center !important;
+    }
+    
+    div.vs {
+        order: -1 !important;
+    }
+    
+    div.team-name {
+        font-size: 1.1em !important;
+    }
+    
+    div.total-score {
+        font-size: 1.5em !important;
+    }
+    
+    table.summary-table {
+        font-size: 0.8em !important;
+    }
+    
+    table.summary-table th,
+    table.summary-table td {
+        padding: 4px !important;
+        font-size: 0.75em !important;
+    }
+}
+
+/* Scrollbar styling */
+div.stats-table-container::-webkit-scrollbar {
+    height: 8px !important;
+}
+
+div.stats-table-container::-webkit-scrollbar-track {
+    background: #f1f1f1 !important;
+    border-radius: 4px !important;
+}
+
+div.stats-table-container::-webkit-scrollbar-thumb {
+    background: #888 !important;
+    border-radius: 4px !important;
+}
+
+div.stats-table-container::-webkit-scrollbar-thumb:hover {
+    background: #555 !important;
+}
+
+/* Bootstrap override for buttons */
+.btn-outline-light {
+    color: white !important;
+    border-color: white !important;
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+}
+
+/* Ensure spinner is visible */
+.spinner-border {
+    width: 2rem !important;
+    height: 2rem !important;
+    border-width: 0.2em !important;
+}
+
+/* Print styles */
+@media print {
+    div.scoreboard-nav,
+    div.game-navigation {
+        display: none !important;
+    }
+    
+    div.stats-table-container {
+        overflow: visible !important;
+    }
+}

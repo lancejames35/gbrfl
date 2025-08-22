@@ -1,0 +1,101 @@
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-chat-dots"></i> Message Board</h2>
+                <a href="/message-board/create" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create New Discussion
+                </a>
+            </div>
+
+            <!-- Flash Messages -->
+            <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <%= success_msg %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <% } %>
+
+            <% if (typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <%= error_msg %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <% } %>
+
+            <!-- Chat Rooms List -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Active Discussions & Chat Rooms</h5>
+                </div>
+                <div class="card-body">
+                    <% if (chatRooms && chatRooms.length > 0) { %>
+                        <div class="list-group">
+                            <% chatRooms.forEach(function(room) { %>
+                                <a href="/message-board/chat/<%= room.room_id %>" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                <!-- Room Type Icon -->
+                                                <% if (room.room_type === 'draft') { %>
+                                                    <i class="bi bi-trophy text-warning"></i>
+                                                <% } else if (room.topic_type === 'Poll') { %>
+                                                    <i class="bi bi-bar-chart text-info"></i>
+                                                <% } else if (room.topic_type === 'Vote') { %>
+                                                    <i class="bi bi-check2-square text-success"></i>
+                                                <% } else if (room.topic_type === 'Announcement') { %>
+                                                    <i class="bi bi-megaphone text-danger"></i>
+                                                <% } else if (room.topic_type === 'Trade') { %>
+                                                    <i class="bi bi-arrow-left-right text-primary"></i>
+                                                <% } else { %>
+                                                    <i class="bi bi-chat-text text-secondary"></i>
+                                                <% } %>
+                                                <%= room.room_name %>
+                                                
+                                                <!-- Special Badge for Draft Room -->
+                                                <% if (room.room_type === 'draft') { %>
+                                                    <span class="badge bg-warning text-dark ms-2">Draft Room</span>
+                                                <% } else if (room.topic_type && room.topic_type !== 'Discussion') { %>
+                                                    <span class="badge bg-secondary ms-2"><%= room.topic_type %></span>
+                                                <% } %>
+                                            </h6>
+                                            
+                                            <p class="mb-1 text-muted">
+                                                Created by <%= room.first_name %> <%= room.last_name %>
+                                                <% if (room.topic_content) { %>
+                                                    <br><small><%= room.topic_content.substring(0, 100) %><%= room.topic_content.length > 100 ? '...' : '' %></small>
+                                                <% } %>
+                                            </p>
+                                        </div>
+                                        
+                                        <div class="text-end">
+                                            <small class="text-muted">
+                                                <i class="bi bi-chat"></i> 
+                                                <%= room.message_count || 0 %> message<%= (room.message_count || 0) !== 1 ? 's' : '' %>
+                                                <% if (room.last_message_at) { %>
+                                                    <br>
+                                                    <i class="bi bi-clock"></i>
+                                                    <%= new Date(room.last_message_at).toLocaleDateString() %>
+                                                <% } %>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </a>
+                            <% }); %>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center py-5">
+                            <i class="bi bi-chat-dots display-1 text-muted"></i>
+                            <h4 class="text-muted mt-3">No discussions yet</h4>
+                            <p class="text-muted">Be the first to start a conversation!</p>
+                            <a href="/message-board/create" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Create First Discussion
+                            </a>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

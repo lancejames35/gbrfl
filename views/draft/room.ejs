@@ -1,0 +1,2789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> | GBRFL</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        /* Draft-specific styles */
+        .draft-container { min-height: auto; }
+        
+        .player-preview { 
+            background: #f8f9fa; 
+            border: 2px solid #e9ecef; 
+            border-radius: 8px;
+            min-height: 80px;
+            max-width: 800px;
+            margin: 0 auto;
+            transition: all 0.3s ease;
+        }
+        
+        .player-preview.selected { background: #e3f2fd; border-color: #2196f3; }
+        .player-preview.user-turn { 
+            background: linear-gradient(135deg, #fff3e0 0%, #ffecb3 100%); 
+            border: 3px solid #ff9800; 
+            box-shadow: 0 0 15px rgba(255, 152, 0, 0.4);
+            animation: turnPulse 2s ease-in-out infinite;
+        }
+        @keyframes turnPulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 152, 0, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(255, 152, 0, 0.7); }
+        }
+        
+        /* Better table column widths */
+        .players-table th:nth-child(1) { width: 45%; } /* Player name */
+        .players-table th:nth-child(2) { width: 15%; } /* Position */
+        .players-table th:nth-child(3) { width: 25%; } /* NFL Team */
+        .players-table th:nth-child(4) { width: 15%; } /* Queue button */
+        
+        /* Left-align layout with natural spacing */
+        .draft-main-container { 
+            padding-top: 20px; 
+        }
+        
+        /* Remove container constraints - let it align left */
+        .container-fluid { 
+            padding-left: 15px; 
+            padding-right: 15px; 
+        }
+        .draft-sections { max-height: calc(100vh - 350px); overflow-y: auto; }
+        
+        /* Full height sections for better space usage */
+        .full-height-card { height: calc(100vh - 280px); }
+        .full-height-card .card-body { height: calc(100% - 60px); overflow-y: auto; }
+        .queue-item { cursor: move; background: #f8f9fa; margin-bottom: 5px; padding: 8px; border-radius: 4px; }
+        .queue-item:hover { background: #e9ecef; }
+        .drag-handle { opacity: 0.6; transition: opacity 0.2s; }
+        .queue-item:hover .drag-handle { opacity: 1; }
+        .pick-item { 
+            font-size: 0.875rem; 
+            display: flex;
+            align-items: stretch;
+            min-height: 40px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            overflow: hidden;
+            padding: 0;
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .pick-tab {
+            background-color: #0d6efd;
+            color: white;
+            width: 90px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border-radius: 0;
+            font-weight: bold;
+            font-size: 0.75em;
+            flex-shrink: 0;
+        }
+        .pick-content {
+            flex: 1;
+            padding: 4px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .pick-info-row {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+        .pick-team-name {
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .pick-player-info {
+            font-size: 0.85em;
+            color: #28a745;
+            font-weight: 600;
+        }
+        .pick-trade-info {
+            font-size: 0.75em;
+            color: #6c757d;
+            font-style: italic;
+        }
+        .pick-status-badge {
+            margin-left: auto;
+        }
+        .current-pick { border-color: #ffc107 !important; animation: pulse 2s infinite; }
+        .completed-pick { opacity: 1; }
+        .user-pick { border-color: #0dcaf0 !important; }
+        .pick-item.current-pick { 
+            background: #fff3cd; 
+            border: 1px solid #dee2e6;
+        }
+        .pick-item.completed-pick { 
+            background: #6c757d; 
+            border: 1px solid #495057;
+        }
+        .pick-item.user-pick { 
+            background: #cfe2ff !important; 
+            border: 1px solid #0d6efd !important;
+        }
+        .pick-item.upcoming-pick { 
+            background: #f8f9fa; 
+            border: 1px solid #dee2e6;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .sortable-ghost { opacity: 0.5; background: #e3f2fd; }
+        .sortable-chosen { transform: scale(1.02); }
+        .sortable-drag { opacity: 0.8; }
+        .drafted-player { opacity: 0.5; background-color: #f5f5f5; }
+        .keeper-player { background-color: #e8f5e9; }
+        .newly-drafted { background-color: #fff3e0; }
+        .pick-item.completed-pick { 
+            background: #dee2e6 !important; 
+            border: 1px solid #ced4da !important;
+        }
+        .chat-messages { max-height: 300px; overflow-y: auto; }
+        .chat-message { padding: 2px 0; border-bottom: 1px solid #eee; }
+        
+        /* ========== MOBILE RESPONSIVE BLOCK 1: MAIN LAYOUT ========== */
+        @media (max-width: 768px) {
+            .desktop-only { display: none; }
+            
+            /* Mobile container setup */
+            .draft-container {
+                position: relative;
+            }
+            
+            /* Player preview - sticks when scroll reaches bottom of blue header */
+            .player-preview {
+                position: sticky !important;
+                top: 10px !important; /* Small gap from top when stuck */
+                z-index: 100 !important;
+                margin-bottom: 8px !important;
+                border-radius: 8px !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+            }
+            
+            /* Ensure default background only when not in user-turn or selected state */
+            .player-preview:not(.user-turn):not(.selected) {
+                background: #f8f9fa !important;
+            }
+            
+            /* Mobile tabs - stick below player preview */
+            .mobile-only .nav-tabs {
+                position: sticky !important;
+                top: 120px !important; /* Player preview height + top offset + spacing */
+                z-index: 99 !important;
+                background: white !important;
+                margin: 0 !important;
+                border-bottom: 2px solid #dee2e6 !important;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            }
+            
+            /* Tab content areas - use remaining viewport height */
+            .mobile-only .tab-content {
+                height: calc(100vh - 200px) !important; /* Full height minus sticky elements */
+                overflow: hidden !important;
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+            }
+            
+            .mobile-only .tab-pane {
+                height: 100% !important;
+                overflow-y: auto !important;
+                padding: 1px !important; /* Reduced padding */
+                margin-top: 0 !important;
+            }
+            
+            /* Chat tab specific - ensure proper flex layout */
+            .mobile-only #chatTab .card-body {
+                display: flex !important;
+                flex-direction: column !important;
+                padding: 10px !important;
+            }
+            
+            .mobile-only #mobileChat {
+                flex: 1;
+                overflow-y: auto;
+                margin-bottom: 10px;
+                min-height: 120px;
+            }
+
+            /* Mobile Players Tab - Clean Spacing */
+            .mobile-only #playersTab .card.mb-3 {
+                margin-bottom: 8px;
+            }
+
+            .mobile-only #playersTab .card:not(.mb-3) {
+                flex: 1;
+                margin-bottom: 0;
+            }
+
+            .mobile-only #playersTab .card:not(.mb-3) .card-body {
+                max-height: calc(100vh - 280px);
+                overflow-y: auto;
+                padding: 0;
+            }
+            
+            /* Draft order tab - optimal scrolling */
+            .mobile-only #mobileDraftOrder {
+                max-height: none !important; /* Remove existing constraint */
+                height: 100% !important;
+                overflow-y: auto !important;
+            }
+            
+            /* Teams tab - roster scrolling */
+            .mobile-only #teamRoster {
+                height: 100% !important;
+                overflow-y: auto !important;
+            }
+            
+            /* Queue tab - optimal height */
+            .mobile-only #mobileQueue {
+                height: 100% !important;
+                overflow-y: auto !important;
+            }
+            
+            /* Draft board tab - horizontal scrolling */
+            .mobile-only #draftResults {
+                height: 100% !important;
+                overflow: auto !important;
+            }
+            
+            /* Ensure smooth scrolling on all mobile containers */
+            .mobile-only .tab-pane * {
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            /* Override external CSS conflicts */
+            .mobile-only .player-preview {
+                margin-top: 0 !important;
+            }
+            
+            .mobile-only .nav-tabs {
+                margin-top: 0 !important;
+                margin-bottom: 0 !important;
+            }
+            
+            /* Ensure proper container spacing */
+            .mobile-only .container-fluid {
+                padding-top: 0 !important;
+            }
+            
+            /* Draft board sticky headers (moved from Block 3) */
+            .mobile-only .draft-board {
+                position: relative;
+            }
+            
+            .mobile-only .draft-board thead th {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+                background: #f3f4f6;
+                border-bottom: 2px solid #d1d5db;
+            }
+            
+            .mobile-only .draft-board tbody td:first-child {
+                position: sticky;
+                left: 0;
+                z-index: 10;
+                background: #f3f4f6;
+                border-right: 2px solid #d1d5db;
+            }
+            
+            .mobile-only .draft-board thead th:first-child {
+                position: sticky;
+                left: 0;
+                z-index: 30;
+                background: #f3f4f6;
+                border-right: 2px solid #d1d5db;
+                border-bottom: 2px solid #d1d5db;
+            }
+        }
+        @media (min-width: 769px) {
+            .mobile-only { display: none; }
+        }
+
+        /* Draft Board Styles */
+        .draft-board-container {
+            overflow-x: auto;
+            max-height: calc(100vh - 200px);
+        }
+
+        .draft-board {
+            min-width: 800px;
+            border-collapse: separate;
+            border-spacing: 2px;
+        }
+
+        .draft-board thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #f3f4f6;
+        }
+
+        .draft-cell {
+            width: 120px;
+            height: 60px;
+            border: 2px solid #e5e7eb;
+            background: #f9fafb;
+            position: relative;
+            text-align: center;
+            vertical-align: middle;
+            transition: all 0.2s ease;
+        }
+
+        .draft-cell:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .draft-cell.current-pick {
+            border-color: #fbbf24;
+            background: #fef3c7;
+            animation: boardPulse 2s infinite;
+        }
+
+        .draft-cell.user-pick {
+            border-color: #3b82f6;
+            background: #dbeafe;
+        }
+
+        @keyframes boardPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .position-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            margin-bottom: 2px;
+            text-align: center;
+        }
+
+        .position-QB { background-color: #1e40af; }
+        .position-RB { background-color: #059669; }
+        .position-RC { background-color: #dc2626; }
+        .position-PK { background-color: #7c3aed; }
+        .position-DU { background-color: #374151; }
+
+        .player-name {
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-top: 2px;
+        }
+
+        /* Team Roster Styles */
+        .roster-header {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .position-group {
+            border-left: 3px solid #dee2e6;
+            padding-left: 15px;
+        }
+
+        .position-header {
+            border-bottom: 1px solid #f1f3f4;
+            padding-bottom: 5px;
+        }
+
+        .player-card {
+            transition: all 0.2s ease;
+            background: #f8f9fa;
+        }
+
+        .player-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .keeper-player {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-color: #6c757d !important;
+        }
+
+        .new-draft-pick {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 1px rgba(40, 167, 69, 0.2);
+        }
+
+        .roster-stats .badge {
+            font-size: 0.75em;
+        }
+
+        /* Position-specific group styling - match position badge colors */
+        .position-group:has(.position-QB) { border-left-color: #1e40af; } /* QB - Blue */
+        .position-group:has(.position-RB) { border-left-color: #059669; } /* RB - Green */
+        .position-group:has(.position-RC) { border-left-color: #dc2626; } /* RC - Red */
+        .position-group:has(.position-PK) { border-left-color: #7c3aed; } /* PK - Purple */
+        .position-group:has(.position-DU) { border-left-color: #374151; } /* DU - Gray */
+
+        /* Chat Styles */
+        #chatMessages, #mobileChat {
+            height: 300px;
+            overflow-y: auto;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .chat-message {
+            margin-bottom: 6px;
+        }
+
+        .chat-bubble {
+            word-wrap: break-word;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .chat-message.current-user .chat-bubble {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
+            border-color: #0056b3;
+        }
+
+        .chat-message.other-user .chat-bubble {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-color: #dee2e6;
+        }
+
+        .chat-author {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+
+        .chat-message.current-user .chat-author {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .chat-text {
+            line-height: 1.4;
+            font-size: 0.9em;
+        }
+
+        .chat-time {
+            opacity: 0.7;
+            font-size: 0.7em !important;
+        }
+
+        .chat-message.current-user .chat-time {
+            color: rgba(255,255,255,0.7) !important;
+        }
+
+        /* Chat input styling */
+        #chatInput {
+            border-radius: 20px;
+            border: 1px solid #dee2e6;
+            padding: 8px 15px;
+        }
+
+        #chatInput:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+        }
+
+        #sendChatBtn {
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        /* Scrollbar styling for chat */
+        #chatMessages::-webkit-scrollbar, #mobileChat::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #chatMessages::-webkit-scrollbar-track, #mobileChat::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        #chatMessages::-webkit-scrollbar-thumb, #mobileChat::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        #chatMessages::-webkit-scrollbar-thumb:hover, #mobileChat::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Chat empty state */
+        .chat-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c757d;
+        }
+
+        .pick-number {
+            font-size: 10px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .team-header {
+            background: #f3f4f6;
+            font-weight: bold;
+            padding: 8px;
+            border: 2px solid #d1d5db;
+            width: 100px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .round-header {
+            background: #f3f4f6;
+            font-weight: bold;
+            padding: 8px;
+            border: 2px solid #d1d5db;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* Mobile Tab Improvements */
+        #mobileTabs {
+            background: white !important;
+            border-radius: 0 !important;
+        }
+
+        #mobileTabs .nav-link {
+            padding: 12px 4px !important;
+            text-align: center;
+            border: none;
+            border-bottom: 3px solid transparent;
+            background: none;
+            transition: all 0.2s ease;
+            font-size: 0.75rem;
+            line-height: 1.2;
+            min-height: 65px;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+
+        #mobileTabs .nav-link:hover {
+            border-bottom-color: #007bff;
+            background: rgba(0, 123, 255, 0.05);
+        }
+
+        #mobileTabs .nav-link.active {
+            border-bottom-color: #007bff;
+            background: rgba(0, 123, 255, 0.1);
+            color: #007bff;
+            font-weight: 600;
+        }
+
+        #mobileTabs .nav-link i {
+            font-size: 1.1rem;
+            margin-bottom: 2px;
+        }
+
+        #mobileTabs .tab-label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #mobileTabs .nav-link.active .tab-label {
+            font-weight: 600;
+        }
+
+        /* Make tabs more touch-friendly */
+        @media (max-width: 480px) {
+            #mobileTabs .nav-link {
+                padding: 10px 2px;
+                min-height: 60px;
+            }
+            
+            #mobileTabs .tab-label {
+                font-size: 0.65rem;
+            }
+        }
+
+        /* Custom Filter Toggle (No Bootstrap Conflicts) */
+        .filter-toggle-header {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .filter-toggle-header:hover {
+            background-color: #f8f9fa;
+        }
+
+        .filter-chevron {
+            transition: transform 0.3s ease;
+        }
+
+        .filter-chevron.rotated {
+            transform: rotate(180deg);
+        }
+
+        .filter-content.hidden {
+            display: none;
+        }
+        
+    </style>
+</head>
+<body data-user-team-id="<%= userTeam.team_id %>" data-user-id="<%= user.id %>">
+    <div class="draft-container">
+        <!-- Draft Header -->
+        <div class="bg-primary text-white p-3">
+            <div class="container-fluid">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h4 class="mb-0">
+                            <i class="bi bi-trophy"></i> GBRFL Draft Room
+                        </h4>
+                        <small>Team: <%= userTeam.team_name %></small>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <% if (user.isAdmin || (typeof originalAdmin !== 'undefined' && originalAdmin)) { %>
+                            <div id="adminControls" class="mb-2">
+                                <% if (typeof originalAdmin !== 'undefined' && originalAdmin) { %>
+                                    <!-- Currently impersonating -->
+                                    <div class="alert alert-warning alert-sm d-inline-block py-1 px-2 me-2">
+                                        <small><i class="bi bi-person-fill-gear"></i> Viewing as: <strong><%= user.firstName %> <%= user.lastName %></strong></small>
+                                    </div>
+                                    <button class="btn btn-outline-light btn-sm" onclick="switchBackToAdmin()">
+                                        <i class="bi bi-arrow-left"></i> Switch Back
+                                    </button>
+                                <% } else { %>
+                                    <!-- Admin controls -->
+                                    <div class="dropdown d-inline-block me-2">
+                                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-person-gear"></i> Switch User
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <% allTeams.forEach(team => { %>
+                                                <li><a class="dropdown-item" href="#" 
+                                                       data-user-id="<%= team.user_id %>" 
+                                                       data-team-name="<%= team.team_name %>"
+                                                       onclick="switchToUserSafe(this)">
+                                                    <%= team.team_name %>
+                                                </a></li>
+                                            <% }); %>
+                                        </ul>
+                                    </div>
+                                    <button class="btn btn-outline-warning btn-sm me-2" onclick="undoLastPick()" title="Undo Last Pick">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Undo Pick
+                                    </button>
+                                <% } %>
+                            </div>
+                        <% } %>
+                        
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#soundSettingsModal" title="Sound Settings">
+                                <i class="bi bi-volume-up"></i>
+                            </button>
+                            <div>
+                                <% if (draftStatus.is_active) { %>
+                                    <span class="badge bg-success">Draft Active</span>
+                                    <small class="ms-2">Round <%= draftStatus.current_round %>, Pick <%= draftStatus.current_pick %></small>
+                                <% } else { %>
+                                    <span class="badge bg-secondary">Draft Not Started</span>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio elements for sound notifications -->
+        <audio id="draftTurnSound" preload="auto">
+            <source src="/sounds/draft-horn.mp3" type="audio/mpeg">
+        </audio>
+
+        <!-- Sound Controls Modal -->
+        <div class="modal fade" id="soundSettingsModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Sound Settings</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">Draft Turn Alert</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enableDraftSound" checked>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <small class="text-muted">Volume</small>
+                                <input type="range" class="form-range flex-grow-1" id="draftSoundVolume" min="0" max="100" value="75">
+                                <button class="btn btn-outline-primary btn-sm" onclick="testDraftSound()">Test</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0">Chat Message Alert</label>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="enableChatSound" checked>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <small class="text-muted">Volume</small>
+                                <input type="range" class="form-range flex-grow-1" id="chatSoundVolume" min="0" max="100" value="50">
+                                <button class="btn btn-outline-primary btn-sm" onclick="testChatSound()">Test</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container-fluid draft-main-container">
+            <div class="row">
+                <!-- Left Column - Draft Order Only -->
+                <div class="col-lg-3 desktop-only">
+                    <div class="card" style="height: calc(100vh - 150px);">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-list-ol"></i> Draft Order
+                                </h6>
+                                <select class="form-select form-select-sm" id="roundFilter" style="width: auto;">
+                                    <option value="">All Rounds</option>
+                                    <option value="1">Round 1</option>
+                                    <option value="2">Round 2</option>
+                                    <option value="3">Round 3</option>
+                                    <option value="4">Round 4</option>
+                                    <option value="5">Round 5</option>
+                                    <option value="6">Round 6</option>
+                                    <option value="7">Round 7</option>
+                                    <option value="8">Round 8</option>
+                                    <option value="9">Round 9</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body p-0" style="height: calc(100% - 60px); overflow-y: auto;">
+                            <div id="draftOrder">
+                                <!-- Draft order loaded via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center Column - Player Preview + Player List -->
+                <div class="col-lg-6">
+                    <!-- Player Preview Area -->
+                    <div class="player-preview rounded p-3 mb-3" id="playerPreview" style="max-width: none; margin: 0;">
+                        <div class="text-center text-muted" id="previewPlaceholder">
+                            <i class="bi bi-person-plus fs-1"></i>
+                            <p class="mb-0">Select a player to preview</p>
+                        </div>
+                        <div class="d-none" id="previewContent">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h5 class="mb-1" id="previewName"></h5>
+                                    <p class="mb-0 text-muted">
+                                        <span id="previewPosition"></span> - <span id="previewTeam"></span>
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <button class="btn btn-success btn-lg d-none" id="draftButton">
+                                        <i class="bi bi-plus-circle"></i> Draft Player
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Tab Navigation -->
+                    <div class="mobile-only mb-3">
+                        <ul class="nav nav-tabs nav-fill" id="mobileTabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#playersTab">
+                                    <i class="bi bi-people d-block"></i>
+                                    <span class="tab-label">Players</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#draftOrderTab">
+                                    <i class="bi bi-list-ol d-block"></i>
+                                    <span class="tab-label">Draft Order</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#draftBoardTab">
+                                    <i class="bi bi-grid-3x3 d-block"></i>
+                                    <span class="tab-label">Draft Board</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#queueTab">
+                                    <i class="bi bi-list-check d-block"></i>
+                                    <span class="tab-label">Queue</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#teamsTab">
+                                    <i class="bi bi-trophy d-block"></i>
+                                    <span class="tab-label">Teams</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#chatTab">
+                                    <i class="bi bi-chat-dots d-block"></i>
+                                    <span class="tab-label">Chat</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Desktop Tab Navigation -->
+                    <div class="desktop-only mb-3">
+                        <ul class="nav nav-tabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#playersTabDesktop">Players</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#draftBoardTabDesktop">Draft Board</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#teamsTabDesktop">Teams</a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="desktop-only">
+                        <div class="tab-content">
+                            <!-- Players Tab -->
+                            <div class="tab-pane fade show active" id="playersTabDesktop">
+                                <!-- Player Filters -->
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Filter Players</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <select class="form-select form-select-sm" id="positionFilter">
+                                                    <option value="">All Positions</option>
+                                                    <option value="QB">QB</option>
+                                                    <option value="RB">RB</option>
+                                                    <option value="RC">RC</option>
+                                                    <option value="PK">PK</option>
+                                                    <option value="DU">DU</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <select class="form-select form-select-sm" id="teamFilter">
+                                                    <option value="">All NFL Teams</option>
+                                                    <% nflTeams.forEach(team => { %>
+                                                        <option value="<%= team.nfl_team_id %>"><%= team.team_name %></option>
+                                                    <% }); %>
+                                                    <option value="null">Free Agent</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" class="form-control form-control-sm" id="searchFilter" placeholder="Search players...">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="showDraftedFilter">
+                                                        <label class="form-check-label small" for="showDraftedFilter">
+                                                            Show Drafted
+                                                        </label>
+                                                    </div>
+                                                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="resetFilters()" title="Reset all filters">
+                                                        <i class="bi bi-arrow-clockwise"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Players List -->
+                                <div class="card" style="height: calc(100vh - 460px);">
+                                    <div class="card-body p-0" style="height: 100%; overflow-y: auto;">
+                                        <table class="table table-sm table-hover mb-0 players-table">
+                                            <thead class="sticky-top bg-light">
+                                                <tr>
+                                                    <th>Player</th>
+                                                    <th>Pos</th>
+                                                    <th>NFL Team</th>
+                                                    <th width="50">Queue</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="playersTableBody">
+                                                <!-- Players loaded via JavaScript -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Draft Board Tab -->
+                            <div class="tab-pane fade" id="draftBoardTabDesktop">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Draft Results</h6>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <input type="radio" class="btn-check" name="draftView" id="pickOrderView" autocomplete="off" checked>
+                                            <label class="btn btn-outline-primary" for="pickOrderView">Pick Grid</label>
+                                            
+                                            <input type="radio" class="btn-check" name="draftView" id="teamGridView" autocomplete="off">
+                                            <label class="btn btn-outline-primary" for="teamGridView">Team Grid</label>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="draftResultsDesktop">
+                                            <!-- Draft results loaded via JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Teams Tab -->
+                            <div class="tab-pane fade" id="teamsTabDesktop">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Team Rosters</h6>
+                                        <select class="form-select form-select-sm" id="teamSelector" style="width: auto;">
+                                            <% allTeams.forEach(team => { %>
+                                                <option value="<%= team.team_id %>" <%= team.team_id === userTeam.team_id ? 'selected' : '' %>>
+                                                    <%= team.team_name %>
+                                                </option>
+                                            <% }); %>
+                                        </select>
+                                    </div>
+                                    <div class="card-body" style="height: calc(100vh - 395px); overflow-y: auto;">
+                                        <div id="teamRosterDesktop">
+                                            <!-- Team roster loaded via JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Tab Content -->
+                    <div class="mobile-only">
+                        <div class="tab-content">
+                            <!-- Players Tab -->
+                            <div class="tab-pane fade show active" id="playersTab">
+                                <!-- Player Filters -->
+                                <div class="card mb-3">
+                                    <div class="card-header filter-toggle-header" onclick="toggleMobileFilters()">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">
+                                                <i class="bi bi-funnel me-1"></i>
+                                                Filter Players
+                                            </h6>
+                                            <i class="bi bi-chevron-down filter-chevron rotated" id="mobileFilterChevron"></i>
+                                        </div>
+                                    </div>
+                                    <div class="card-body filter-content hidden" id="mobileFilterContent">
+                                        <div class="row g-3">
+                                            <div class="col-md-3">
+                                                <select class="form-select form-select-sm" id="positionFilterMobile">
+                                                    <option value="">All Positions</option>
+                                                    <option value="QB">QB</option>
+                                                    <option value="RB">RB</option>
+                                                    <option value="RC">RC</option>
+                                                    <option value="PK">PK</option>
+                                                    <option value="DU">DU</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <select class="form-select form-select-sm" id="teamFilterMobile">
+                                                    <option value="">All NFL Teams</option>
+                                                    <% nflTeams.forEach(team => { %>
+                                                        <option value="<%= team.nfl_team_id %>"><%= team.team_name %></option>
+                                                    <% }); %>
+                                                    <option value="null">Free Agent</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" class="form-control form-control-sm" id="searchFilterMobile" placeholder="Search players...">
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="showDraftedFilterMobile">
+                                                        <label class="form-check-label small" for="showDraftedFilterMobile">
+                                                            Show Drafted
+                                                        </label>
+                                                    </div>
+                                                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="resetFilters()" title="Reset all filters">
+                                                        <i class="bi bi-arrow-clockwise"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Players List -->
+                                <div class="card">
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-hover mb-0">
+                                                <thead class="sticky-top bg-light">
+                                                    <tr>
+                                                        <th>Player</th>
+                                                        <th>Pos</th>
+                                                        <th>NFL Team</th>
+                                                        <th width="50">Queue</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="playersTableBodyMobile">
+                                                    <!-- Players loaded via JavaScript -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Other mobile tabs... -->
+                            <div class="tab-pane fade" id="draftBoardTab">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">Draft Results</h6>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <input type="radio" class="btn-check" name="draftViewMobile" id="pickOrderViewMobile" autocomplete="off" checked>
+                                                <label class="btn btn-outline-primary" for="pickOrderViewMobile">Pick</label>
+                                                
+                                                <input type="radio" class="btn-check" name="draftViewMobile" id="teamGridViewMobile" autocomplete="off">
+                                                <label class="btn btn-outline-primary" for="teamGridViewMobile">Team</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0" style="max-height: calc(100vh - 280px); overflow: auto;">
+                                        <div id="draftResults">
+                                            <!-- Draft results loaded via JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="teamsTab">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0">Team Rosters</h6>
+                                        <select class="form-select form-select-sm" id="teamSelectorMobile" style="width: auto;">
+                                            <% allTeams.forEach(team => { %>
+                                                <option value="<%= team.team_id %>" <%= team.team_id === userTeam.team_id ? 'selected' : '' %>>
+                                                    <%= team.team_name %>
+                                                </option>
+                                            <% }); %>
+                                        </select>
+                                    </div>
+                                    <div class="card-body p-0" style="max-height: calc(100vh - 280px); overflow-y: auto;">
+                                        <div id="teamRoster" style="padding: 8px;">
+                                            <!-- Team roster loaded via JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="queueTab">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">My Queue</h6>
+                                    </div>
+                                    <div class="card-body p-0" style="max-height: calc(100vh - 280px); overflow-y: auto;">
+                                        <div id="mobileQueue" style="padding: 8px;">
+                                            <!-- Queue items loaded via JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="draftOrderTab">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0">Draft Order</h6>
+                                            <select class="form-select form-select-sm" id="roundFilterMobile" style="width: auto;">
+                                                <option value="">All Rounds</option>
+                                                <option value="1">Round 1</option>
+                                                <option value="2">Round 2</option>
+                                                <option value="3">Round 3</option>
+                                                <option value="4">Round 4</option>
+                                                <option value="5">Round 5</option>
+                                                <option value="6">Round 6</option>
+                                                <option value="7">Round 7</option>
+                                                <option value="8">Round 8</option>
+                                                <option value="9">Round 9</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0" style="max-height: calc(100vh - 280px); overflow-y: auto;">
+                                        <div id="mobileDraftOrder">
+                                            <!-- Draft order loaded via JavaScript -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tab-pane fade" id="chatTab">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">Draft Chat</h6>
+                                    </div>
+                                    <div class="card-body p-0" style="display: flex; flex-direction: column;">
+                                        <div id="mobileChat" style="flex: 1; overflow-y: auto; margin: 8px 8px 8px 8px; min-height: 200px;">
+                                            <!-- Chat loaded via JavaScript -->
+                                        </div>
+                                        <div class="input-group input-group-sm" style="margin: 0 8px 8px 8px;">
+                                            <input type="text" class="form-control" id="mobileChatInput" placeholder="Type a message...">
+                                            <button class="btn btn-primary" type="button" id="mobileSendChatBtn">
+                                                <i class="bi bi-send"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Queue + Chat -->
+                <div class="col-lg-3 desktop-only">
+                    <!-- Queue Section -->
+                    <div class="card mb-3" style="height: calc(50vh - 70px);">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="bi bi-list-check"></i> My Queue
+                            </h6>
+                            <small class="text-muted" id="queueCount">0 players</small>
+                        </div>
+                        <div class="card-body p-2" style="height: calc(100% - 60px); overflow-y: auto;">
+                            <div id="queueList">
+                                <div class="text-center text-muted py-3">
+                                    <i class="bi bi-plus-circle"></i>
+                                    <br><small>Add players to your queue</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Section -->
+                    <div class="card" style="height: calc(50vh - 95px);">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-chat-dots"></i> Draft Chat
+                            </h6>
+                        </div>
+                        <div class="card-body p-2" style="height: calc(100% - 60px); display: flex; flex-direction: column;">
+                            <div id="chatMessages" style="flex: 1; overflow-y: auto; margin-bottom: 10px;">
+                                <!-- Chat messages loaded via JavaScript -->
+                            </div>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="chatInput" placeholder="Type a message...">
+                                <button class="btn btn-primary" type="button" id="sendChatBtn">
+                                    <i class="bi bi-send"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Draft Confirmation Modal -->
+    <div class="modal fade" id="draftConfirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Draft Pick</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-person-check fs-1 text-success"></i>
+                    </div>
+                    <h5 id="confirmPlayerName"></h5>
+                    <p class="text-muted mb-0">
+                        <span id="confirmPosition"></span> - <span id="confirmTeam"></span>
+                    </p>
+                    <div class="alert alert-info mt-3">
+                        Are you sure you want to draft this player?
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmDraftBtn">
+                        <i class="bi bi-check-circle"></i> Confirm Draft
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Global variables
+        let selectedPlayer = null;
+        let currentUserTeamId = parseInt(document.body.dataset.userTeamId);
+        let currentUserId = parseInt(document.body.dataset.userId);
+        let isUserTurn = false;
+
+        // Helper functions
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+
+        // Element selection helper for desktop/mobile pairs
+        function getActiveElement(desktopId, mobileId) {
+            const desktop = document.getElementById(desktopId);
+            const mobile = document.getElementById(mobileId);
+            return isMobile() ? mobile : desktop;
+        }
+
+        // Initialize draft room
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDraftRoom();
+            loadPlayers();
+            loadDraftOrder();
+            loadTeamRoster();
+            loadQueue();
+            loadDraftBoard();
+            loadChatMessages();
+            setupEventListeners();
+            initializeSounds();
+            
+            // Set initial player list height since filter starts collapsed
+            const playerTableContainer = document.querySelector('.mobile-only #playersTab .table-responsive');
+            if (playerTableContainer) {
+                playerTableContainer.style.maxHeight = '600px';
+            }
+            
+            // Adjust chat height on window resize
+            window.addEventListener('resize', debounce(adjustMobileChatHeight, 100));
+
+            // Initial chat height adjustment for mobile
+            if (isMobile()) {
+                adjustMobileChatHeight();
+            }
+        });
+
+        function initializeDraftRoom() {
+            // Initialize Socket.io connection to draft namespace
+            const socket = io('/draft');
+            
+            socket.on('connect', () => {
+            });
+            
+            socket.on('disconnect', () => {
+            });
+            
+            // Listen for draft pick events from other users
+            socket.on('playerDrafted', (data) => {
+                handlePlayerDrafted(data);
+            });
+            
+            // Listen for chat messages from other users
+            socket.on('chatMessage', (message) => {
+                addChatMessage(message);
+            });
+            
+            // Store socket globally for other functions
+            window.draftSocket = socket;
+
+            // Listen for pick undo events
+            socket.on('pickUndone', (data) => {
+                handlePickUndone(data);
+            });
+        }
+
+        function handlePlayerDrafted(data) {
+            // Show notification
+            showDraftNotification(data);
+            
+            // Update player lists (remove drafted player)
+            loadPlayers();
+            
+            // Update draft order (advance to next pick)
+            loadDraftOrder();
+            
+            // Update queue (remove drafted player if in anyone's queue)
+            loadQueue();
+            
+            // Update team roster if on teams tab
+            loadTeamRoster();
+
+            // Update draft board
+            loadDraftBoard();
+        }
+
+        function handlePickUndone(data) {
+            // Show notification
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            
+            notification.innerHTML = `
+                <strong>Pick Undone!</strong><br>
+                <small>Removed pick #${data.overallPick}: ${data.undonePlayer.display_name} (${data.undonePlayer.position}) from ${data.teamName}</small>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+            
+            // Refresh all displays
+            loadPlayers();
+            loadDraftOrder();
+            loadTeamRoster();
+            loadQueue();
+            loadDraftBoard();
+        }
+
+        function showDraftNotification(data) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            
+            notification.innerHTML = `
+                <strong>Pick Made!</strong><br>
+                <small>${data.teamName} selected ${data.player.display_name} (${data.player.position})</small>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Add to page
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Mobile scroll limit to keep sticky elements visible
+        (function setupMobileScrollLimit() {
+            if (window.innerWidth > 768) return;
+            
+            const maxScrollTop = 140;
+            let ticking = false;
+            
+            function limitScroll() {
+                if (window.scrollY > maxScrollTop) {
+                    window.scrollTo(0, maxScrollTop);
+                }
+                ticking = false;
+            }
+            
+            window.addEventListener('scroll', function() {
+                if (!ticking) {
+                    requestAnimationFrame(limitScroll);
+                    ticking = true;
+                }
+            }, { passive: true });
+        })();
+
+        function adjustMobileChatHeight() {
+            if (!isMobile()) return;
+            
+            const chatCardBody = document.querySelector('#chatTab .card-body');
+            const mobileTabs = document.getElementById('mobileTabs');
+            const inputGroup = document.querySelector('#chatTab .input-group');
+            
+            if (!chatCardBody || !mobileTabs || !inputGroup) return;
+            
+            // Get the bottom position of the mobile tabs
+            const tabsRect = mobileTabs.getBoundingClientRect();
+            const tabsBottom = tabsRect.bottom;
+            
+            // Get the height of the input section
+            const inputHeight = inputGroup.offsetHeight + 16; // +16 for margins
+            
+            // Calculate available height with generous buffer for all padding/margins/borders
+            const availableHeight = window.innerHeight - tabsBottom - inputHeight - 100; 
+            
+            // Set the chat messages container height specifically
+            const chatContainer = document.getElementById('mobileChat');
+            if (chatContainer) {
+                chatContainer.style.height = `${Math.max(100, availableHeight)}px`; // Minimum 100px
+                chatContainer.style.maxHeight = `${Math.max(100, availableHeight)}px`;
+            }
+        }
+
+        function setupEventListeners() {
+            // Helper function to safely add event listeners
+            function safeAddListener(id, event, handler) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener(event, handler);
+                }
+            }
+
+            // Desktop filter changes
+            safeAddListener('positionFilter', 'change', loadPlayers);
+            safeAddListener('teamFilter', 'change', loadPlayers);
+            safeAddListener('showDraftedFilter', 'change', loadPlayers);
+            safeAddListener('searchFilter', 'input', debounce(loadPlayers, 300));
+            
+            // Mobile filter changes
+            safeAddListener('positionFilterMobile', 'change', loadPlayers);
+            safeAddListener('teamFilterMobile', 'change', loadPlayers);
+            safeAddListener('showDraftedFilterMobile', 'change', loadPlayers);
+            safeAddListener('searchFilterMobile', 'input', debounce(loadPlayers, 300));
+            
+            // Draft button
+            safeAddListener('draftButton', 'click', showDraftConfirmation);
+            safeAddListener('confirmDraftBtn', 'click', confirmDraft);
+            
+            // Team selector
+            safeAddListener('teamSelector', 'change', loadTeamRoster);
+            safeAddListener('teamSelectorMobile', 'change', loadTeamRoster);
+                        
+            // Chat - Desktop
+            safeAddListener('sendChatBtn', 'click', sendChatMessage);
+            safeAddListener('chatInput', 'keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendChatMessage();
+                }
+            });
+            
+            // Chat - Mobile
+            safeAddListener('mobileSendChatBtn', 'click', sendChatMessage);
+            safeAddListener('mobileChatInput', 'keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendChatMessage();
+                }
+            });
+
+            // Round filter
+            safeAddListener('roundFilter', 'change', loadDraftOrder);
+            safeAddListener('roundFilterMobile', 'change', loadDraftOrder);
+
+            // Draft board view toggle
+            safeAddListener('pickOrderView', 'change', loadDraftBoard);
+            safeAddListener('teamGridView', 'change', loadDraftBoard);
+            safeAddListener('pickOrderViewMobile', 'change', loadDraftBoard);
+            safeAddListener('teamGridViewMobile', 'change', loadDraftBoard);
+
+            // Mobile tab switches - scroll when tabs become active
+            document.querySelectorAll('#mobileTabs a[data-bs-toggle="tab"]').forEach(tab => {
+                tab.addEventListener('shown.bs.tab', function(e) {
+                    if (e.target.getAttribute('href') === '#chatTab') {
+                        // Chat tab activated - resize and scroll to bottom
+                        setTimeout(() => {
+                            adjustMobileChatHeight();
+                            const mobileContainer = document.getElementById('mobileChat');
+                            scrollChatToBottom(mobileContainer);
+                        }, 150);
+                    } else if (e.target.getAttribute('href') === '#draftOrderTab') {
+                        // Order tab activated - scroll to current pick
+                        setTimeout(() => {
+                            const mobileDraftOrderContainer = document.getElementById('mobileDraftOrder');
+                            if (mobileDraftOrderContainer) {
+                                const currentPickElement = mobileDraftOrderContainer.querySelector('.current-pick');
+                                if (currentPickElement) {
+                                    const elementTop = currentPickElement.offsetTop;
+                                    const targetScrollTop = Math.max(0, elementTop - 60);
+                                    
+                                    // Scroll the parent card-body (the actual scrollable container)
+                                    const cardBody = mobileDraftOrderContainer.closest('.card-body');
+                                    if (cardBody) {
+                                        cardBody.scrollTo({
+                                            top: targetScrollTop,
+                                            behavior: 'smooth'
+                                        });
+                                    }
+                                }
+                            }
+                        }, 300);
+                    }
+                });
+            });
+        }
+
+        // Player loading and filtering
+        function loadPlayers() {
+            function getFilterValue(desktopId, mobileId, property = 'value') {
+                const desktop = document.getElementById(desktopId);
+                const mobile = document.getElementById(mobileId);
+                const active = isMobile() ? mobile : desktop;
+                if (!active) return property === 'checked' ? false : '';
+                return property === 'checked' ? active.checked : active.value;
+            }
+                
+            const params = new URLSearchParams({
+                position: getFilterValue('positionFilter', 'positionFilterMobile'),
+                team: getFilterValue('teamFilter', 'teamFilterMobile'),
+                search: getFilterValue('searchFilter', 'searchFilterMobile'),
+                showDrafted: getFilterValue('showDraftedFilter', 'showDraftedFilterMobile', 'checked')
+            });
+
+            fetch(`/draft/api/players?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayPlayers(data.players);
+                    }
+                })
+                .catch(error => console.error('Error loading players:', error));
+        }
+
+        function displayPlayers(players) {
+            function createPlayerRow(player) {
+                const playerJson = JSON.stringify(player).replace(/"/g, '&quot;');
+                return `
+                    <tr class="${player.is_drafted ? 'drafted-player' : ''}" style="cursor: pointer" onclick="selectPlayer(${playerJson})">
+                        <td>
+                            ${player.display_name}
+                            ${player.is_rookie ? '<span class="badge bg-warning text-dark">R</span>' : ''}
+                        </td>
+                        <td>${player.position}</td>
+                        <td>${player.team_code || 'FA'}</td>
+                        <td>
+                            ${!player.is_drafted ? `<button class="btn btn-outline-primary btn-sm" onclick="addToQueue(${player.player_id}, event)"><i class="bi bi-plus"></i></button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }
+
+            const playersHTML = players.map(createPlayerRow).join('');
+            
+            const desktopTbody = document.getElementById('playersTableBody');
+            const mobileTbody = document.getElementById('playersTableBodyMobile');
+            
+            if (desktopTbody) desktopTbody.innerHTML = playersHTML;
+            if (mobileTbody) mobileTbody.innerHTML = playersHTML;
+        }
+
+        // Player selection
+        function selectPlayer(player) {
+            selectedPlayer = player;
+            updatePlayerPreview();
+        }
+
+    function updatePlayerPreview() {
+        const placeholder = document.getElementById('previewPlaceholder');
+        const content = document.getElementById('previewContent');
+        const draftButton = document.getElementById('draftButton');
+        const preview = document.getElementById('playerPreview');
+
+        // Always apply turn styling if it's user's turn, regardless of selection
+        if (isUserTurn) {
+            preview.classList.add('user-turn');
+        } else {
+            preview.classList.remove('user-turn');
+        }
+
+        if (selectedPlayer) {
+            placeholder.classList.add('d-none');
+            content.classList.remove('d-none');
+            
+            document.getElementById('previewName').textContent = selectedPlayer.display_name;
+            document.getElementById('previewPosition').textContent = selectedPlayer.position;
+            document.getElementById('previewTeam').textContent = selectedPlayer.team_code || 'Free Agent';
+
+            // Show draft button if it's user's turn and player is available
+            if (isUserTurn && !selectedPlayer.is_drafted) {
+                draftButton.classList.remove('d-none');
+            } else {
+                draftButton.classList.add('d-none');
+            }
+
+            preview.classList.add('selected');
+        } else {
+            placeholder.classList.remove('d-none');
+            content.classList.add('d-none');
+            draftButton.classList.add('d-none');
+            preview.classList.remove('selected');
+        }
+    }
+
+        // Queue management
+        function addToQueue(playerId, event) {
+            event.stopPropagation();
+            
+            fetch('/draft/api/queue/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadQueue();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => console.error('Error adding to queue:', error));
+        }
+
+        function loadQueue() {
+            // Get user's current queue from server
+            fetch(`/draft/api/queue`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayQueue(data.queue);
+                        updateQueueCount(data.queue.length);
+                    } else {
+                        console.error('Error loading queue:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading queue:', error);
+                });
+        }
+
+        function displayQueue(queueItems) {
+            const queueList = document.getElementById('queueList');
+            const mobileQueue = document.getElementById('mobileQueue');
+            
+            if (queueItems.length === 0) {
+                // Show empty state
+                const emptyHTML = `
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-plus-circle"></i>
+                        <br><small>Add players to your queue</small>
+                    </div>
+                `;
+                if (queueList) queueList.innerHTML = emptyHTML;
+                if (mobileQueue) mobileQueue.innerHTML = emptyHTML;
+                return;
+            }
+
+            // Display queue items with drag handles
+            const queueHTML = queueItems.map((item, index) => `
+                <div class="queue-item" data-player-id="${item.player_id}" onclick="selectPlayerFromQueue(${item.player_id}, '${item.display_name}', '${item.position}', '${item.team_code || 'FA'}')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="drag-handle me-2" style="cursor: grab;">
+                                <i class="bi bi-grip-vertical text-muted"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">${item.display_name}</div>
+                                <small class="text-muted">${item.position} - ${item.team_code || 'FA'}</small>
+                            </div>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline-danger btn-sm" onclick="removeFromQueue(${item.player_id}, event)" title="Remove from queue">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            if (queueList) {
+                queueList.innerHTML = queueHTML;
+                initializeSortable(queueList);
+            }
+            if (mobileQueue) {
+                mobileQueue.innerHTML = queueHTML;
+                initializeSortable(mobileQueue);
+            }
+        }
+
+        function initializeSortable(container) {
+            // Destroy existing sortable if it exists
+            if (container.sortableInstance) {
+                container.sortableInstance.destroy();
+            }
+
+            // Initialize new sortable
+            container.sortableInstance = new Sortable(container, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                handle: '.drag-handle',
+                onEnd: function(evt) {
+                    // Get new order of player IDs
+                    const playerIds = Array.from(container.children).map(item => 
+                        item.getAttribute('data-player-id')
+                    );
+                    
+                    // Update server with new order
+                    updateQueueOrder(playerIds);
+                }
+            });
+        }
+
+        function updateQueueOrder(playerIds) {
+            fetch('/draft/api/queue/reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerIds: playerIds })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    console.error('Error reordering queue:', data.message);
+                    // Reload queue to reset order on error
+                    loadQueue();
+                }
+            })
+            .catch(error => {
+                console.error('Error reordering queue:', error);
+                loadQueue();
+            });
+        }
+
+        function updateQueueCount(count) {
+            const queueCountElement = document.getElementById('queueCount');
+            if (queueCountElement) {
+                queueCountElement.textContent = `${count} player${count !== 1 ? 's' : ''}`;
+            }
+        }
+
+        function selectPlayerFromQueue(playerId, displayName, position, teamCode) {
+            // Create player object from queue data
+            selectedPlayer = {
+                player_id: playerId,
+                display_name: displayName,
+                position: position,
+                team_code: teamCode === 'FA' ? null : teamCode,
+                is_drafted: false
+            };
+            updatePlayerPreview();
+        }
+
+        function removeFromQueue(playerId, event) {
+            event.stopPropagation(); // Prevent selecting the player
+            
+            fetch('/draft/api/queue/remove', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadQueue(); // Refresh the queue display
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => console.error('Error removing from queue:', error));
+        }
+
+        // Draft functionality
+        function showDraftConfirmation() {
+            if (!selectedPlayer) return;
+
+            document.getElementById('confirmPlayerName').textContent = selectedPlayer.display_name;
+            document.getElementById('confirmPosition').textContent = selectedPlayer.position;
+            document.getElementById('confirmTeam').textContent = selectedPlayer.team_code || 'Free Agent';
+
+            new bootstrap.Modal(document.getElementById('draftConfirmModal')).show();
+        }
+
+        function confirmDraft() {
+            if (!selectedPlayer) return;
+
+            fetch('/draft/api/pick', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ playerId: selectedPlayer.player_id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('draftConfirmModal')).hide();
+                    // Refresh data after successful pick
+                    loadPlayers();
+                    loadDraftOrder();
+                    loadTeamRoster();
+                    selectedPlayer = null;
+                    updatePlayerPreview();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => console.error('Error making pick:', error));
+        }
+
+        function loadDraftOrder() {
+            fetch('/draft/api/draft-order')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayDraftOrder(data.draftOrder, data.draftStatus);
+                    } else {
+                        console.error('Error loading draft order:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading draft order:', error);
+                });
+        }
+
+        function displayDraftOrder(draftOrder, draftStatus) {
+            const draftOrderContainer = document.getElementById('draftOrder');
+            if (!draftOrderContainer) return;
+
+            // Get round filter value
+            const roundFilterElement = isMobile() ? 
+                document.getElementById('roundFilterMobile') : 
+                document.getElementById('roundFilter');
+            const selectedRound = roundFilterElement?.value;
+
+            const currentOverallPick = ((draftStatus.current_round - 1) * 10) + draftStatus.current_pick;
+            
+            // Filter by round if selected
+            let filteredOrder = selectedRound ? 
+                draftOrder.filter(pick => pick.round.toString() === selectedRound) : 
+                draftOrder;
+
+            // Group picks by round
+            const picksByRound = {};
+            filteredOrder.forEach(pick => {
+                if (!picksByRound[pick.round]) {
+                    picksByRound[pick.round] = [];
+                }
+                picksByRound[pick.round].push(pick);
+            });
+
+            let html = '';
+            
+            // Display each round with separators
+            Object.keys(picksByRound).sort((a, b) => parseInt(a) - parseInt(b)).forEach((round, roundIndex) => {
+                // Round header
+                if (!selectedRound) {
+                    html += `
+                        <div class="round-separator mb-3 mt-3">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-grow-1" style="height: 1px; background: linear-gradient(to right, #dee2e6, transparent);"></div>
+                                <div class="px-3">
+                                    <span class="badge bg-primary">Round ${round}</span>
+                                </div>
+                                <div class="flex-grow-1" style="height: 1px; background: linear-gradient(to left, #dee2e6, transparent);"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Display picks in this round
+                picksByRound[round].forEach((pick, index) => {
+                    const isCurrentPick = draftStatus.is_active && pick.overall_pick === currentOverallPick;
+                    const isCompleted = pick.drafted_player !== null;
+                    const isUsersPick = pick.fantasy_team_id === currentUserTeamId;
+                    const isTraded = pick.fantasy_team_id !== pick.original_team_id;
+                    
+                    // Determine CSS classes
+                    let pickClass = 'pick-item';
+                    if (isCurrentPick) pickClass += ' current-pick bg-warning border-warning';
+                    else if (isCompleted) pickClass += ' completed-pick bg-light border-success';
+                    else if (isUsersPick) pickClass += ' user-pick bg-info bg-opacity-10 border-info';
+                    else pickClass += ' upcoming-pick border-secondary';
+
+                    // Create pick display with new horizontal layout
+                    html += `<div class="${pickClass}">`;
+
+                    // Color tab with pick info
+                    html += `<div class="pick-tab">`;
+                    html += `<div>#${pick.overall_pick}</div>`;
+                    html += `<div>R${pick.round}.${pick.pick_number}</div>`;
+                    html += `</div>`;
+
+                    // Main content area
+                    html += `<div class="pick-content">`;
+
+                    // First row: Team name and status badge
+                    html += `<div class="pick-info-row">`;
+                    html += `<span class="pick-team-name">${pick.first_name} ${pick.last_name} - ${pick.team_name}</span>`;
+                    if (isCurrentPick) {
+                        html += `<span class="badge bg-danger pulse pick-status-badge">ON CLOCK</span>`;
+                    } else if (isCompleted) {
+                        html += `<i class="bi bi-check-circle-fill text-success pick-status-badge"></i>`;
+                    }
+                    html += `</div>`;
+
+                    // Second row: Drafted player info OR trade info for future picks
+                    if (isCompleted) {
+                        html += `<div class="pick-player-info">${pick.drafted_player} ${pick.drafted_position} • ${pick.drafted_team || 'FA'}</div>`;
+                        // Third row: Trade info if applicable
+                        if (isTraded) {
+                            html += `<div class="pick-trade-info">via ${pick.original_first_name} ${pick.original_last_name}</div>`;
+                        }
+                    } else {
+                        // For current/future picks, show trade info on second row if applicable
+                        if (isTraded) {
+                            html += `<div class="pick-trade-info">via ${pick.original_first_name} ${pick.original_last_name}</div>`;
+                        }
+                    }
+
+                    html += `</div>`; // Close pick-content
+                    html += `</div>`; // Close pick-item
+                });
+            });
+            
+            draftOrderContainer.innerHTML = html;
+            
+            // Also update mobile draft order
+            const mobileDraftOrder = document.getElementById('mobileDraftOrder');
+            if (mobileDraftOrder) {
+                mobileDraftOrder.innerHTML = html;
+            }
+            
+            // Auto-scroll to current pick
+            scrollToCurrentPick(draftStatus, currentOverallPick);
+            
+            // Update global turn status
+            const currentPick = draftOrder.find(pick => pick.overall_pick === currentOverallPick);
+            const previousTurnStatus = isUserTurn;
+            
+            if (currentPick && draftStatus.is_active) {
+                isUserTurn = currentPick.fantasy_team_id === currentUserTeamId;
+            } else {
+                isUserTurn = false;
+            }
+            
+            // Play notification sound if it just became user's turn
+            if (isUserTurn && !previousTurnStatus && draftStatus.is_active) {
+                playTurnNotification();
+            }
+            
+            updatePlayerPreview(); // Always refresh to update turn styling
+        }
+
+        function scrollToCurrentPick(draftStatus, currentOverallPick) {
+            if (!draftStatus.is_active) return;
+            
+            // Find the current pick element
+            const currentPickSelector = '.current-pick';
+            
+            // Scroll desktop version
+            const draftOrderContainer = document.getElementById('draftOrder');
+            if (draftOrderContainer) {
+                const currentPickElement = draftOrderContainer.querySelector(currentPickSelector);
+                if (currentPickElement) {
+                    setTimeout(() => {
+                        // Get the parent scrollable container (card-body)
+                        const scrollableParent = draftOrderContainer.closest('.card-body');
+                        if (scrollableParent) {
+                            const containerTop = scrollableParent.scrollTop;
+                            const containerHeight = scrollableParent.clientHeight;
+                            const elementTop = currentPickElement.offsetTop;
+                            const elementHeight = currentPickElement.offsetHeight;
+                            
+                            // Position current pick at the top of the visible area (with small offset)
+                            const targetScrollTop = elementTop - 60; // 20px offset from top
+                            
+                            scrollableParent.scrollTo({
+                                top: targetScrollTop,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }, 150);
+                }
+            }
+            
+            // Scroll mobile version - only if visible
+            const mobileDraftOrderContainer = document.getElementById('mobileDraftOrder');
+            if (mobileDraftOrderContainer) {
+                // Check if the Order tab is active (mobile container is visible)
+                const orderTab = document.querySelector('#mobileTabs a[href="#draftOrderTab"]');
+                const isOrderTabActive = orderTab && orderTab.classList.contains('active');
+                
+                if (isOrderTabActive) {
+                    const currentPickElement = mobileDraftOrderContainer.querySelector(currentPickSelector);
+                    if (currentPickElement) {
+                        setTimeout(() => {
+                            const elementTop = currentPickElement.offsetTop;
+                            const targetScrollTop = Math.max(0, elementTop - 60);
+                            
+                            mobileDraftOrderContainer.scrollTo({
+                                top: targetScrollTop,
+                                behavior: 'smooth'
+                            });
+                        }, 300);
+                    }
+                }
+            }
+        }
+
+        function loadTeamRoster() {
+            const activeSelector = getActiveElement('teamSelector', 'teamSelectorMobile');
+            const teamId = activeSelector ? activeSelector.value : currentUserTeamId;
+            
+            if (!teamId) {
+                console.error('No team ID available for roster loading');
+                return;
+            }
+
+            fetch(`/draft/api/team-roster?teamId=${teamId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayTeamRoster(data.team, data.roster, data.stats);
+                    } else {
+                        console.error('Error loading team roster:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading team roster:', error);
+                });
+        }
+
+        function displayTeamRoster(team, roster, stats) {
+            const desktopContainer = document.getElementById('teamRosterDesktop');
+            const mobileContainer = document.getElementById('teamRoster');
+            
+            // Build roster HTML
+            let html = `
+                <div class="roster-header mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">${team.first_name} ${team.last_name}</h6>
+                        <div class="roster-stats">
+                            <span class="badge bg-primary me-1">${stats.totalPlayers} Total</span>
+                            <span class="badge bg-info me-1">${stats.keeperCount} Keepers</span>
+                            <span class="badge bg-success">${stats.draftPickCount} Drafted</span>
+                        </div>
+                    </div>
+                    <small class="text-muted">${team.team_name}</small>
+                </div>
+            `;
+
+            // Display each position group
+            const positions = ['QB', 'RB', 'RC', 'PK', 'DU'];
+            positions.forEach(position => {
+                const players = roster[position] || [];
+                
+                if (players.length > 0) {
+                    html += `
+                        <div class="position-group mb-4">
+                            <div class="position-header d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">
+                                    <span class="position-badge position-${position} me-2">${position}</span>
+                                    ${getPositionName(position)}
+                                </h6>
+                                <small class="text-muted">${players.length} player${players.length !== 1 ? 's' : ''}</small>
+                            </div>
+                            <div class="position-players">
+                    `;
+                    
+                    players.forEach(player => {
+                        const isNewPick = player.is_new_draft_pick;
+                        const playerClass = isNewPick ? 'new-draft-pick' : 'keeper-player';
+                        const badgeClass = isNewPick ? 'bg-success' : 'bg-secondary';
+                        const badgeText = isNewPick ? '2025 Pick' : 'Keeper';
+                        
+                        html += `
+                            <div class="player-card ${playerClass} p-2 mb-2 border rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="fw-bold">${player.display_name}</div>
+                                        <small class="text-muted">${player.team_code || 'FA'}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge ${badgeClass} mb-1">${badgeText}</span>
+                                        ${isNewPick ? `<br><small class="text-muted">${formatDate(player.acquisition_date)}</small>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            // Show message if no players
+            if (stats.totalPlayers === 0) {
+                html += `
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-person-x fs-1"></i>
+                        <p class="mb-0">No players on roster</p>
+                    </div>
+                `;
+            }
+
+            // Update both containers
+            if (desktopContainer) {
+                desktopContainer.innerHTML = html;
+            }
+            if (mobileContainer) {
+                mobileContainer.innerHTML = html;
+            }
+        }
+
+        function getPositionName(position) {
+            const names = {
+                'QB': 'Quarterbacks',
+                'RB': 'Running Backs', 
+                'RC': 'Receivers',
+                'PK': 'Place Kickers',
+                'DU': 'Defense/Special Teams'
+            };
+            return names[position] || position;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric'
+            });
+        }
+
+        function loadDraftBoard() {
+            fetch('/draft/api/draft-board')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayDraftBoard(data.teams, data.picks, data.draftOrder);
+                    } else {
+                        console.error('Error loading draft board:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading draft board:', error);
+                });
+        }
+
+        function displayPickOrderView(teams, picks, draftOrder) {
+            const desktopContainer = document.getElementById('draftResultsDesktop');
+            const mobileContainer = document.getElementById('draftResults');
+            
+            // Get current pick for highlighting
+            const currentPick = draftOrder.find(pick => 
+                !picks.find(p => p.overall_pick === pick.overall_pick)
+            );
+            const currentOverallPick = currentPick ? currentPick.overall_pick : null;
+            
+            let html = `
+                <div class="draft-board-container">
+                    <table class="draft-board table-sm">
+                        <thead>
+                            <tr>
+                                <th class="team-header">Pick</th>
+            `;
+            
+            // Add round headers
+            for (let round = 1; round <= 9; round++) {
+                html += `<th class="round-header">R${round}</th>`;
+            }
+            html += `</tr></thead><tbody>`;
+            
+            // Add pick rows (1-10 for each pick position in round)
+            for (let pickPosition = 1; pickPosition <= 10; pickPosition++) {
+                html += `<tr>`;
+                html += `<td class="team-header">Pick ${pickPosition}</td>`;
+                
+                // Add cells for each round
+                for (let round = 1; round <= 9; round++) {
+                    const overallPick = ((round - 1) * 10) + pickPosition;
+                    const pick = picks.find(p => p.overall_pick === overallPick);
+                    const draftOrderPick = draftOrder.find(d => d.overall_pick === overallPick);
+                    
+                    let cellClass = 'draft-cell';
+                    let cellContent = '';
+                    
+                    if (pick) {
+                        // Completed pick
+                        if (draftOrderPick?.fantasy_team_id === currentUserTeamId) {
+                            cellClass += ' user-pick';
+                        }
+                        cellContent = `
+                            <div class="position-badge position-${pick.position}">${pick.position}</div>
+                            <div class="player-name">${pick.display_name}</div>
+                            <div class="pick-number">${pick.team_name}</div>
+                        `;
+                    } else if (overallPick === currentOverallPick) {
+                        // Current pick
+                        cellClass += ' current-pick';
+                        cellContent = `
+                            <div class="pick-number">ON CLOCK</div>
+                            <div class="pick-number">${draftOrderPick ? draftOrderPick.team_name : ''}</div>
+                        `;
+                    } else if (draftOrderPick) {
+                        // Future pick
+                        if (draftOrderPick.fantasy_team_id === currentUserTeamId) {
+                            cellClass += ' user-pick';
+                        }
+                        cellContent = `
+                            <div class="pick-number">Pick ${overallPick}</div>
+                            <div class="pick-number">${draftOrderPick.team_name}</div>
+                        `;
+                    }
+                    
+                    html += `<td class="${cellClass}">${cellContent}</td>`;
+                }
+                
+                html += `</tr>`;
+            }
+            
+            html += `</tbody></table></div>`;
+            
+            // Update containers
+            if (desktopContainer) desktopContainer.innerHTML = html;
+            if (mobileContainer) mobileContainer.innerHTML = html;
+        }
+
+        function displayTeamGridView(teams, picks, draftOrder) {
+            const desktopContainer = document.getElementById('draftResultsDesktop');
+            const mobileContainer = document.getElementById('draftResults');
+            
+            // Group picks by team
+            const teamPicks = {};
+            teams.forEach(team => {
+                teamPicks[team.team_id] = picks
+                    .filter(pick => pick.fantasy_team_id === team.team_id)
+                    .sort((a, b) => a.overall_pick - b.overall_pick);
+            });
+            
+            let html = `
+                <div class="draft-board-container">
+                    <table class="draft-board table-sm">
+                        <thead>
+                            <tr>
+                                <th class="team-header" style="width: 150px;">Team</th>
+                                <th class="round-header">1st Pick</th>
+                                <th class="round-header">2nd Pick</th>
+                                <th class="round-header">3rd Pick</th>
+                                <th class="round-header">4th Pick</th>
+                                <th class="round-header">5th Pick</th>
+                                <th class="round-header">6th Pick</th>
+                                <th class="round-header">7th Pick</th>
+                                <th class="round-header">8th Pick</th>
+                                <th class="round-header">9th Pick</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            teams.forEach(team => {
+                const picks = teamPicks[team.team_id] || [];
+                let rowClass = team.team_id === currentUserTeamId ? 'table-info' : '';
+                
+                html += `<tr class="${rowClass}">`;
+                html += `<td class="team-header"><div>${team.first_name} ${team.last_name}</div><small class="text-muted">${team.team_name}</small></td>`;
+
+                // Show up to 9 picks
+                for (let pickIndex = 0; pickIndex < 9; pickIndex++) {
+                    const pick = picks[pickIndex];
+                    
+                    if (pick) {
+                        html += `
+                            <td class="draft-cell">
+                                <div class="position-badge position-${pick.position} mb-1">${pick.position}</div>
+                                <div class="player-name">${pick.display_name}</div>
+                                <div class="pick-number">Pick ${pick.overall_pick}</div>
+                            </td>
+                        `;
+                    } else {
+                        html += `<td class="draft-cell text-center text-muted">-</td>`;
+                    }
+                }
+                
+                html += `</tr>`;
+            });
+            
+            html += `</tbody></table></div>`;
+            
+            // Update containers
+            if (desktopContainer) desktopContainer.innerHTML = html;
+            if (mobileContainer) mobileContainer.innerHTML = html;
+        }
+
+        function displayDraftBoard(teams, picks, draftOrder) {
+            // Check which view is selected
+            const isPickOrderView = isMobile() ? 
+                document.getElementById('pickOrderViewMobile')?.checked : 
+                document.getElementById('pickOrderView')?.checked;
+            
+            if (isPickOrderView !== false) { // Default to pick order if elements don't exist yet
+                displayPickOrderView(teams, picks, draftOrder);
+            } else {
+                displayTeamGridView(teams, picks, draftOrder);
+            }
+        }
+
+        // Chat functionality
+        function sendChatMessage() {
+            const activeInput = getActiveElement('chatInput', 'mobileChatInput');
+            
+            if (!activeInput) return;
+            
+            const message = activeInput.value.trim();
+            
+            if (!message) return;
+            
+            if (message.length > 500) {
+                alert('Message too long (max 500 characters)');
+                return;
+            }
+
+            fetch('/draft/api/chat-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    activeInput.value = '';
+                    setTimeout(() => {
+                        const desktopContainer = document.getElementById('chatMessages');
+                        const mobileContainer = document.getElementById('mobileChat');
+                        scrollChatToBottom(desktopContainer);
+                        scrollChatToBottom(mobileContainer);
+                    }, 100);
+                } else {
+                    alert('Error sending message: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending chat message:', error);
+                alert('Error sending message');
+            });
+        }
+
+        function loadChatMessages() {
+            fetch('/draft/api/chat-messages?limit=50')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayChatMessages(data.messages);
+                    } else {
+                        console.error('Error loading chat messages:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading chat messages:', error);
+                });
+        }
+
+        function displayChatMessages(messages) {
+            const desktopContainer = document.getElementById('chatMessages');
+            const mobileContainer = document.getElementById('mobileChat');
+            
+            let html = '';
+            
+            if (messages.length === 0) {
+                html = `
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-chat"></i>
+                        <br><small>No messages yet. Start the conversation!</small>
+                    </div>
+                `;
+            } else {
+                messages.forEach(message => {
+                    html += formatChatMessage(message);
+                });
+            }
+            
+            // Update both containers
+            if (desktopContainer) {
+                desktopContainer.innerHTML = html;
+                scrollChatToBottom(desktopContainer);
+            }
+            if (mobileContainer) {
+                mobileContainer.innerHTML = html;
+                // Force mobile container to have proper dimensions before scrolling
+                setTimeout(() => {
+                    scrollChatToBottom(mobileContainer);
+                }, 100);
+            }
+        }
+
+        function addChatMessage(message) {
+            const desktopContainer = document.getElementById('chatMessages');
+            const mobileContainer = document.getElementById('mobileChat');
+            
+            // Play chat sound for all messages (including your own)
+            playChatNotification();
+            
+            const messageHtml = formatChatMessage(message);
+            
+            // Add to desktop chat
+            if (desktopContainer) {
+                // Remove empty state if it exists
+                const emptyState = desktopContainer.querySelector('.text-center.text-muted');
+                if (emptyState) {
+                    desktopContainer.innerHTML = '';
+                }
+                
+                desktopContainer.insertAdjacentHTML('beforeend', messageHtml);
+                scrollChatToBottom(desktopContainer);
+            }
+            
+            // Add to mobile chat
+            if (mobileContainer) {
+                // Remove empty state if it exists
+                const emptyState = mobileContainer.querySelector('.text-center.text-muted');
+                if (emptyState) {
+                    mobileContainer.innerHTML = '';
+                }
+                
+                mobileContainer.insertAdjacentHTML('beforeend', messageHtml);
+                // Always scroll mobile chat to bottom when new message arrives
+                scrollChatToBottom(mobileContainer);
+            }
+        }
+
+        function formatChatMessage(message) {
+            const isCurrentUser = message.user_id === currentUserId;
+            const messageClass = isCurrentUser ? 'current-user' : 'other-user';
+            const timestamp = formatChatTime(message.created_at);
+            
+            return `
+                <div class="chat-message ${messageClass} mb-2">
+                    <div class="d-flex ${isCurrentUser ? 'justify-content-end' : 'justify-content-start'}">
+                        <div class="chat-bubble ${isCurrentUser ? 'bg-primary text-white' : 'bg-light'} px-3 py-1 rounded" style="max-width: 75%;">
+                            ${!isCurrentUser ? `<div class="chat-author fw-bold mb-1">${message.first_name} ${message.last_name}</div>` : ''}
+                            <div class="chat-text">${escapeHtml(message.message)}</div>
+                            <div class="chat-time text-muted mt-1" style="font-size: 0.75em;">
+                                ${timestamp}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatChatTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            
+            // If today, show time only
+            if (date.toDateString() === now.toDateString()) {
+                return date.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+            }
+            
+            // If this week, show day and time
+            const daysDiff = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+            if (daysDiff < 7) {
+                return date.toLocaleDateString('en-US', { 
+                    weekday: 'short',
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+            }
+            
+            // Older messages show full date
+            return date.toLocaleDateString('en-US', { 
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            });
+        }
+
+        function scrollChatToBottom(container) {
+            if (!container) return;
+            
+            // Check if container is visible
+            const isVisible = container.offsetHeight > 0 && container.offsetWidth > 0;
+            if (!isVisible) return;
+            
+            // Multiple attempts to ensure scroll happens
+            const scrollToBottom = () => {
+                container.scrollTop = container.scrollHeight;
+            };
+            
+            // Immediate scroll
+            scrollToBottom();
+            
+            // Delayed scroll to handle dynamic content
+            setTimeout(scrollToBottom, 50);
+            setTimeout(scrollToBottom, 150);
+            setTimeout(scrollToBottom, 300);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Sound notification functions
+        function initializeSounds() {
+            // Load sound preferences from localStorage
+            const draftSoundEnabled = localStorage.getItem('draftSoundEnabled') !== 'false';
+            const chatSoundEnabled = localStorage.getItem('chatSoundEnabled') !== 'false';
+            const draftVolume = localStorage.getItem('draftSoundVolume') || '75';
+            const chatVolume = localStorage.getItem('chatSoundVolume') || '50';
+            
+            // Set initial UI states
+            document.getElementById('enableDraftSound').checked = draftSoundEnabled;
+            document.getElementById('enableChatSound').checked = chatSoundEnabled;
+            document.getElementById('draftSoundVolume').value = draftVolume;
+            document.getElementById('chatSoundVolume').value = chatVolume;
+            
+            // Add event listeners for settings
+            document.getElementById('enableDraftSound').addEventListener('change', saveSoundSettings);
+            document.getElementById('enableChatSound').addEventListener('change', saveSoundSettings);
+            document.getElementById('draftSoundVolume').addEventListener('input', saveSoundSettings);
+            document.getElementById('chatSoundVolume').addEventListener('input', saveSoundSettings);
+            
+            // Create better audio contexts
+            createNFLDraftSound();
+            createChatPopSound();
+        }
+
+        function createNFLDraftSound() {
+            // Audio elements are now loaded from files - no audio context needed
+            window.playNFLDraftHorn = function() {
+                const audio = document.getElementById('draftTurnSound');
+                if (audio) {
+                    const volume = document.getElementById('draftSoundVolume').value / 100;
+                    audio.volume = volume;
+                    audio.currentTime = 0;
+                    
+                    if (audio.readyState >= 2) {
+                        audio.play().catch(() => {});
+                    } else {
+                        audio.addEventListener('canplay', () => {
+                            audio.play().catch(() => {});
+                        }, { once: true });
+                    }
+                }
+            };
+        }
+
+        function createChatPopSound() {
+            // Create WhatsApp-style pop sound programmatically (reuse existing context)
+            if (!window.draftAudioContext) {
+                window.draftAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const audioContext = window.draftAudioContext;
+            
+            window.playChatPop = function() {
+                const volume = document.getElementById('chatSoundVolume').value / 100;
+                const now = audioContext.currentTime;
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Short, high frequency pop
+                oscillator.frequency.setValueAtTime(800, now);
+                oscillator.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+                oscillator.type = 'sine';
+                
+                // Quick pop envelope with volume control
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(0.2 * volume, now + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                
+                oscillator.start(now);
+                oscillator.stop(now + 0.1);
+            };
+        }
+
+        function playTurnNotification() {
+            const enabled = document.getElementById('enableDraftSound').checked;
+            if (enabled && window.playNFLDraftHorn) {
+                window.playNFLDraftHorn();
+            }
+        }
+
+        function playChatNotification() {
+            const enabled = document.getElementById('enableChatSound').checked;
+            if (enabled && window.playChatPop) {
+                window.playChatPop();
+            }
+        }
+
+        function testDraftSound() {
+            playTurnNotification();
+        }
+
+        function testChatSound() {
+            playChatNotification();
+        }
+
+        function saveSoundSettings() {
+            const draftEnabled = document.getElementById('enableDraftSound').checked;
+            const chatEnabled = document.getElementById('enableChatSound').checked;
+            const draftVolume = document.getElementById('draftSoundVolume').value;
+            const chatVolume = document.getElementById('chatSoundVolume').value;
+            
+            localStorage.setItem('draftSoundEnabled', draftEnabled);
+            localStorage.setItem('chatSoundEnabled', chatEnabled);
+            localStorage.setItem('draftSoundVolume', draftVolume);
+            localStorage.setItem('chatSoundVolume', chatVolume);
+        }
+
+        function resetFilters() {
+            // Reset desktop filters
+            const positionFilter = document.getElementById('positionFilter');
+            const teamFilter = document.getElementById('teamFilter');
+            const searchFilter = document.getElementById('searchFilter');
+            const showDraftedFilter = document.getElementById('showDraftedFilter');
+            
+            if (positionFilter) positionFilter.value = '';
+            if (teamFilter) teamFilter.value = '';
+            if (searchFilter) searchFilter.value = '';
+            if (showDraftedFilter) showDraftedFilter.checked = false;
+            
+            // Reset mobile filters
+            const positionFilterMobile = document.getElementById('positionFilterMobile');
+            const teamFilterMobile = document.getElementById('teamFilterMobile');
+            const searchFilterMobile = document.getElementById('searchFilterMobile');
+            const showDraftedFilterMobile = document.getElementById('showDraftedFilterMobile');
+            
+            if (positionFilterMobile) positionFilterMobile.value = '';
+            if (teamFilterMobile) teamFilterMobile.value = '';
+            if (searchFilterMobile) searchFilterMobile.value = '';
+            if (showDraftedFilterMobile) showDraftedFilterMobile.checked = false;
+            
+            // Reload players with reset filters
+            loadPlayers();
+        }
+
+        // Utility functions
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Custom filter toggle function (no Bootstrap conflicts)
+        function toggleMobileFilters() {
+            const filterContent = document.getElementById('mobileFilterContent');
+            const chevron = document.getElementById('mobileFilterChevron');
+            const playerTableContainer = document.querySelector('.mobile-only #playersTab .table-responsive');
+            
+            if (filterContent && chevron && playerTableContainer) {
+                if (filterContent.classList.contains('hidden')) {
+                    // Currently hidden - show it
+                    filterContent.classList.remove('hidden');
+                    chevron.classList.remove('rotated');
+                    // Shrink player list back to normal height
+                    playerTableContainer.style.maxHeight = '400px';
+                } else {
+                    // Currently visible - hide it
+                    filterContent.classList.add('hidden');
+                    chevron.classList.add('rotated');
+                    // Expand player list to use the extra space
+                    playerTableContainer.style.maxHeight = '600px';
+                }
+            }
+        }
+
+        // Admin user switching functions
+        function switchToUserSafe(element) {
+            const userId = element.getAttribute('data-user-id');
+            const teamName = element.getAttribute('data-team-name');
+            
+            if (!confirm(`Switch to user: ${teamName}?`)) return;
+            
+            fetch('/admin/switch-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetUserId: parseInt(userId) })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Refresh to show new user perspective
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Switch user error:', error);
+                alert('Error switching user');
+            });
+        }
+
+        function switchBackToAdmin() {
+            fetch('/admin/switch-back', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Refresh to show admin perspective
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Switch back error:', error);
+                alert('Error switching back');
+            });
+        }
+
+        function undoLastPick() {
+            if (!confirm('Are you sure you want to undo the last draft pick? This cannot be undone.')) return;
+            
+            fetch('/admin/undo-pick', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Don't need to manually refresh here since the socket event will handle it
+                    alert(data.message);
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Undo pick error:', error);
+                alert('Error undoing pick');
+            });
+        }
+
+    </script>
+</body>
+</html>

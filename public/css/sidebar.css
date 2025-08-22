@@ -1,0 +1,248 @@
+/* Sidebar Styles */
+:root {
+    --header-height: 60px;
+    --sidebar-width: 250px;
+    --sidebar-collapsed-width: 60px;
+    --primary-color: #0d6efd;
+    --primary-dark: #0b5ed7;
+    --sidebar-bg: #f8f9fa;
+    --header-bg: #343a40;
+    --header-text: white;
+  }
+  
+  /* Top header styles */
+  .main-header {
+    background-color: var(--header-bg);
+    color: var(--header-text);
+    height: var(--header-height);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+  }
+  
+  .main-header a {
+    color: var(--header-text);
+  }
+  
+  .main-header .dropdown-menu a {
+    color: #212529;
+  }
+  
+  /* Team name section */
+  .main-header .h5 {
+    letter-spacing: 0.5px;
+  }
+  
+  /* Header search box styles */
+  .main-header .form-control {
+    padding-right: 30px;
+    transition: width 0.3s ease;
+    height: 35px;
+  }
+  
+  .main-header .form-control:focus {
+    width: 250px;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Notification badge */
+  .badge {
+    font-size: 0.6rem;
+    padding: 0.25em 0.4em;
+  }
+  
+  /* Header icons */
+  .main-header i.bi {
+    font-size: 1.2rem;
+  }
+  
+  /* Sidebar styles */
+  .sidebar {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    width: var(--sidebar-width);
+    height: calc(100vh - var(--header-height));
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid #dee2e6;
+    transition: all 0.3s ease, box-shadow 0.3s ease;
+    z-index: 1030;
+    overflow-y: auto;
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  
+  .sidebar-content {
+    padding: 1.5rem 1rem;
+  }
+  
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Pin icon styles */
+  .sidebar-pin {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1rem;
+    color: #6c757d;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  
+  .sidebar-pin:hover {
+    background-color: rgba(108, 117, 125, 0.1);
+  }
+  
+  .sidebar:hover .sidebar-pin {
+    opacity: 0.7;
+  }
+  
+  .sidebar.expanded-hover .sidebar-pin {
+    opacity: 1;
+  }
+  
+  .sidebar.pinned .sidebar-pin {
+    color: var(--primary-color);
+    opacity: 1;
+  }
+  
+  .nav-link {
+    border-radius: 0.25rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.25rem;
+    transition: all 0.2s;
+  }
+  
+  .nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+  }
+  
+  .nav-link.active {
+    background-color: var(--primary-color);
+    color: white;
+  }
+  
+  /* Text transition effects */
+  .nav-text,
+  .sidebar-header h2,
+  #theme-toggle span {
+    transition: opacity 0.2s ease;
+  }
+  
+  /* Collapsed sidebar styles */
+  .sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+  }
+  
+  .sidebar.collapsed .sidebar-content {
+    padding: 1.5rem 0.5rem;
+  }
+  
+  .sidebar.collapsed .nav-link {
+    text-align: center;
+    padding: 0.75rem 0;
+  }
+  
+  .sidebar.collapsed .nav-link i {
+    margin-right: 0 !important;
+    font-size: 1.25rem;
+  }
+  
+  .sidebar.collapsed .nav-text,
+  .sidebar.collapsed .sidebar-header h2,
+  .sidebar.collapsed #theme-toggle span {
+    display: none;
+    opacity: 0;
+  }
+  
+  /* Main content adjustments */
+  .main-content {
+    margin-left: var(--sidebar-width);
+    margin-top: var(--header-height);
+    transition: margin-left 0.3s ease;
+    min-height: calc(100vh - var(--header-height));
+    z-index: 1020; /* Lower than sidebar and header */
+  }
+  
+  .main-content.collapsed {
+    margin-left: var(--sidebar-collapsed-width);
+  }
+  
+  /* For pages without sidebar */
+  .main-content.no-sidebar {
+    margin-left: 0 !important;
+  }
+  
+  /* Hover functionality */
+  .sidebar.collapsed.expanded-hover {
+    width: var(--sidebar-width);
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .sidebar.collapsed.expanded-hover .sidebar-content {
+    padding: 1.5rem 1rem;
+  }
+  
+  .sidebar.collapsed.expanded-hover .nav-link {
+    text-align: left;
+    padding: 0.75rem 1rem;
+  }
+  
+  .sidebar.collapsed.expanded-hover .nav-link i {
+    margin-right: 0.5rem !important;
+    font-size: 1rem;
+  }
+  
+  .sidebar.collapsed.expanded-hover .nav-text,
+  .sidebar.collapsed.expanded-hover .sidebar-header h2,
+  .sidebar.collapsed.expanded-hover #theme-toggle span {
+    display: inline-block;
+    opacity: 1;
+  }
+  
+  /* Adjust main content when sidebar is hovered */
+  .main-content.sidebar-hovered {
+    margin-left: var(--sidebar-width);
+  }
+  
+  /* Mobile adjustments */
+  @media (max-width: 768px) {
+    .sidebar {
+      left: calc(-1 * var(--sidebar-width));
+      box-shadow: none;
+    }
+    
+    .sidebar.show {
+      left: 0;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .main-content, 
+    .main-content.collapsed {
+      margin-left: 0;
+    }
+    
+    /* Make icons a bit smaller on mobile */
+    .main-header i.bi {
+      font-size: 1.1rem;
+    }
+    
+    /* Add spacing between icons on mobile */
+    .main-header a {
+      padding: 0.4rem;
+    }
+  }

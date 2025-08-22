@@ -1,0 +1,430 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/teams/<%= team.team_id %>"><%= team.team_name %></a></li>
+                <li class="breadcrumb-item active" aria-current="page">Keeper Management</li>
+            </ol>
+        </nav>
+        <!-- Team Selector Dropdown -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="teamSelector" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-shield-check"></i> <%= team.team_name %> - Keepers
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="teamSelector">
+                <% if (typeof allTeams !== 'undefined' && allTeams.length > 0) { %>
+                    <% allTeams.forEach(otherTeam => { %>
+                        <% if (otherTeam.team_id !== team.team_id) { %>
+                            <li>
+                                <a class="dropdown-item" href="/keepers/<%= otherTeam.team_id %>">
+                                    <%= otherTeam.team_name %> 
+                                    <span class="text-muted">(<%= otherTeam.owner_username %>)</span>
+                                </a>
+                            </li>
+                        <% } %>
+                    <% }); %>
+                <% } else { %>
+                    <li><a class="dropdown-item disabled" href="#">No other teams available</a></li>
+                <% } %>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/teams/<%= team.team_id %>"><i class="bi bi-arrow-left"></i> Back to Team Page</a></li>
+            </ul>
+        </div>
+        <p class="text-muted">Owned by: <%= team.owner_username %></p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <% if (leagueSettings && leagueSettings.keeper_deadline_date) { %>
+            <div class="badge bg-<%= deadlinePassed ? 'danger' : 'info' %> mb-2">
+                <i class="bi bi-calendar-event"></i> 
+                Deadline: <%= new Date(leagueSettings.keeper_deadline_date).toLocaleDateString() %>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Keeper Management Area -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-shield-check"></i> Keeper Selection
+                </h5>
+                <div>
+                    <span class="badge bg-primary" id="keeperCountBadge">
+                        <span id="currentCount"><%= keeperCount %></span> of <%= keeperLimit %> Selected
+                    </span>
+                    <% if (!deadlinePassed && players && players.length > 0) { %>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" id="clearAllBtn">
+                            <i class="bi bi-x-circle"></i> Clear All
+                        </button>
+                    <% } %>
+                </div>
+            </div>
+            <div class="card-body">
+                <% if (deadlinePassed) { %>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill"></i> 
+                        <strong>Keeper deadline has passed.</strong> Keeper selections are now final.
+                    </div>
+                <% } %>
+                
+                <% if (players && players.length > 0) { %>
+                    <form id="keeperForm" action="/keepers/<%= team.team_id %>" method="POST" 
+                          data-keeper-limit="<%= keeperLimit || 0 %>">
+                        
+                        <!-- Progress Bar -->
+                        <div class="mb-4">
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     id="keeperProgressBar"
+                                     style="width: <%= (keeperCount / keeperLimit) * 100 %>%"
+                                     aria-valuenow="<%= keeperCount %>" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="<%= keeperLimit %>">
+                                    <span id="progressText"><%= keeperCount %> / <%= keeperLimit %></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Player Selection Grid -->
+                        <div class="row g-3" id="playerGrid">
+                            <% players.forEach(player => { %>
+                                <div class="col-md-6">
+                                    <div class="card keeper-card <%= player.is_keeper ? 'selected' : '' %>" data-player-id="<%= player.player_id %>">
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                <input class="form-check-input keeper-checkbox" 
+                                                       type="checkbox" 
+                                                       value="<%= player.player_id %>" 
+                                                       id="keeper_<%= player.player_id %>"
+                                                       name="keepers"
+                                                       <%= player.is_keeper ? 'checked' : '' %>
+                                                       <%= deadlinePassed ? 'disabled' : '' %>>
+                                                <label class="form-check-label w-100" for="keeper_<%= player.player_id %>">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div>
+                                                            <strong class="player-name"><%= player.display_name %></strong>
+                                                            <% if (player.is_rookie) { %>
+                                                                <span class="badge bg-warning text-dark ms-1">R</span>
+                                                            <% } %>
+                                                            <br>
+                                                            <small class="text-muted">
+                                                                <%= player.position %> - <%= player.team_code || 'FA' %>
+                                                                <% if (player.team_name) { %>
+                                                                    (<%= player.team_name %>)
+                                                                <% } %>
+                                                            </small>
+                                                        </div>
+                                                        <div class="text-end">
+                                                            <% if (player.acquisition_type === 'Keeper') { %>
+                                                                <span class="badge bg-info">Keeper</span>
+                                                            <% } else if (player.acquisition_type === 'Draft') { %>
+                                                                <span class="badge bg-primary">Draft</span>
+                                                            <% } else if (player.acquisition_type === 'Trade') { %>
+                                                                <span class="badge bg-warning text-dark">Trade</span>
+                                                            <% } else { %>
+                                                                <span class="badge bg-secondary">FA</span>
+                                                            <% } %>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </div>
+                        
+                        <% if (!deadlinePassed) { %>
+                            <div class="mt-4 d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg" id="updateKeepersBtn">
+                                    <i class="bi bi-check-circle"></i> Update Keeper Selections
+                                </button>
+                            </div>
+                        <% } %>
+                    </form>
+                <% } else { %>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill"></i>
+                        This team currently has no players on its roster. 
+                        <a href="/teams/<%= team.team_id %>" class="alert-link">Add players to your roster</a> to select keepers.
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Information -->
+    <div class="col-lg-4">
+        <!-- Keeper Rules -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Keeper Rules</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle text-success"></i>
+                        You can protect <strong><%= keeperLimit %></strong> players
+                    </li>
+                    <% if (leagueSettings && leagueSettings.keeper_deadline_date) { %>
+                        <li class="mb-2">
+                            <i class="bi bi-calendar-event text-primary"></i>
+                            Deadline: <strong><%= new Date(leagueSettings.keeper_deadline_date).toLocaleDateString() %></strong>
+                        </li>
+                    <% } %>
+                    <li class="mb-2">
+                        <i class="bi bi-calendar-check text-primary"></i>
+                        Selections must be finalized by the deadline
+                    </li>
+                    <li>
+                        <i class="bi bi-arrow-repeat text-info"></i>
+                        You can update selections until the deadline
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Current Keepers Summary -->
+        <% if (players && players.filter(p => p.is_keeper).length > 0) { %>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Current Keepers</h5>
+                </div>
+                <div class="card-body">
+                    <div class="keeper-summary-list">
+                        <% 
+                            const keepers = players.filter(p => p.is_keeper);
+                            const positions = ['QB', 'RB', 'RC', 'PK', 'DU'];
+                            positions.forEach(pos => {
+                                const posKeepers = keepers.filter(p => p.position === pos);
+                                if (posKeepers.length > 0) {
+                        %>
+                            <div class="mb-2">
+                                <strong><%= pos %></strong>
+                                <ul class="list-unstyled ms-3 mb-1">
+                                    <% posKeepers.forEach(player => { %>
+                                        <li class="small">
+                                            <%= player.display_name %>
+                                            <span class="text-muted">(<%= player.team_code || 'FA' %>)</span>
+                                        </li>
+                                    <% }); %>
+                                </ul>
+                            </div>
+                        <% 
+                                }
+                            });
+                        %>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- Position Breakdown -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Roster Breakdown</h5>
+            </div>
+            <div class="card-body">
+                <% 
+                    const positionCounts = {};
+                    const keeperPositionCounts = {};
+                    if (players && players.length > 0) {
+                        players.forEach(player => {
+                            positionCounts[player.position] = (positionCounts[player.position] || 0) + 1;
+                            if (player.is_keeper) {
+                                keeperPositionCounts[player.position] = (keeperPositionCounts[player.position] || 0) + 1;
+                            }
+                        });
+                    }
+                %>
+                <ul class="list-group list-group-flush">
+                    <% ['QB', 'RB', 'RC', 'PK', 'DU'].forEach(pos => { %>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <%= pos === 'QB' ? 'Quarterbacks' : 
+                                pos === 'RB' ? 'Running Backs' :
+                                pos === 'RC' ? 'Receivers' :
+                                pos === 'PK' ? 'Kickers' : 'Defense Units' %>
+                            <div>
+                                <% if (keeperPositionCounts[pos] > 0) { %>
+                                    <span class="badge bg-success rounded-pill me-1">
+                                        <%= keeperPositionCounts[pos] %> kept
+                                    </span>
+                                <% } %>
+                                <span class="badge bg-primary rounded-pill">
+                                    <%= positionCounts[pos] || 0 %> total
+                                </span>
+                            </div>
+                        </li>
+                    <% }); %>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.keeper-card {
+    transition: all 0.3s ease;
+    border: 2px solid #dee2e6;
+}
+
+.keeper-card:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+}
+
+.keeper-card.selected {
+    border-color: #198754;
+    background-color: #d1e7dd;
+}
+
+.keeper-card .form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.player-name {
+    font-size: 1.1em;
+}
+
+.keeper-summary-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#keeperProgressBar {
+    transition: width 0.3s ease;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const keeperCheckboxes = document.querySelectorAll('.keeper-checkbox');
+    const updateKeepersBtn = document.getElementById('updateKeepersBtn');
+    const keeperForm = document.getElementById('keeperForm');
+    const keeperLimit = keeperForm ? parseInt(keeperForm.dataset.keeperLimit) || 0 : 0;
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    const progressBar = document.getElementById('keeperProgressBar');
+    const progressText = document.getElementById('progressText');
+    const currentCountSpan = document.getElementById('currentCount');
+    const keeperCountBadge = document.getElementById('keeperCountBadge');
+    
+    if (keeperCheckboxes.length > 0 && updateKeepersBtn) {
+        // Update keeper count and UI
+        function updateKeeperStatus() {
+            const selectedKeepers = document.querySelectorAll('.keeper-checkbox:checked');
+            const count = selectedKeepers.length;
+            
+            // Update count displays
+            if (currentCountSpan) currentCountSpan.textContent = count;
+            if (progressText) progressText.textContent = `${count} / ${keeperLimit}`;
+            
+            // Update progress bar
+            if (progressBar) {
+                const percentage = (count / keeperLimit) * 100;
+                progressBar.style.width = `${percentage}%`;
+                progressBar.setAttribute('aria-valuenow', count);
+                
+                // Change color based on status
+                progressBar.classList.remove('bg-success', 'bg-warning', 'bg-danger');
+                if (count === 0) {
+                    progressBar.classList.add('bg-secondary');
+                } else if (count <= keeperLimit) {
+                    progressBar.classList.add('bg-success');
+                } else {
+                    progressBar.classList.add('bg-danger');
+                }
+            }
+            
+            // Update badge color
+            if (keeperCountBadge) {
+                keeperCountBadge.classList.remove('bg-primary', 'bg-success', 'bg-danger');
+                if (count > keeperLimit) {
+                    keeperCountBadge.classList.add('bg-danger');
+                } else if (count === keeperLimit) {
+                    keeperCountBadge.classList.add('bg-success');
+                } else {
+                    keeperCountBadge.classList.add('bg-primary');
+                }
+            }
+            
+            // Update button state
+            if (count > keeperLimit) {
+                updateKeepersBtn.classList.remove('btn-primary');
+                updateKeepersBtn.classList.add('btn-danger');
+                updateKeepersBtn.disabled = true;
+                updateKeepersBtn.innerHTML = `
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    Too Many Selected (${count} of ${keeperLimit})
+                `;
+            } else {
+                updateKeepersBtn.classList.remove('btn-danger');
+                updateKeepersBtn.classList.add('btn-primary');
+                updateKeepersBtn.disabled = false;
+                updateKeepersBtn.innerHTML = `
+                    <i class="bi bi-check-circle"></i> 
+                    Update Keeper Selections
+                `;
+            }
+            
+            // Update card visual states
+            keeperCheckboxes.forEach(checkbox => {
+                const card = checkbox.closest('.keeper-card');
+                if (card) {
+                    if (checkbox.checked) {
+                        card.classList.add('selected');
+                    } else {
+                        card.classList.remove('selected');
+                    }
+                }
+            });
+        }
+        
+        // Add event listeners to all checkboxes
+        keeperCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateKeeperStatus);
+        });
+        
+        // Clear all button functionality
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear all keeper selections?')) {
+                    keeperCheckboxes.forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    updateKeeperStatus();
+                }
+            });
+        }
+        
+        // Initial status update
+        updateKeeperStatus();
+        
+        // Handle form submission
+        if (keeperForm) {
+            keeperForm.addEventListener('submit', function(e) {
+                const selectedCount = document.querySelectorAll('.keeper-checkbox:checked').length;
+                if (selectedCount > keeperLimit) {
+                    e.preventDefault();
+                    alert(`You can only select up to ${keeperLimit} keepers. Currently selected: ${selectedCount}`);
+                    return false;
+                }
+            });
+        }
+    }
+    
+    // Team selector dropdown
+    const teamSelector = document.getElementById('teamSelector');
+    const dropdownMenu = document.querySelector('[aria-labelledby="teamSelector"]');
+    
+    if (teamSelector && dropdownMenu) {
+        teamSelector.addEventListener('click', function(e) {
+            dropdownMenu.classList.toggle('show');
+        });
+    }
+});
+</script>

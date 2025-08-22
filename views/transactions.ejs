@@ -1,0 +1,188 @@
+<!-- views/transactions.ejs -->
+<div class="card border-0 shadow">
+    <!-- Header -->
+    <div class="card-header bg-primary text-white py-3">
+      <h1 class="display-5 mb-0">GBRFL Transactions</h1>
+    </div>
+    
+    <!-- Advanced Filters -->
+    <div class="card-body bg-light">
+      <div class="row g-2">
+        <div class="col-md-3">
+          <label for="seasonFilter" class="form-label">Season</label>
+          <select class="form-select" id="seasonFilter">
+            <option value="all" selected>All Seasons</option>
+            <option value="2024">2024</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="weekFilter" class="form-label">Week</label>
+          <select class="form-select" id="weekFilter">
+            <option value="all" selected>All Weeks</option>
+            <option value="Offseason">Offseason</option>
+            <option value="Draft">Draft</option>
+            <option value="Week 1">Week 1</option>
+            <option value="Week 2">Week 2</option>
+            <option value="Week 3">Week 3</option>
+            <option value="Week 4">Week 4</option>
+            <option value="Week 5">Week 5</option>
+            <option value="Week 6">Week 6</option>
+            <option value="Week 7">Week 7</option>
+            <option value="Week 8">Week 8</option>
+            <option value="Week 9">Week 9</option>
+            <option value="Week 10">Week 10</option>
+            <option value="Week 11">Week 11</option>
+            <option value="Week 12">Week 12</option>
+            <option value="Week 13">Week 13</option>
+            <option value="Week 14">Week 14</option>
+            <option value="Week 15">Week 15</option>
+            <option value="Week 16">Week 16</option>
+            <option value="Week 17">Week 17</option>
+            <option value="Week 18">Week 18</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="ownerFilter" class="form-label">Owner</label>
+          <select class="form-select" id="ownerFilter">
+            <option value="all" selected>All Owners</option>
+            <% if (typeof users !== 'undefined' && users.length > 0) { %>
+              <% users.forEach(user => { %>
+                <option value="<%= user.user_id %>"><%= user.first_name %> <%= user.last_name %></option>
+              <% }); %>
+            <% } %>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="typeFilter" class="form-label">Transaction Type</label>
+          <select class="form-select" id="typeFilter">
+            <option value="all" selected>All Types</option>
+            <option value="Free Agent">Free Agent</option>
+            <option value="Trade">Trade</option>
+            <option value="Draft Pick Trade">Draft Pick Trade</option>
+            <option value="Protection Spot Trade">Protection Spot Trade</option>
+            <option value="Drop">Drop</option>
+            <option value="Waiver">Waiver</option>
+          </select>
+        </div>
+      </div>
+      <div class="row mt-3">
+        <div class="col-12 text-end">
+          <button id="applyFilters" class="btn btn-primary">Apply Filters</button>
+          <button id="resetFilters" class="btn btn-outline-secondary">Reset</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Transactions Content -->
+    <div class="card-body">
+      <div id="transactionsContainer">
+        <!-- Transaction data will be loaded here -->
+        <div class="loading">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p>Loading transactions...</p>
+        </div>
+      </div>
+      
+      <!-- Archive Link -->
+      <a href="https://www.fantasyfootballer.com/gbrfl/transactions.htm" class="archive-link" target="_blank">
+        <i class="bi bi-archive-fill"></i> View Transactions Archive
+      </a>
+      
+      <!-- Pagination -->
+      <nav aria-label="Transaction pagination" id="paginationContainer" class="d-none">
+        <ul class="pagination justify-content-center">
+          <li class="page-item disabled">
+            <a class="page-link prev-page" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+          </li>
+          <li class="page-item active"><a class="page-link" data-page="1" href="#">1</a></li>
+          <li class="page-item"><a class="page-link" data-page="2" href="#">2</a></li>
+          <li class="page-item"><a class="page-link" data-page="3" href="#">3</a></li>
+          <li class="page-item">
+            <a class="page-link next-page" href="#">Next</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+  
+  <!-- Transaction template (hidden, used by JavaScript) -->
+  <template id="transactionTemplate">
+    <div class="transaction-row">
+      <div class="row align-items-center">
+        <div class="col-md-3">
+          <strong class="owner-name"></strong>
+        </div>
+        <div class="col-md-4">
+          <span class="acquired"></span>
+        </div>
+        <div class="col-md-4">
+          <span class="lost"></span>
+        </div>
+        <div class="col-md-1 text-end">
+          <small class="text-muted transaction-date"></small>
+        </div>
+      </div>
+    </div>
+  </template>
+  
+  <!-- Week header template (hidden, used by JavaScript) -->
+  <template id="weekHeaderTemplate">
+    <div class="week-header"></div>
+  </template>
+  
+  <!-- Season header template (hidden, used by JavaScript) -->
+  <template id="seasonHeaderTemplate">
+    <h3 class="mt-4 mb-3"></h3>
+  </template>
+  
+  <style>
+    .conditional-trade {
+      color: #6c757d;
+      font-style: italic;
+    }
+    .week-header {
+      background-color: #f8f9fa;
+      padding: 10px 15px;
+      margin: 20px 0 10px 0;
+      border-left: 5px solid #0d6efd;
+      font-weight: bold;
+    }
+    .transaction-row {
+      border-bottom: 1px solid #eee;
+      padding: 10px 0;
+    }
+    .transaction-row:hover {
+      background-color: #f8f9fa;
+    }
+    .acquired {
+      color: #198754;
+    }
+    .lost {
+      color: #dc3545;
+    }
+    .archive-link {
+      display: block;
+      text-align: center;
+      margin: 20px 0;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      text-decoration: none;
+    }
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+    #transactionsContainer {
+      min-height: 300px;
+    }
+    .no-results {
+      text-align: center;
+      padding: 50px 0;
+      color: #6c757d;
+    }
+  </style>
+  
+  <script src="/js/transactions.js"></script>

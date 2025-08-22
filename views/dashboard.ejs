@@ -1,0 +1,303 @@
+<!-- Enhanced CSS for Dashboard -->
+<style>
+    .stat-block {
+        padding: 1.25rem;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(13, 110, 253, 0.03));
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 1px solid rgba(13, 110, 253, 0.15);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-block::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #0d6efd, #6610f2);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .stat-block:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(13, 110, 253, 0.2);
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.12), rgba(13, 110, 253, 0.06));
+        border-color: rgba(13, 110, 253, 0.3);
+    }
+
+    .stat-block:hover::before {
+        opacity: 1;
+    }
+
+    .news-item {
+        transition: all 0.2s ease;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 0.5rem 0;
+    }
+
+    .news-item:hover {
+        background: rgba(13, 110, 253, 0.03);
+        transform: translateX(8px);
+        border-left: 3px solid #0d6efd;
+        padding-left: 1.5rem;
+    }
+
+    .keeper-progress {
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(108, 117, 125, 0.2);
+        overflow: hidden;
+    }
+
+    .keeper-progress-bar {
+        height: 100%;
+        border-radius: 3px;
+        transition: width 0.4s ease;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+
+    .live-indicator {
+        animation: pulse 2s infinite;
+    }
+</style>
+
+<div class="row">
+    <!-- League News -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">League News</h5>
+                <span class="badge bg-primary">Latest</span>
+            </div>
+            <div class="card-body">
+                <!-- Welcome Message - First -->
+                <div class="news-item mb-3 pb-3 border-bottom">
+                    <h6>Welcome to the New GBRFL Website</h6>
+                    <p class="text-muted mb-1"><small>Posted on March 25, 2025</small></p>
+                    <p>Welcome to the new George Blanda Rotisserie Football League website! This platform will help us manage teams, rosters, draft, and more efficiently.</p>
+                </div>
+                
+                <!-- Keeper Selection - Second -->
+                <div class="news-item mb-3 pb-3 border-bottom">
+                    <h6>Keeper Selection Period Now Open</h6>
+                    <p class="text-muted mb-1"><small>Posted on April 10, 2025</small></p>
+                    <p>The keeper selection period is now open. Teams can protect players based on their available protection spots. The deadline for keeper selections is August 24, 2025.</p>
+                </div>
+                
+                <!-- Draft Information - Third -->
+                <div class="news-item">
+                    <h6>Draft Day Approaching</h6>
+                    <p class="text-muted mb-1"><small>Posted on August 15, 2025</small></p>
+                    <% if (isDraftDay) { %>
+                        <p>The 2025 GBRFL Draft is happening today! Access the draft room below when you're ready to participate.</p>
+                        <a href="/draft" class="btn btn-success mt-2">
+                            <i class="bi bi-calendar-event"></i> Join Draft Room
+                        </a>
+                    <% } else { %>
+                        <p>The 2025 GBRFL Draft is scheduled for August 31, 2025. Make sure your keeper selections are finalized before the August 24th deadline. Draft room access will be available here on draft day.</p>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Sidebar -->
+    <div class="col-lg-4">
+        <!-- My Team Status -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">My Team Status</h5>
+            </div>
+            <div class="card-body">
+                <% if (userTeam) { %>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="stat-block">
+                                <h6 class="text-muted">Draft Position</h6>
+                                <span class="fs-4 fw-bold">
+                                    <% if (userTeam.draft_position) { %>
+                                        #<%= userTeam.draft_position %>
+                                    <% } else { %>
+                                        <span class="text-muted">TBD</span>
+                                    <% } %>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-block">
+                                <h6 class="text-muted">Keepers Set</h6>
+                                <span class="fs-4 fw-bold">
+                                    <span class="<%= userTeam.keepers_filled >= userTeam.protection_spots ? 'text-success' : 'text-warning' %>">
+                                        <%= userTeam.keepers_filled || 0 %>/<%= userTeam.protection_spots || 12 %>
+                                    </span>
+                                </span>
+                                <!-- Progress bar -->
+                                <div class="keeper-progress mt-2">
+                                    <div class="keeper-progress-bar bg-<%= userTeam.keepers_filled >= userTeam.protection_spots ? 'success' : 'warning' %>" 
+                                         style="width: <%= ((userTeam.keepers_filled || 0) / (userTeam.protection_spots || 12)) * 100 %>%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-block">
+                                <h6 class="text-muted">Days to Draft</h6>
+                                <span class="fs-4 fw-bold text-info">
+                                    <% if (isDraftDay) { %>
+                                        <span class="live-indicator">TODAY</span>
+                                    <% } else if (daysUntilDraft <= 0) { %>
+                                        COMPLETE
+                                    <% } else { %>
+                                        <%= daysUntilDraft %>
+                                    <% } %>
+                                </span>
+                                <!-- Real-time countdown for draft day -->
+                                <% if (isDraftDay) { %>
+                                    <div class="small text-muted mt-1" id="draftCountdown">Loading...</div>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <!-- Team info at bottom -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1"><%= userTeam.team_name %></h6>
+                            <small class="text-muted"><%= userTeam.player_count %> players on roster</small>
+                        </div>
+                        <a href="/teams/<%= userTeam.team_id %>" class="btn btn-sm btn-outline-primary">View Team</a>
+                    </div>
+                <% } else { %>
+                    <p class="text-muted text-center">Contact the league administrator to get assigned to a team.</p>
+                <% } %>
+            </div>
+        </div>
+        
+        <!-- Important Dates -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Important Dates</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Keeper Deadline
+                        <% if (isKeeperPeriodActive) { %>
+                            <span class="badge bg-warning text-dark">Aug 24, 2025</span>
+                        <% } else { %>
+                            <span class="badge bg-secondary">Closed</span>
+                        <% } %>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Draft Date
+                        <% if (isDraftDay) { %>
+                            <span class="badge bg-success live-indicator">TODAY</span>
+                        <% } else { %>
+                            <span class="badge bg-info text-dark">Aug 31, 2025</span>
+                        <% } %>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Season Start
+                        <span class="badge bg-success">Sep 4, 2025</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <!-- Conditional keeper management button -->
+                    <% if (userTeam && isKeeperPeriodActive) { %>
+                        <a href="/keepers/<%= userTeam.team_id %>" 
+                           class="btn btn-success">
+                            <i class="bi bi-shield-check"></i> Manage Keepers
+                        </a>
+                    <% } %>
+                    
+                    <!-- Draft room button (only on draft day) -->
+                    <% if (isDraftDay) { %>
+                        <a href="/draft" class="btn btn-primary">
+                            <i class="bi bi-calendar-event"></i> Join Draft Room
+                        </a>
+                    <% } %>
+                    
+                    <a href="/players/available" class="btn btn-outline-primary">
+                        <i class="bi bi-person-plus"></i> Browse Available Players
+                    </a>
+                    <a href="/trades/new" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left-right"></i> Propose a Trade
+                    </a>
+                    <a href="/message-board" class="btn btn-outline-dark">
+                        <i class="bi bi-chat-square-text"></i> Create Forum Post
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dashboard-specific JavaScript -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle keeper scroll on mobile
+        const keeperBtn = document.querySelector('.keeper-scroll-btn');
+        if (keeperBtn) {
+            keeperBtn.addEventListener('click', function(e) {
+                // Check if mobile (768px breakpoint)
+                if (window.innerWidth <= 768) {
+                    e.preventDefault();
+                    
+                    // Navigate to team page with hash for mobile scroll
+                    const teamId = this.href.split('/teams/')[1].split('#')[0];
+                    window.location.href = `/teams/${teamId}#keepers`;
+                }
+                // On desktop, let the link work normally
+            });
+        }
+
+        // Real-time draft countdown
+        if (document.getElementById('draftCountdown')) {
+            function updateDraftCountdown() {
+                const draftTime = new Date('2025-08-31 12:00:00').getTime(); // Adjust time as needed
+                const now = new Date().getTime();
+                const distance = draftTime - now;
+                
+                if (distance > 0) {
+                    const hours = Math.floor(distance / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    
+                    if (hours > 0) {
+                        document.getElementById('draftCountdown').innerText = `Starts in ${hours}h ${minutes}m`;
+                    } else if (minutes > 0) {
+                        document.getElementById('draftCountdown').innerText = `Starts in ${minutes}m ${seconds}s`;
+                    } else {
+                        document.getElementById('draftCountdown').innerText = `Starts in ${seconds}s`;
+                    }
+                } else {
+                    document.getElementById('draftCountdown').innerHTML = '<span class="text-success fw-bold">Draft is LIVE!</span>';
+                }
+            }
+            
+            updateDraftCountdown();
+            setInterval(updateDraftCountdown, 1000); // Update every second
+        }
+    });
+</script>

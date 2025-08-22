@@ -1,0 +1,21 @@
+# NFL Player Stats Import Script Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# NFL data source - latest version
+nfl-data-py>=0.3.4
+
+# Database connectivity
+mysql-connector-python>=8.0.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# Optional: For enhanced data processing
+pyarrow>=12.0.0
+
+# Optional: For progress bars during large imports
+tqdm>=4.65.0

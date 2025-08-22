@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> | GBRFL</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        /* Chat room styles */
+        .chat-container { min-height: calc(100vh - 80px); }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+            color: white;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .chat-messages {
+            height: calc(100vh - 300px);
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Unified Layout - Chat bubble style for all devices */
+        .chat-message {
+            padding: 8px 0;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-message:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Current user's messages - right aligned */
+        .chat-message.own-message {
+            align-items: flex-end;
+        }
+        
+        .chat-message.own-message .message-content {
+            background: #0d6efd;
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+            padding: 10px 14px;
+            max-width: min(500px, 70%);
+            margin-left: auto;
+        }
+        
+        .chat-message.own-message .message-header {
+            order: 2;
+            margin-top: 4px;
+            margin-bottom: 0;
+            align-items: flex-end;
+            font-size: 0.8em;
+        }
+        
+        .chat-message.own-message .message-header-info {
+            justify-content: flex-end;
+        }
+        
+        .chat-message.own-message .message-time {
+            text-align: right;
+        }
+        
+        /* Other users' messages - left aligned */
+        .chat-message.other-message .message-content {
+            background: #f8f9fa;
+            color: #212529;
+            border: 1px solid #e9ecef;
+            border-radius: 18px 18px 18px 4px;
+            padding: 10px 14px;
+            max-width: min(500px, 70%);
+        }
+        
+        .chat-message.other-message .message-header {
+            margin-bottom: 4px;
+            font-size: 0.8em;
+        }
+        
+        .message-header {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.875em;
+        }
+        
+        .message-header-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .message-user {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        
+        .message-team {
+            color: #28a745;
+            font-size: 0.875em;
+            margin-left: 5px;
+        }
+        
+        .message-time {
+            color: #6c757d;
+            font-size: 0.85em;
+            margin-top: 2px;
+        }
+        
+        .message-content {
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        
+        /* Mobile specific adjustments */
+        @media (max-width: 768px) {
+            .chat-message.own-message .message-content,
+            .chat-message.other-message .message-content {
+                max-width: 80%;
+                padding: 8px 12px;
+            }
+            
+            .message-header {
+                font-size: 0.75em;
+            }
+            
+            .message-time {
+                font-size: 0.75em;
+            }
+        }
+        
+        .system-message {
+            font-style: italic;
+            color: #6c757d;
+            background: #f8f9fa;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .chat-input-section {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Topic info styles */
+        .topic-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .topic-badge {
+            font-size: 0.75em;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .chat-messages {
+                height: calc(100vh - 350px);
+                max-width: 100%;
+                margin: 0 -15px 1rem -15px;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+            
+            .chat-header {
+                margin: 0 -15px 1rem -15px;
+                border-radius: 0;
+            }
+            
+            .topic-info {
+                max-width: 100%;
+                margin: 0 -15px 1rem -15px;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+            
+            .chat-input-section {
+                max-width: 100%;
+                margin: 0 -15px;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                border-bottom: none;
+            }
+        }
+        
+        /* Typing indicator */
+        .typing-indicator {
+            padding: 5px 10px;
+            font-style: italic;
+            color: #6c757d;
+            font-size: 0.875em;
+            display: none;
+        }
+        
+        .typing-dots::after {
+            content: '...';
+            animation: typing 1.5s infinite;
+        }
+        
+        @keyframes typing {
+            0%, 60% { opacity: 0; }
+            30% { opacity: 1; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Chat Header -->
+    <div class="chat-header">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div class="d-flex align-items-center">
+                        <a href="/message-board" class="btn btn-light btn-sm me-3">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </a>
+                        <div>
+                            <h4 class="mb-0">
+                                <% if (chatRoom.room_type === 'draft') { %>
+                                    <i class="bi bi-trophy"></i>
+                                <% } else if (chatRoom.topic_type === 'Poll') { %>
+                                    <i class="bi bi-bar-chart"></i>
+                                <% } else if (chatRoom.topic_type === 'Vote') { %>
+                                    <i class="bi bi-check2-square"></i>
+                                <% } else if (chatRoom.topic_type === 'Announcement') { %>
+                                    <i class="bi bi-megaphone"></i>
+                                <% } else if (chatRoom.topic_type === 'Trade') { %>
+                                    <i class="bi bi-arrow-left-right"></i>
+                                <% } else { %>
+                                    <i class="bi bi-chat-dots"></i>
+                                <% } %>
+                                <%= chatRoom.room_name %>
+                            </h4>
+                            <small class="opacity-75">
+                                <% if (chatRoom.room_type === 'draft') { %>
+                                    <span class="badge bg-warning text-dark">Draft Room</span>
+                                <% } else if (chatRoom.topic_type) { %>
+                                    <span class="badge bg-light text-dark"><%= chatRoom.topic_type %></span>
+                                <% } %>
+                                Created by <%= chatRoom.first_name %> <%= chatRoom.last_name %>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="text-end">
+                        <small class="opacity-75">
+                            <i class="bi bi-people"></i> <span id="onlineCount">1</span> online
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+        <!-- Topic Information (if not draft room) -->
+        <% if (chatRoom.room_type !== 'draft' && chatRoom.topic_content) { %>
+            <div class="topic-info">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0">Discussion Topic</h6>
+                    <% if (chatRoom.topic_type && chatRoom.topic_type !== 'Discussion') { %>
+                        <span class="topic-badge badge bg-secondary"><%= chatRoom.topic_type %></span>
+                    <% } %>
+                </div>
+                <p class="mb-0 small"><%= chatRoom.topic_content %></p>
+            </div>
+        <% } %>
+        
+        <!-- Poll Voting Section -->
+        <% if (chatRoom.topic_type === 'Poll' && pollData) { %>
+            <div class="topic-info">
+                <h6 class="mb-3">
+                    <i class="bi bi-bar-chart"></i> Poll Options 
+                    <small class="text-muted">(<%= pollData.totalVotes %> vote<%= pollData.totalVotes !== 1 ? 's' : '' %>)</small>
+                </h6>
+                
+                <% if (!pollData.userHasVoted) { %>
+                    <!-- Voting Form -->
+                    <form id="pollVoteForm">
+                        <div class="poll-options">
+                            <% pollData.options.forEach(function(option) { %>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="pollOption" id="option<%= option.option_id %>" value="<%= option.option_id %>">
+                                    <label class="form-check-label" for="option<%= option.option_id %>">
+                                        <%= option.option_text %>
+                                    </label>
+                                </div>
+                            <% }); %>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm mt-3">
+                            <i class="bi bi-check-circle"></i> Submit Vote
+                        </button>
+                    </form>
+                <% } else { %>
+                    <!-- Results Display -->
+                    <div class="poll-results">
+                        <% pollData.options.forEach(function(option) { 
+                            const percentage = pollData.totalVotes > 0 ? Math.round((option.vote_count / pollData.totalVotes) * 100) : 0;
+                            const isUserChoice = pollData.userVote && pollData.userVote.option_id === option.option_id;
+                        %>
+                            <div class="poll-option-result mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>
+                                        <%= option.option_text %>
+                                        <% if (isUserChoice) { %>
+                                            <span class="badge bg-primary ms-1">Your Vote</span>
+                                        <% } %>
+                                    </span>
+                                    <span class="text-muted"><%= option.vote_count %> (<%= percentage %>%)</span>
+                                </div>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar <%= isUserChoice ? 'bg-primary' : 'bg-secondary' %>" 
+                                         role="progressbar" 
+                                         style="width: <%= percentage %>%"
+                                         aria-valuenow="<%= percentage %>" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                        <p class="text-muted small mt-3 mb-0">
+                            <i class="bi bi-info-circle"></i> You voted for: <strong><%= pollData.userVote.option_text %></strong>
+                        </p>
+                    </div>
+                <% } %>
+            </div>
+            
+            <script>
+                <% if (!pollData.userHasVoted) { %>
+                // Handle poll voting
+                document.getElementById('pollVoteForm').addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const selectedOption = document.querySelector('input[name="pollOption"]:checked');
+                    if (!selectedOption) {
+                        alert('Please select an option');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('/message-board/api/poll/<%= chatRoom.topic_id %>/vote', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ optionId: selectedOption.value })
+                        });
+                        
+                        const result = await response.json();
+                        if (result.success) {
+                            // Reload page to show results
+                            window.location.reload();
+                        } else {
+                            alert(result.message || 'Error voting');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error submitting vote');
+                    }
+                });
+                <% } %>
+            </script>
+        <% } %>
+
+        <div class="row">
+            <div class="col-12">
+                <!-- Chat Messages Area -->
+                <div class="chat-messages" id="chatMessages">
+                    <% if (messages && messages.length > 0) { %>
+                        <% messages.forEach(function(message) { %>
+                            <% if (message.message_type === 'system') { %>
+                                <div class="chat-message" data-message-id="<%= message.message_id %>">
+                                    <div class="system-message">
+                                        <i class="bi bi-info-circle"></i> <%= message.message %>
+                                    </div>
+                                </div>
+                            <% } else { %>
+                                <% const isOwnMessage = message.user_id === user.id; %>
+                                <div class="chat-message <%= isOwnMessage ? 'own-message' : 'other-message' %>" data-message-id="<%= message.message_id %>">
+                                    <div class="message-header">
+                                        <div class="message-header-info">
+                                            <span class="message-user"><%= message.first_name %> <%= message.last_name %></span>
+                                            <% if (message.team_name) { %>
+                                                <span class="message-team">(<%= message.team_name %>)</span>
+                                            <% } %>
+                                        </div>
+                                        <div class="message-time">
+                                            <%= new Date(message.created_at).toLocaleTimeString() %>
+                                        </div>
+                                    </div>
+                                    <div class="message-content"><%= message.message %></div>
+                                </div>
+                            <% } %>
+                        <% }); %>
+                    <% } else { %>
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-chat-text display-4"></i>
+                            <p class="mt-2">No messages yet. Be the first to start the conversation!</p>
+                        </div>
+                    <% } %>
+                    
+                    <!-- Typing indicator -->
+                    <div class="typing-indicator" id="typingIndicator">
+                        <span id="typingUsers"></span> <span class="typing-dots">is typing</span>
+                    </div>
+                </div>
+
+                <!-- Chat Input -->
+                <div class="chat-input-section">
+                    <form id="chatForm">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="messageInput" 
+                                   placeholder="Type your message..." maxlength="500" autocomplete="off">
+                            <button class="btn btn-primary" type="submit" id="sendBtn">
+                                <i class="bi bi-send"></i> Send
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            Press Enter to send. Maximum 500 characters.
+                        </small>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Chat functionality
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const chatForm = document.getElementById('chatForm');
+        const sendBtn = document.getElementById('sendBtn');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const typingUsers = document.getElementById('typingUsers');
+        const roomId = <%= chatRoom.room_id %>;
+        const currentUser = '<%= user.first_name %> <%= user.last_name %>';
+
+        // Initialize Socket.IO connection for message board
+        const socket = io('/message-board');
+        
+        // Join the specific chat room
+        socket.emit('joinRoom', { roomId: roomId });
+        
+        // Handle new messages
+        socket.on('chatMessage', function(message) {
+            addMessageToChat(message);
+            scrollToBottom();
+        });
+        
+        // Handle user count updates
+        socket.on('userCountUpdate', function(data) {
+            document.getElementById('onlineCount').textContent = data.count;
+        });
+        
+        // Handle typing indicators
+        let typingTimer;
+        messageInput.addEventListener('input', function() {
+            socket.emit('typing', { roomId: roomId, user: currentUser });
+            
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(function() {
+                socket.emit('stopTyping', { roomId: roomId, user: currentUser });
+            }, 1000);
+        });
+        
+        socket.on('userTyping', function(data) {
+            if (data.user !== currentUser) {
+                typingUsers.textContent = data.user;
+                typingIndicator.style.display = 'block';
+                scrollToBottom();
+            }
+        });
+        
+        socket.on('userStoppedTyping', function(data) {
+            if (data.user !== currentUser) {
+                typingIndicator.style.display = 'none';
+            }
+        });
+        
+        // Handle form submission
+        chatForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            // Clear input and disable send button
+            messageInput.value = '';
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+            
+            // Stop typing indicator
+            socket.emit('stopTyping', { roomId: roomId, user: currentUser });
+            
+            try {
+                const response = await fetch(`/message-board/api/chat/${roomId}/message`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'Error sending message');
+                }
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                alert('Error sending message: ' + error.message);
+                messageInput.value = message; // Restore message
+            } finally {
+                // Re-enable send button
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="bi bi-send"></i> Send';
+                messageInput.focus();
+            }
+        });
+        
+        // Add message to chat display
+        function addMessageToChat(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            messageDiv.dataset.messageId = message.message_id;
+            
+            if (message.message_type === 'system') {
+                messageDiv.innerHTML = `
+                    <div class="system-message">
+                        <i class="bi bi-info-circle"></i> ${escapeHtml(message.message)}
+                    </div>
+                `;
+            } else {
+                const isOwnMessage = message.user_id === <%= user.id %>;
+                const messageClass = isOwnMessage ? 'own-message' : 'other-message';
+                messageDiv.classList.add(messageClass);
+                
+                const teamInfo = message.team_name ? `<span class="message-team">(${escapeHtml(message.team_name)})</span>` : '';
+                const messageTime = new Date(message.created_at).toLocaleTimeString();
+                
+                messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <div class="message-header-info">
+                            <span class="message-user">${escapeHtml(message.first_name)} ${escapeHtml(message.last_name)}</span>
+                            ${teamInfo}
+                        </div>
+                        <div class="message-time">${messageTime}</div>
+                    </div>
+                    <div class="message-content">${escapeHtml(message.message)}</div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+        }
+        
+        // Scroll to bottom of chat
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+        
+        // Initial scroll to bottom
+        scrollToBottom();
+        
+        // Focus on input when page loads
+        messageInput.focus();
+        
+        // Handle Enter key in input
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                chatForm.dispatchEvent(new Event('submit'));
+            }
+        });
+        
+        // Handle window focus for message input
+        window.addEventListener('focus', function() {
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>

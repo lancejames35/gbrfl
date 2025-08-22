@@ -1,0 +1,781 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="h2 mb-1">Schedule Management</h1>
+        <p class="text-muted small">Drag teams up/down to reorder positions for the <%= seasonYear %> season</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <div id="saveStatus" class="text-muted small"></div>
+    </div>
+</div>
+
+<!-- Progress -->
+<div class="progress mb-4" style="height: 6px;">
+    <div class="progress-bar bg-success" role="progressbar" style="width: <%= (assignments.length / 10) * 100 %>%"></div>
+</div>
+<div class="text-center mb-4">
+    <small class="text-muted" id="progressText"><%= assignments.length %> of 10 positions assigned</small>
+</div>
+
+<!-- Simple Vertical List -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Team Position Assignments</h5>
+                <small class="text-muted">Drag teams up/down to change positions</small>
+            </div>
+            <div class="card-body p-0">
+                <div id="teamList" class="team-list">
+                    <% 
+                        // Create array of 10 positions
+                        const positionList = [];
+                        for(let i = 1; i <= 10; i++) {
+                            const assignment = assignments.find(a => a.schedule_position === i);
+                            positionList.push({
+                                position: i,
+                                team: assignment || null
+                            });
+                        }
+                        
+                        positionList.forEach(pos => {
+                    %>
+                        <div class="team-item" data-position="<%= pos.position %>">
+                            <div class="position-number">
+                                <%= pos.position %>
+                            </div>
+                            <div class="team-content">
+                                <% if (pos.team) { %>
+                                    <div class="team-info" draggable="true" data-team-id="<%= pos.team.fantasy_team_id %>">
+                                        <div class="team-avatar">
+                                            <%= pos.team.team_name.substring(0, 2).toUpperCase() %>
+                                        </div>
+                                        <div class="team-details">
+                                            <div class="team-name"><%= pos.team.team_name %></div>
+                                            <div class="owner-name"><%= pos.team.first_name %> <%= pos.team.last_name %></div>
+                                        </div>
+                                        <div class="drag-handle">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </div>
+                                    </div>
+                                <% } else { %>
+                                    <div class="empty-slot">
+                                        <i class="bi bi-plus-circle"></i>
+                                        <span>Empty Position</span>
+                                    </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Available Teams -->
+        <% if (unassignedTeams && unassignedTeams.length > 0) { %>
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">Unassigned Teams</h6>
+                <small class="text-muted">Drag these to positions above</small>
+            </div>
+            <div class="card-body">
+                <div class="unassigned-teams" id="unassignedTeams">
+                    <% unassignedTeams.forEach(team => { %>
+                        <div class="unassigned-team" data-team-id="<%= team.team_id %>" draggable="true">
+                            <div class="team-avatar">
+                                <%= team.team_name.substring(0, 2).toUpperCase() %>
+                            </div>
+                            <div class="team-details">
+                                <div class="team-name"><%= team.team_name %></div>
+                                <div class="owner-name"><%= team.owner_name || 'No Owner' %></div>
+                            </div>
+                            <div class="drag-handle">
+                                <i class="bi bi-grip-vertical"></i>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        </div>
+        <% } %>
+    </div>
+    
+    <!-- Live Schedule Preview -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Schedule Preview</h6>
+            </div>
+            <div class="card-body">
+                <div id="schedulePreviewContainer">
+                    <div class="text-center py-4" id="schedulePreviewPlaceholder">
+                        <i class="bi bi-calendar-event text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mt-2">Loading schedule preview...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.team-list {
+    min-height: 600px;
+}
+
+.team-item {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border-bottom: 1px solid #eee;
+    min-height: 60px;
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.team-item.drag-over {
+    background: #e8f5e8;
+    border: 2px solid #28a745;
+}
+
+.position-number {
+    width: 50px;
+    text-align: center;
+    font-weight: bold;
+    color: #666;
+    background: #f8f9fa;
+    padding: 20px 0;
+    border-right: 1px solid #eee;
+}
+
+.team-content {
+    flex: 1;
+    padding: 10px 15px;
+}
+
+.team-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: grab;
+    padding: 5px;
+    border-radius: 4px;
+    transition: transform 0.1s ease;
+}
+
+.team-info:hover {
+    transform: translateY(-1px);
+}
+
+.team-info.dragging {
+    transform: scale(1.02);
+}
+
+.team-info:active {
+    cursor: grabbing;
+}
+
+.team-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.team-details {
+    flex: 1;
+}
+
+.team-name {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.owner-name {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.drag-handle {
+    color: #999;
+    cursor: grab;
+    padding: 5px;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.empty-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #999;
+    padding: 15px;
+    border: 2px dashed #ddd;
+    border-radius: 6px;
+}
+
+.unassigned-teams {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.unassigned-team {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.unassigned-team:hover {
+    background: #ffe69c;
+    transform: translateY(-1px);
+}
+
+.unassigned-team:active {
+    cursor: grabbing;
+}
+
+.unassigned-team.dragging {
+    opacity: 0.5;
+}
+
+.schedule-preview-table {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.game-primary, .game-bonus {
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.game-primary {
+    background: #e3f2fd;
+}
+
+.game-bonus {
+    background: #f3e5f5;
+}
+
+@media (max-width: 991px) {
+    .col-lg-6:last-child {
+        margin-top: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .team-info {
+        gap: 8px;
+    }
+    
+    .team-avatar {
+        width: 35px;
+        height: 35px;
+        font-size: 0.7rem;
+    }
+    
+    .position-number {
+        width: 40px;
+        font-size: 0.9rem;
+    }
+    
+    .unassigned-teams {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let draggedElement = null;
+    let currentAssignments = [];
+    
+    // Initialize from server data (with safe fallbacks)
+    const serverData = {
+        assignments: <%- JSON.stringify(assignments || []) %>,
+        unassignedTeams: <%- JSON.stringify(unassignedTeams || []) %>
+    };
+    
+    currentAssignments = [...serverData.assignments];
+    
+    // Debug information
+    console.log('Schedule Management JavaScript loaded successfully');
+    console.log('Server data received:', serverData);
+    console.log('Current assignments:', currentAssignments);
+    
+    // Initialize everything
+    initializeDragAndDrop();
+    loadSchedulePreview();
+    
+    function initializeDragAndDrop() {
+        // Setup drag events for team cards
+        document.querySelectorAll('.team-info, .unassigned-team').forEach(item => {
+            setupDragEvents(item);
+        });
+        
+        // Setup drop events for team slots
+        document.querySelectorAll('.team-item').forEach(item => {
+            setupDropEvents(item);
+        });
+    }
+    
+    function setupDragEvents(element) {
+        console.log('Setting up drag events for element:', element);
+        
+        // Desktop drag events
+        element.addEventListener('dragstart', function(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            console.log('Drag started:', this);
+        });
+        
+        element.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            draggedElement = null;
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+            console.log('Drag ended:', this);
+        });
+        
+        // Mobile touch events
+        let touchStartY = 0;
+        let touchElement = null;
+        
+        element.addEventListener('touchstart', function(e) {
+            touchStartY = e.touches[0].clientY;
+            touchElement = this;
+            this.classList.add('dragging');
+            console.log('Touch started:', this);
+        }, { passive: true });
+        
+        element.addEventListener('touchmove', function(e) {
+            if (!touchElement) return;
+            e.preventDefault();
+            
+            const touch = e.touches[0];
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow ? elementBelow.closest('.team-item') : null;
+            
+            // Clear previous highlights
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+            
+            // Highlight current target
+            if (targetItem && targetItem !== touchElement.closest('.team-item')) {
+                targetItem.classList.add('drag-over');
+            }
+        }, { passive: false });
+        
+        element.addEventListener('touchend', function(e) {
+            if (!touchElement) return;
+            
+            const touch = e.changedTouches[0];
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetItem = elementBelow ? elementBelow.closest('.team-item') : null;
+            
+            this.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+            
+            if (targetItem && targetItem !== touchElement.closest('.team-item')) {
+                // Simulate drop event
+                draggedElement = touchElement;
+                const targetPosition = parseInt(targetItem.dataset.position);
+                
+                if (touchElement.classList.contains('unassigned-team')) {
+                    const targetTeamContent = targetItem.querySelector('.team-content');
+                    moveUnassignedToPosition(touchElement, targetPosition, targetTeamContent);
+                } else if (touchElement.classList.contains('team-info')) {
+                    const sourceTeamItem = touchElement.closest('.team-item');
+                    const sourcePosition = parseInt(sourceTeamItem.dataset.position);
+                    
+                    if (sourcePosition !== targetPosition) {
+                        shiftTeamPositions(sourcePosition, targetPosition);
+                    }
+                }
+            }
+            
+            touchElement = null;
+            draggedElement = null;
+            console.log('Touch ended');
+        }, { passive: true });
+    }
+    
+    function setupDropEvents(element) {
+        element.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        
+        element.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        });
+        
+        element.addEventListener('dragleave', function(e) {
+            if (!this.contains(e.relatedTarget)) {
+                this.classList.remove('drag-over');
+            }
+        });
+        
+        element.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            
+            if (!draggedElement) {
+                console.warn('No dragged element found');
+                return;
+            }
+            
+            const targetPosition = parseInt(this.dataset.position);
+            const targetTeamContent = this.querySelector('.team-content');
+            
+            console.log('Drop event triggered:', {
+                draggedElement,
+                targetPosition,
+                draggedElementClasses: draggedElement.className
+            });
+            
+            if (draggedElement.classList.contains('unassigned-team')) {
+                // Moving from unassigned to position
+                console.log('Moving unassigned team to position:', targetPosition);
+                moveUnassignedToPosition(draggedElement, targetPosition, targetTeamContent);
+            } else if (draggedElement.classList.contains('team-info')) {
+                // Moving between positions
+                const sourceTeamItem = draggedElement.closest('.team-item');
+                const sourcePosition = parseInt(sourceTeamItem.dataset.position);
+                
+                console.log('Moving team from position', sourcePosition, 'to position', targetPosition);
+                
+                if (sourcePosition !== targetPosition) {
+                    shiftTeamPositions(sourcePosition, targetPosition);
+                } else {
+                    console.log('Source and target positions are the same, no move needed');
+                }
+            } else {
+                console.warn('Dragged element does not match expected classes:', draggedElement.className);
+            }
+        });
+    }
+    
+    function moveUnassignedToPosition(unassignedTeam, targetPosition, targetTeamContent) {
+        console.log('moveUnassignedToPosition called:', { unassignedTeam, targetPosition, targetTeamContent });
+        
+        try {
+            // Get team data
+            const teamId = unassignedTeam.dataset.teamId;
+            const teamAvatar = unassignedTeam.querySelector('.team-avatar').textContent;
+            const teamName = unassignedTeam.querySelector('.team-name').textContent;
+            const ownerName = unassignedTeam.querySelector('.owner-name').textContent;
+            
+            console.log('Team data extracted:', { teamId, teamAvatar, teamName, ownerName });
+            
+            // Clear existing team in target position if any
+            const existingTeamInfo = targetTeamContent.querySelector('.team-info');
+            if (existingTeamInfo) {
+                console.log('Moving existing team to unassigned');
+                moveTeamToUnassigned(existingTeamInfo);
+            }
+            
+            // Create new team info element
+            const newTeamInfo = document.createElement('div');
+            newTeamInfo.className = 'team-info';
+            newTeamInfo.draggable = true;
+            newTeamInfo.dataset.teamId = teamId;
+            newTeamInfo.innerHTML = `
+                <div class="team-avatar">${teamAvatar}</div>
+                <div class="team-details">
+                    <div class="team-name">${teamName}</div>
+                    <div class="owner-name">${ownerName}</div>
+                </div>
+                <div class="drag-handle">
+                    <i class="bi bi-grip-vertical"></i>
+                </div>
+            `;
+            
+            // Replace content
+            targetTeamContent.innerHTML = '';
+            targetTeamContent.appendChild(newTeamInfo);
+            
+            console.log('New team info created and added to position', targetPosition);
+            
+            // Setup drag events for new element
+            setupDragEvents(newTeamInfo);
+            
+            // Remove from unassigned
+            unassignedTeam.remove();
+            
+            console.log('Team removed from unassigned area');
+            
+            updateAssignments();
+        } catch (error) {
+            console.error('Error in moveUnassignedToPosition:', error);
+        }
+    }
+    
+    function shiftTeamPositions(sourcePos, targetPos) {
+        console.log(`Shifting team from position ${sourcePos} to position ${targetPos}`);
+        
+        // Get all team items
+        const allItems = [];
+        for (let i = 1; i <= 10; i++) {
+            const item = document.querySelector(`.team-item[data-position="${i}"]`);
+            if (item) {
+                allItems[i] = {
+                    element: item,
+                    content: item.querySelector('.team-content').innerHTML
+                };
+            }
+        }
+        
+        // Store the content being moved
+        const movingContent = allItems[sourcePos].content;
+        
+        if (sourcePos < targetPos) {
+            // Moving down: shift positions up from source+1 to target
+            for (let i = sourcePos; i < targetPos; i++) {
+                if (allItems[i + 1]) {
+                    allItems[i].element.querySelector('.team-content').innerHTML = allItems[i + 1].content;
+                }
+            }
+        } else {
+            // Moving up: shift positions down from target to source-1
+            for (let i = sourcePos; i > targetPos; i--) {
+                if (allItems[i - 1]) {
+                    allItems[i].element.querySelector('.team-content').innerHTML = allItems[i - 1].content;
+                }
+            }
+        }
+        
+        // Place the moved team in target position
+        allItems[targetPos].element.querySelector('.team-content').innerHTML = movingContent;
+        
+        // Re-initialize drag events
+        initializeDragAndDrop();
+        
+        updateAssignments();
+        
+        console.log(`Completed shift from position ${sourcePos} to ${targetPos}`);
+    }
+    
+    function moveTeamToUnassigned(teamInfo) {
+        const teamId = teamInfo.dataset.teamId;
+        const teamAvatar = teamInfo.querySelector('.team-avatar').textContent;
+        const teamName = teamInfo.querySelector('.team-name').textContent;
+        const ownerName = teamInfo.querySelector('.owner-name').textContent;
+        
+        // Create unassigned team element
+        const unassignedTeam = document.createElement('div');
+        unassignedTeam.className = 'unassigned-team';
+        unassignedTeam.draggable = true;
+        unassignedTeam.dataset.teamId = teamId;
+        unassignedTeam.innerHTML = `
+            <div class="team-avatar">${teamAvatar}</div>
+            <div class="team-details">
+                <div class="team-name">${teamName}</div>
+                <div class="owner-name">${ownerName}</div>
+            </div>
+            <div class="drag-handle">
+                <i class="bi bi-grip-vertical"></i>
+            </div>
+        `;
+        
+        // Add to unassigned area
+        const unassignedArea = document.getElementById('unassignedTeams');
+        if (unassignedArea) {
+            unassignedArea.appendChild(unassignedTeam);
+            setupDragEvents(unassignedTeam);
+        }
+    }
+    
+    function updateAssignments() {
+        currentAssignments = [];
+        
+        try {
+            document.querySelectorAll('.team-item').forEach((item) => {
+                const position = parseInt(item.dataset.position);
+                const teamInfo = item.querySelector('.team-info');
+                
+                if (teamInfo) {
+                    const teamId = parseInt(teamInfo.dataset.teamId);
+                    const teamNameEl = teamInfo.querySelector('.team-name');
+                    const ownerNameEl = teamInfo.querySelector('.owner-name');
+                    
+                    if (!teamNameEl) {
+                        console.warn('Team name element not found for position:', position);
+                        return;
+                    }
+                    
+                    const teamName = teamNameEl.textContent;
+                    const ownerName = ownerNameEl ? ownerNameEl.textContent : '';
+                    
+                    // Find original team data
+                    const allTeams = [...(serverData.assignments || []), ...(serverData.unassignedTeams || [])];
+                    const originalTeam = allTeams.find(t => 
+                        t && ((t.team_id || t.fantasy_team_id) === teamId || t.team_name === teamName)
+                    );
+                    
+                    if (originalTeam) {
+                        currentAssignments.push({
+                            schedule_position: position,
+                            fantasy_team_id: originalTeam.team_id || originalTeam.fantasy_team_id,
+                            team_name: teamName,
+                            first_name: originalTeam.first_name || '',
+                            last_name: originalTeam.last_name || ''
+                        });
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error updating assignments:', error);
+        }
+        
+        // Update progress
+        updateProgress();
+        
+        // Auto-save changes and then update preview
+        autoSaveAssignments().then(() => {
+            // Update preview after save completes
+            setTimeout(() => loadSchedulePreview(), 500);
+        });
+    }
+    
+    function updateProgress() {
+        const progress = (currentAssignments.length / 10) * 100;
+        const progressBar = document.querySelector('.progress-bar');
+        const progressText = document.getElementById('progressText');
+        
+        if (progressBar) {
+            progressBar.style.width = progress + '%';
+        }
+        
+        if (progressText) {
+            progressText.textContent = `${currentAssignments.length} of 10 positions assigned`;
+        }
+    }
+    
+    async function autoSaveAssignments() {
+        const statusDiv = document.getElementById('saveStatus');
+        
+        try {
+            const response = await fetch('/admin/schedules/assignments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ assignments: currentAssignments })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Clear any previous error messages
+                statusDiv.innerHTML = '';
+            } else {
+                statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-1"></i>Error saving';
+                console.error('Save error:', result.message);
+            }
+        } catch (error) {
+            statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle text-danger me-1"></i>Save failed';
+            console.error('Save error:', error);
+        }
+    }
+    
+    async function loadSchedulePreview() {
+        try {
+            const response = await fetch('/admin/schedules/preview');
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.success && result.schedule) {
+                displaySchedulePreview(result.schedule, result.notes || {});
+            } else {
+                document.getElementById('schedulePreviewContainer').innerHTML = 
+                    `<div class="alert alert-warning">Error loading preview: ${result.message || 'Unknown error'}</div>`;
+            }
+        } catch (error) {
+            console.error('Error loading schedule preview:', error);
+            document.getElementById('schedulePreviewContainer').innerHTML = 
+                `<div class="alert alert-warning">Error loading preview: ${error.message}</div>`;
+        }
+    }
+    
+    function displaySchedulePreview(schedule, notes) {
+        const container = document.getElementById('schedulePreviewContainer');
+        
+        if (!container) {
+            console.error('Schedule preview container not found');
+            return;
+        }
+        
+        if (!schedule || typeof schedule !== 'object') {
+            container.innerHTML = '<div class="alert alert-warning">No schedule data available</div>';
+            return;
+        }
+        
+        try {
+            let html = '<div class="schedule-preview-table"><table class="table table-sm">';
+            html += '<thead><tr><th width="15%">Week</th><th width="42.5%">Primary Games</th><th width="42.5%">Bonus Games</th></tr></thead><tbody>';
+            
+            for (let week = 1; week <= 17; week++) {
+                const weekSchedule = schedule[week] || [];
+                const primaryGames = weekSchedule.filter(g => g && g.game_type === 'primary');
+                const bonusGames = weekSchedule.filter(g => g && g.game_type === 'bonus');
+                
+                html += `<tr><td><strong>Week ${week}</strong></td><td>`;
+                primaryGames.forEach(game => {
+                    if (game && game.game_display) {
+                        html += `<div class="game-primary">${game.game_display}</div>`;
+                    }
+                });
+                html += `</td><td>`;
+                bonusGames.forEach(game => {
+                    if (game && game.game_display) {
+                        html += `<div class="game-bonus">${game.game_display}</div>`;
+                    }
+                });
+                html += `</td></tr>`;
+            }
+            
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        } catch (error) {
+            console.error('Error displaying schedule preview:', error);
+            container.innerHTML = '<div class="alert alert-danger">Error displaying schedule preview</div>';
+        }
+    }
+    
+    function showAlert(type, message) {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 300px;';
+        alert.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        
+        document.body.appendChild(alert);
+        setTimeout(() => alert.remove(), 3000);
+    }
+});
+</script>

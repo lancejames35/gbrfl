@@ -1,0 +1,46 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <h1 class="mb-0">Fantasy Teams</h1>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="/teams/my-teams" class="btn btn-outline-primary me-2">
+            <i class="bi bi-person"></i> My Teams
+        </a>
+        <a href="/teams/create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create Team
+        </a>
+    </div>
+</div>
+
+<!-- Team Cards -->
+<div class="row">
+    <% if (teams && teams.length > 0) { %>
+        <% teams.forEach(team => { %>
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><%= team.team_name %></h5>
+                        <span class="badge bg-secondary"><%= team.owner_username %></span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Placeholder for team stats -->
+                        <div class="mb-3">
+                            <small class="text-muted">Created: <%= new Date(team.created_at).toLocaleDateString() %></small>
+                        </div>
+                        <div class="d-grid">
+                            <a href="/teams/<%= team.team_id %>" class="btn btn-outline-primary">View Team</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% }); %>
+    <% } else { %>
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                No teams found. <a href="/teams/create" class="alert-link">Create your first team</a>
+            </div>
+        </div>
+    <% } %>
+</div>

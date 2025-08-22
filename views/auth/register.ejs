@@ -1,0 +1,126 @@
+<!-- Registration Form -->
+<div class="row">
+    <div class="col-md-6 mx-auto">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0">Register</h2>
+            </div>
+            <div class="card-body">
+                <form action="/register" method="POST" class="needs-validation" novalidate>
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="username" 
+                                    name="username" 
+                                    value="<%= typeof username !== 'undefined' ? username : '' %>"
+                                    autocomplete="username"
+                                    required
+                                    minlength="3"
+                                    maxlength="20"
+                                >
+                                <div class="form-text">Username must be between 3-20 characters.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input 
+                                    type="email" 
+                                    class="form-control" 
+                                    id="email" 
+                                    name="email" 
+                                    value="<%= typeof email !== 'undefined' ? email : '' %>"
+                                    autocomplete="email"
+                                    required
+                                >
+                            </div>
+                            <div class="mb-3">
+                                <label for="firstName" class="form-label">First Name</label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="firstName" 
+                                    name="firstName" 
+                                    value="<%= typeof firstName !== 'undefined' ? firstName : '' %>"
+                                    autocomplete="given-name"
+                                >
+                            </div>
+                            <div class="mb-3">
+                                <label for="lastName" class="form-label">Last Name</label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="lastName" 
+                                    name="lastName" 
+                                    value="<%= typeof lastName !== 'undefined' ? lastName : '' %>"
+                                    autocomplete="family-name"
+                                >
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="password" 
+                                    name="password" 
+                                    autocomplete="new-password"
+                                    required
+                                    minlength="6"
+                                >
+                                <div class="form-text">Password must be at least 6 characters.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="confirmPassword" 
+                                    name="confirmPassword" 
+                                    autocomplete="new-password"
+                                    required
+                                >
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">Register</button>
+                            </div>
+                        </form>
+            </div>
+            <div class="card-footer text-center">
+                <p class="mb-0">Already have an account? <a href="/login">Login</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Page-specific JavaScript -->
+<script>
+    // Form validation script
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fetch all forms with the 'needs-validation' class
+        const forms = document.querySelectorAll('.needs-validation');
+        
+        // Loop over them and prevent submission
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                
+                // Check if passwords match
+                const password = document.getElementById('password');
+                const confirmPassword = document.getElementById('confirmPassword');
+                
+                if (password.value !== confirmPassword.value) {
+                    confirmPassword.setCustomValidity('Passwords do not match');
+                    event.preventDefault();
+                    event.stopPropagation();
+                } else {
+                    confirmPassword.setCustomValidity('');
+                }
+                
+                form.classList.add('was-validated');
+            }, false);
+        });
+    });
+</script>

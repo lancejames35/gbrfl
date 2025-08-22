@@ -1,0 +1,232 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-0">Activity Logs</h1>
+        <p class="text-muted">Monitor all league activity and system events</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <button class="btn btn-outline-secondary">
+            <i class="bi bi-download"></i> Export Logs
+        </button>
+    </div>
+</div>
+
+<!-- Log Filters -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Filter Logs</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <label class="form-label">Activity Type</label>
+                    <select class="form-select">
+                        <option value="">All Activities</option>
+                        <option value="trade">Trades</option>
+                        <option value="waiver">Waiver Claims</option>
+                        <option value="keeper">Keeper Updates</option>
+                        <option value="roster">Roster Changes</option>
+                        <option value="draft">Draft Picks</option>
+                        <option value="admin">Admin Actions</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <label class="form-label">User</label>
+                    <select class="form-select">
+                        <option value="">All Users</option>
+                        <option value="1">John Doe</option>
+                        <option value="2">Jane Smith</option>
+                        <option value="3">Mike Johnson</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <label class="form-label">Date Range</label>
+                    <select class="form-select">
+                        <option value="today">Today</option>
+                        <option value="week" selected>Past Week</option>
+                        <option value="month">Past Month</option>
+                        <option value="season">This Season</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" placeholder="Search logs...">
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary">Apply Filters</button>
+        <button class="btn btn-outline-secondary">Clear Filters</button>
+    </div>
+</div>
+
+<!-- Activity Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-list-ul display-4 text-primary"></i>
+                <h5 class="card-title mt-3">Total Activities</h5>
+                <h3 class="text-primary">1,247</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-day display-4 text-success"></i>
+                <h5 class="card-title mt-3">Today</h5>
+                <h3 class="text-success">23</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-person-check display-4 text-warning"></i>
+                <h5 class="card-title mt-3">Active Users</h5>
+                <h3 class="text-warning">8</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-triangle display-4 text-danger"></i>
+                <h5 class="card-title mt-3">Errors</h5>
+                <h3 class="text-danger">2</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Log Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Recent Activity</h5>
+        <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm active">Real-time</button>
+            <button class="btn btn-outline-secondary btn-sm">Paused</button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Activity</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <small>Oct 15, 2024<br>2:30:15 PM</small>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar bg-primary text-white rounded-circle me-2" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">
+                                    JD
+                                </div>
+                                John Doe
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">Keeper Update</span>
+                        </td>
+                        <td>Selected Tom Brady as keeper player</td>
+                        <td>
+                            <span class="badge bg-success">Success</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <small>Oct 15, 2024<br>1:45:22 PM</small>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar bg-success text-white rounded-circle me-2" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">
+                                    JS
+                                </div>
+                                Jane Smith
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning">Trade Proposal</span>
+                        </td>
+                        <td>Proposed trade with Team Alpha</td>
+                        <td>
+                            <span class="badge bg-warning">Pending</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <small>Oct 15, 2024<br>12:15:08 PM</small>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar bg-danger text-white rounded-circle me-2" style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem;">
+                                    AD
+                                </div>
+                                Admin
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">Admin Action</span>
+                        </td>
+                        <td>Processed waiver wire claims</td>
+                        <td>
+                            <span class="badge bg-success">Success</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- More log entries would be here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Log pagination" class="mt-3">
+            <ul class="pagination justify-content-center">
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item">
+                    <a class="page-link" href="#" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>

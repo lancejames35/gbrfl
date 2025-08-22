@@ -1,0 +1,217 @@
+<div class="container-fluid mt-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Create New Discussion</h5>
+                        <a href="/message-board" class="btn btn-sm btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Message Board
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Flash Messages -->
+                    <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <%= success_msg %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+
+                    <% if (typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <%= error_msg %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+
+                    <form id="createDiscussionForm">
+                        <!-- Discussion Type -->
+                        <div class="mb-3">
+                            <label for="postType" class="form-label">
+                                <i class="bi bi-bookmark"></i> Discussion Type
+                            </label>
+                            <select class="form-select" id="postType" name="postType" required>
+                                <option value="Discussion">💬 Discussion - General conversation</option>
+                                <option value="Poll">📊 Poll - Create a poll with voting options</option>
+                            </select>
+                            <div class="form-text">Choose the type that best fits your discussion</div>
+                        </div>
+
+                        <!-- Title -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">
+                                <i class="bi bi-type"></i> Title
+                            </label>
+                            <input type="text" class="form-control" id="title" name="title" maxlength="100" required>
+                            <div class="form-text">Give your discussion a clear, descriptive title</div>
+                        </div>
+
+                        <!-- Content -->
+                        <div class="mb-3">
+                            <label for="content" class="form-label">
+                                <i class="bi bi-text-paragraph"></i> Description
+                            </label>
+                            <textarea class="form-control" id="content" name="content" rows="4" maxlength="5000" required></textarea>
+                            <div class="form-text">Provide details about your discussion topic</div>
+                        </div>
+
+                        <!-- Additional Options (shown conditionally) -->
+                        <div id="pollOptions" class="mb-3" style="display: none;">
+                            <label class="form-label">
+                                <i class="bi bi-list"></i> Poll Options
+                            </label>
+                            <div id="pollOptionsList">
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" name="pollOption[]" placeholder="Option 1">
+                                    <button class="btn btn-outline-danger" type="button" onclick="removePollOption(this)">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control" name="pollOption[]" placeholder="Option 2">
+                                    <button class="btn btn-outline-danger" type="button" onclick="removePollOption(this)">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPollOption()">
+                                <i class="bi bi-plus"></i> Add Option
+                            </button>
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="bi bi-check-circle"></i> Create Discussion
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-eye"></i> What happens next?</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Discussion Features</h6>
+                            <ul class="list-unstyled small">
+                                <li><i class="bi bi-chat-dots text-primary"></i> Real-time chat room created automatically</li>
+                                <li><i class="bi bi-people text-success"></i> All league members can participate</li>
+                                <li><i class="bi bi-bell text-warning"></i> Members get notified of new activity</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Management</h6>
+                            <ul class="list-unstyled small">
+                                <li><i class="bi bi-pencil text-info"></i> You can manage your discussion</li>
+                                <li><i class="bi bi-pin text-secondary"></i> Admins can pin important topics</li>
+                                <li><i class="bi bi-archive text-muted"></i> Inactive discussions are archived</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle form submission
+document.getElementById('createDiscussionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.innerHTML;
+    
+    // Show loading state
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating...';
+    submitBtn.disabled = true;
+    
+    try {
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        
+        // Handle poll options if present
+        if (data.postType === 'Poll') {
+            const pollOptions = formData.getAll('pollOption[]').filter(option => option.trim() !== '');
+            if (pollOptions.length < 2) {
+                throw new Error('Polls must have at least 2 options');
+            }
+            data.pollOptions = pollOptions;
+        }
+        
+        const response = await fetch('/message-board/api/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Redirect to the new chat room
+            window.location.href = result.redirect;
+        } else {
+            throw new Error(result.message || 'Error creating discussion');
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+        
+        // Restore button
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+});
+
+// Handle discussion type change
+document.getElementById('postType').addEventListener('change', function() {
+    const pollOptions = document.getElementById('pollOptions');
+    
+    if (this.value === 'Poll') {
+        pollOptions.style.display = 'block';
+    } else {
+        pollOptions.style.display = 'none';
+    }
+});
+
+// Poll option management
+function addPollOption() {
+    const pollOptionsList = document.getElementById('pollOptionsList');
+    const currentOptions = pollOptionsList.children.length;
+    
+    if (currentOptions >= 10) {
+        alert('Maximum 10 poll options allowed');
+        return;
+    }
+    
+    const optionDiv = document.createElement('div');
+    optionDiv.className = 'input-group mb-2';
+    optionDiv.innerHTML = `
+        <input type="text" class="form-control" name="pollOption[]" placeholder="Option ${currentOptions + 1}">
+        <button class="btn btn-outline-danger" type="button" onclick="removePollOption(this)">
+            <i class="bi bi-x"></i>
+        </button>
+    `;
+    
+    pollOptionsList.appendChild(optionDiv);
+}
+
+function removePollOption(button) {
+    const pollOptionsList = document.getElementById('pollOptionsList');
+    if (pollOptionsList.children.length > 2) {
+        button.parentElement.remove();
+    } else {
+        alert('Polls must have at least 2 options');
+    }
+}
+</script>

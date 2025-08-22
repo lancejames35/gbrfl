@@ -1,0 +1,488 @@
+/* Retro Newspaper Theme for GBRFL */
+
+/* Base Variables */
+.retro-theme {
+  /* Override the default theme variables */
+  --primary-color: #222222;
+  --primary-dark: #000000;
+  --sidebar-bg: #f4f1e4;
+  --header-bg: #222222;
+  --header-text: #f4f1e4;
+  
+  /* New retro theme variables */
+  --retro-bg: #f4f1e4;
+  --retro-text: #222222;
+  --retro-border: #c0b9a4;
+  --retro-accent: #8b0000;
+  --retro-light: #e8e5d8;
+  --retro-card: #ffffff;
+  --retro-serif: 'Times New Roman', Times, serif;
+  --retro-sans: Georgia, 'Times New Roman', Times, serif;
+}
+
+/* Global Styles */
+.retro-theme body {
+  background-color: var(--retro-bg);
+  color: var(--retro-text);
+  font-family: var(--retro-sans);
+}
+
+/* Background texture */
+.retro-theme::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('data:image/png;base64,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');
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Typography */
+.retro-theme h1, 
+.retro-theme h2, 
+.retro-theme h3, 
+.retro-theme h4, 
+.retro-theme h5, 
+.retro-theme h6 {
+  font-family: var(--retro-serif);
+  font-weight: 700;
+  color: var(--retro-text);
+}
+
+/* Navigation Header Transformation */
+.retro-theme .main-header {
+  background-color: var(--retro-text);
+  border-bottom: 3px double var(--retro-border);
+}
+
+.retro-theme .main-header .h4 {
+  font-family: var(--retro-serif);
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: 0.1rem;
+  text-transform: uppercase;
+}
+
+.retro-theme .main-header h2.h5 {
+  font-style: italic;
+}
+
+/* Newspaper masthead */
+.retro-theme .main-header::before {
+  content: "THE BLANDA TIMES";
+  display: block;
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-family: var(--retro-serif);
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: var(--header-text);
+  letter-spacing: 0.2rem;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.retro-theme .main-header::after {
+  content: "MONDAY, APRIL 14, 2025";
+  display: block;
+  position: absolute;
+  top: 30px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-family: var(--retro-serif);
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--header-text);
+  letter-spacing: 0.1rem;
+  pointer-events: none;
+}
+
+/* Sidebar Styling */
+.retro-theme .sidebar {
+  background-color: var(--retro-bg);
+  border-right: 1px solid var(--retro-border);
+}
+
+.retro-theme .sidebar-header h2 {
+  font-family: var(--retro-serif);
+  text-transform: uppercase;
+  font-size: 1.1rem;
+}
+
+.retro-theme .nav-link {
+  color: var(--retro-text);
+  border-bottom: 1px solid var(--retro-border);
+  border-radius: 0;
+  margin-bottom: 0.5rem;
+  font-family: var(--retro-serif);
+}
+
+.retro-theme .nav-link:hover {
+  background-color: var(--retro-light);
+}
+
+.retro-theme .nav-link.active {
+  background-color: var(--retro-light);
+  color: var(--retro-accent);
+  font-weight: 700;
+  border-left: 4px solid var(--retro-accent);
+}
+
+/* Card styling to look like newspaper clippings */
+.retro-theme .card {
+  background-color: var(--retro-card);
+  border: 1px solid var(--retro-border);
+  border-radius: 0;
+  box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+}
+
+.retro-theme .card-header {
+  background-color: var(--retro-bg);
+  border-bottom: 1px solid var(--retro-border);
+  font-family: var(--retro-serif);
+}
+
+.retro-theme .card-header h5 {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+}
+
+/* News items styling */
+.retro-theme .news-item h6 {
+  font-size: 1.2rem;
+  font-family: var(--retro-serif);
+  font-weight: 700;
+}
+
+.retro-theme .news-item {
+  position: relative;
+}
+
+.retro-theme .news-item::after {
+  content: "■";
+  display: block;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--retro-accent);
+  padding: 0.5rem 0;
+}
+
+/* Table styling */
+.retro-theme .table {
+  border: 1px solid var(--retro-border);
+  font-family: var(--retro-sans);
+}
+
+.retro-theme .table th {
+  background-color: var(--retro-bg);
+  border-bottom: 2px solid var(--retro-border);
+  font-family: var(--retro-serif);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+
+.retro-theme .table td {
+  border-bottom: 1px solid var(--retro-border);
+}
+
+/* Convert modern badges to newspaper style indicators */
+.retro-theme .badge {
+  background-color: transparent !important;
+  color: var(--retro-text) !important;
+  font-family: var(--retro-serif);
+  padding: 0.1rem 0.4rem;
+  font-weight: normal;
+  font-style: italic;
+}
+
+.retro-theme .badge.bg-primary::before {
+  content: "★ ";
+  color: var(--retro-accent);
+}
+
+.retro-theme .badge.bg-success::before {
+  content: "✓ ";
+  color: #2c5530;
+}
+
+.retro-theme .badge.bg-warning::before {
+  content: "! ";
+  color: #664d03;
+}
+
+.retro-theme .badge.bg-danger::before {
+  content: "✗ ";
+  color: var(--retro-accent);
+}
+
+.retro-theme .badge.bg-info::before {
+  content: "ℹ ";
+  color: #055160;
+}
+
+/* Button styling */
+.retro-theme .btn {
+  border-radius: 0;
+  text-transform: uppercase;
+  font-family: var(--retro-serif);
+  font-size: 0.85rem;
+  letter-spacing: 0.05rem;
+}
+
+.retro-theme .btn-primary,
+.retro-theme .btn-outline-primary:hover {
+  background-color: var(--retro-text);
+  border-color: var(--retro-text);
+  color: var(--retro-bg);
+}
+
+.retro-theme .btn-outline-primary {
+  border-color: var(--retro-text);
+  color: var(--retro-text);
+}
+
+.retro-theme .btn-outline-secondary {
+  border-color: var(--retro-border);
+  color: var(--retro-text);
+}
+
+/* Footer styling */
+.retro-theme footer {
+  background-color: var(--retro-text);
+  border-top: 3px double var(--retro-border);
+}
+
+/* Media query adjustments */
+@media (max-width: 768px) {
+  .retro-theme .main-header::before {
+    font-size: 1.2rem;
+    top: 3px;
+  }
+  
+  .retro-theme .main-header::after {
+    font-size: 0.7rem;
+    top: 25px;
+  }
+}
+
+/* Print-inspired dropdown menus */
+.retro-theme .dropdown-menu {
+  background-color: var(--retro-card);
+  border: 1px solid var(--retro-border);
+  border-radius: 0;
+  box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+}
+
+.retro-theme .dropdown-item {
+  font-family: var(--retro-serif);
+}
+
+.retro-theme .dropdown-item:hover {
+  background-color: var(--retro-bg);
+}
+
+/* Form elements */
+.retro-theme .form-control {
+  border-radius: 0;
+  border: 1px solid var(--retro-border);
+  background-color: var(--retro-light);
+}
+
+.retro-theme .form-control:focus {
+  box-shadow: none;
+  border-color: var(--retro-text);
+  background-color: var(--retro-card);
+}
+
+.retro-theme .form-select {
+  border-radius: 0;
+  border: 1px solid var(--retro-border);
+  background-color: var(--retro-light);
+}
+
+/* Add a decorative column divider */
+.retro-theme .col-lg-8::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 1px;
+  background-color: var(--retro-border);
+}
+
+/* Page header section */
+.retro-theme header.bg-light {
+  background-color: var(--retro-bg) !important;
+  border-bottom: 3px double var(--retro-border);
+  margin-bottom: 1.5rem;
+}
+
+.retro-theme header.bg-light h1 {
+  font-size: 2.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  border-bottom: 1px solid var(--retro-border);
+  display: inline-block;
+}
+
+/* Pagination styling */
+.retro-theme .pagination {
+  font-family: var(--retro-serif);
+}
+
+.retro-theme .page-link {
+  border-color: var(--retro-border);
+  color: var(--retro-text);
+  background-color: var(--retro-card);
+}
+
+.retro-theme .page-link:hover {
+  background-color: var(--retro-bg);
+  color: var(--retro-text);
+}
+
+.retro-theme .page-item.active .page-link {
+  background-color: var(--retro-text);
+  border-color: var(--retro-text);
+  color: var(--retro-card);
+}
+
+/* Alerts */
+.retro-theme .alert {
+  border-radius: 0;
+  border-width: 1px;
+  border-style: solid;
+  background-color: var(--retro-light);
+  font-family: var(--retro-serif);
+  font-style: italic;
+}
+
+.retro-theme .alert-success {
+  border-color: #2c5530;
+  color: #2c5530;
+}
+
+.retro-theme .alert-danger {
+  border-color: var(--retro-accent);
+  color: var(--retro-accent);
+}
+
+.retro-theme .alert-info {
+  border-color: #055160;
+  color: #055160;
+}
+
+/* Additional Newspaper Features */
+
+/* First letter styling for news items */
+.retro-theme .news-item p:not(.text-muted) {
+    text-align: justify;
+  }
+  
+  .retro-theme .news-item p:not(.text-muted)::first-letter {
+    font-family: var(--retro-serif);
+    font-size: 3em;
+    font-weight: 700;
+    float: left;
+    line-height: 0.8;
+    margin-right: 0.1em;
+    margin-top: 0.1em;
+  }
+  
+  /* Column layout for news articles in larger screens */
+  @media (min-width: 992px) {
+    .retro-theme .news-item p:not(.text-muted) {
+      column-count: 2;
+      column-gap: 1.5rem;
+      column-rule: 1px solid var(--retro-border);
+    }
+  }
+  
+  /* Decorative newsy background for selected elements */
+  .retro-theme .card-body {
+    position: relative;
+  }
+  
+  .retro-theme .card-body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 27px,
+        rgba(0, 0, 0, 0.05) 28px
+      );
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: -1;
+  }
+  
+  /* Special styling for highlighted news */
+  .retro-theme .card-header .badge.bg-primary {
+    color: white !important;
+    background-color: var(--retro-accent) !important;
+    font-weight: bold;
+    font-style: normal;
+    position: relative;
+    transform: rotate(-2deg);
+    display: inline-block;
+    border: 1px solid var(--retro-text);
+  }
+  
+  .retro-theme .card-header .badge.bg-primary::before {
+    content: none;
+  }
+  
+  /* League name styling in footer */
+  .retro-theme footer .mb-0 {
+    font-family: var(--retro-serif);
+    font-style: italic;
+  }
+  
+  /* "Ink bleed" effect on hover for buttons */
+  .retro-theme .btn:hover {
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.5);
+  }
+  
+  /* Add a subtle fold effect to cards */
+  .retro-theme .card {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .retro-theme .card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 15px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.05), transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  /* Decorative quote style */
+  .retro-theme blockquote {
+    font-family: var(--retro-serif);
+    font-style: italic;
+    border-left: 3px solid var(--retro-border);
+    padding-left: 1rem;
+  }

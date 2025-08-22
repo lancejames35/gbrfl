@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= typeof title !== 'undefined' ? title : 'GBRFL' %> | GBRFL</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/sidebar.css">
+    <!-- Add retro theme CSS -->
+    <link rel="stylesheet" href="/css/retro-theme.css">
+    <!-- Page specific styles -->
+    <% if (typeof head !== 'undefined') { %>
+        <%- head %>
+    <% } %>
+</head>
+<body>
+    <!-- Include header partial -->
+    <%- include('../partials/header') %>
+        
+    <!-- Include sidebar partial only if user is logged in -->
+    <% if (locals.user && user) { %>
+    <%- include('../partials/sidebar', { activePage: typeof activePage !== 'undefined' ? activePage : '' }) %>
+    <% } %>
+    
+    <!-- Main content with margin for sidebar -->
+    <main class="main-content <%= locals.user && user ? '' : 'no-sidebar' %>">
+        <div class="container my-4">
+            <!-- Flash Messages -->
+            <% if(typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+                <div class="alert alert-success">
+                    <%= success_msg %>
+                </div>
+            <% } %>
+
+            <% if(typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+                <div class="alert alert-danger">
+                    <%= error_msg %>
+                </div>
+            <% } %>
+            
+            <!-- Page content goes here -->
+            <%- body %>
+        </div>
+    </main>
+
+    <footer class="bg-dark text-white py-3 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; <%= new Date().getFullYear() %> George Blanda Rotisserie Football League</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-0">
+                        <a href="/privacy" class="text-white me-3">Privacy Policy</a>
+                        <a href="/terms" class="text-white">Terms of Use</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/sidebar.js"></script>
+    <script src="/js/main.js"></script>
+    <!-- Add theme toggle JavaScript -->
+    <script src="/js/theme-toggle.js"></script>
+    
+    <!-- Admin user switching functionality -->
+    <script>
+        // Admin user switching functions (available globally)
+        function switchToUserSafe(element) {
+            const userId = element.getAttribute('data-user-id');
+            const userName = element.getAttribute('data-user-name');
+            const teamName = element.getAttribute('data-team-name');
+            
+            const displayName = teamName && teamName !== 'No Team' ? 
+                `${userName} (${teamName})` : userName;
+            
+            if (!confirm(`Switch to user: ${displayName}?`)) return;
+            
+            fetch('/admin/switch-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetUserId: parseInt(userId) })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Refresh to show new user perspective
+                } else {
+                    alert(`Error switching user: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Switch user error:', error);
+                alert('Error switching user');
+            });
+        }
+
+        function switchBackToAdmin() {
+            if (!confirm('Switch back to admin account?')) return;
+            
+            fetch('/admin/switch-back', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Refresh to show admin perspective
+                } else {
+                    alert(`Error switching back: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('Switch back error:', error);
+                alert('Error switching back');
+            });
+        }
+
+        // User switching submenu functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing user switching submenu...');
+            
+            const submenuToggle = document.getElementById('switchUserToggle');
+            const submenuDropdown = document.getElementById('userSwitchSubmenu');
+            const arrow = document.getElementById('switchUserArrow');
+            
+            console.log('Elements found:', {
+                toggle: !!submenuToggle,
+                dropdown: !!submenuDropdown,
+                arrow: !!arrow
+            });
+            
+            if (submenuToggle && submenuDropdown) {
+                // Click handler for submenu toggle
+                submenuToggle.addEventListener('click', function(e) {
+                    console.log('Switch User clicked!');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Toggle submenu visibility
+                    const isVisible = submenuDropdown.style.display === 'block';
+                    if (isVisible) {
+                        submenuDropdown.style.display = 'none';
+                        if (arrow) arrow.classList.remove('rotated');
+                        console.log('Hiding submenu');
+                    } else {
+                        submenuDropdown.style.display = 'block';
+                        if (arrow) arrow.classList.add('rotated');
+                        console.log('Showing submenu');
+                    }
+                });
+                
+                // Handle hover for desktop
+                submenuToggle.parentElement.addEventListener('mouseenter', function() {
+                    if (window.innerWidth > 768) {
+                        submenuDropdown.style.display = 'block';
+                        if (arrow) arrow.classList.add('rotated');
+                    }
+                });
+                
+                submenuToggle.parentElement.addEventListener('mouseleave', function() {
+                    if (window.innerWidth > 768) {
+                        submenuDropdown.style.display = 'none';
+                        if (arrow) arrow.classList.remove('rotated');
+                    }
+                });
+                
+                // Close submenu when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!submenuToggle.parentElement.contains(e.target)) {
+                        submenuDropdown.style.display = 'none';
+                        if (arrow) arrow.classList.remove('rotated');
+                    }
+                });
+                
+                // Prevent submenu from closing when clicking inside it
+                submenuDropdown.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+                
+                console.log('User switching submenu functionality loaded successfully');
+            } else {
+                console.log('User switching elements not found - user may not be admin');
+            }
+        });
+    </script>
+    
+    <!-- Notifications JavaScript -->
+    <script src="/js/notifications.js"></script>
+</body>
+</html>

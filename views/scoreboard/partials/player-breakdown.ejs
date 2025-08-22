@@ -1,0 +1,273 @@
+<!-- Player Breakdown Section -->
+<div class="player-breakdown-section">
+  <div class="row">
+    <div class="col-12">
+      <hr class="my-3">
+      <h6 class="text-center text-muted mb-3">
+        <i class="fas fa-users"></i> Player Breakdown - <%= category.charAt(0).toUpperCase() + category.slice(1) %>
+      </h6>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Team 1 Players -->
+    <div class="col-6">
+      <div class="team-players">
+        <h6 class="team-name text-center mb-3"><%= game.team1.name %></h6>
+        <div class="players-list">
+          <% team1Players.forEach((player, index) => { %>
+            <div class="player-card mb-2 position-relative">
+              <div class="card bg-light">
+                <div class="card-body py-2">
+                  <div class="row align-items-center">
+                    <div class="col-8">
+                      <div class="player-info">
+                        <strong class="player-name"><%= player.name %></strong>
+                        <div class="team-info">
+                          <small class="text-muted">
+                            <%= player.team %> <%= player.opponent %>
+                            <span class="badge badge-sm <%= player.status === 'final' ? 'bg-success' : (player.status === 'live' ? 'bg-warning' : 'bg-secondary') %>">
+                              <%= player.status.toUpperCase() %>
+                            </span>
+                          </small>
+                        </div>
+                        
+                        <!-- Cascading Indicator -->
+                        <% if (player.cascaded) { %>
+                          <div class="cascade-indicator">
+                            <small class="text-info">
+                              <i class="fas fa-arrow-down"></i> Cascaded from inactive player
+                            </small>
+                          </div>
+                        <% } %>
+                      </div>
+                    </div>
+                    <div class="col-4 text-end">
+                      <div class="player-status">
+                        <% if (player.active) { %>
+                          <i class="fas fa-check-circle text-success" title="Active Player"></i>
+                        <% } else { %>
+                          <i class="fas fa-times-circle text-danger" title="Inactive - DNP"></i>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Player Stats -->
+                  <div class="player-stats mt-2">
+                    <% if (category === 'passing') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.comp %>/<%= player.stats.att %>, 
+                          <%= player.stats.yards %> yards, 
+                          <%= player.stats.tds %> TD<% if (player.stats.tds !== 1) { %>s<% } %><% if (player.stats.ints > 0) { %>, 
+                          <%= player.stats.ints %> INT<% if (player.stats.ints !== 1) { %>s<% } %><% } %>
+                        </small>
+                      </div>
+                    <% } else if (category === 'rushing') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.rush_att %> att, 
+                          <%= player.stats.rush_yards %> yards, 
+                          <%= player.stats.rush_tds %> TD<% if (player.stats.rush_tds !== 1) { %>s<% } %>
+                          <% if (player.stats.rec && player.stats.rec > 0) { %>
+                            | <%= player.stats.rec %> rec, <%= player.stats.rec_yards %> rec yds
+                          <% } %>
+                        </small>
+                      </div>
+                    <% } else if (category === 'receiving') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.rec %> rec, 
+                          <%= player.stats.rec_yards %> yards, 
+                          <%= player.stats.rec_tds %> TD<% if (player.stats.rec_tds !== 1) { %>s<% } %>
+                        </small>
+                      </div>
+                    <% } else if (category === 'kicking') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.fg_made %>/<%= player.stats.fg_att %> FG, 
+                          Long: <%= player.stats.long %>, 
+                          <%= player.stats.points %> pts
+                        </small>
+                      </div>
+                    <% } else if (category === 'defense') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.points_allowed %> pts allowed, 
+                          <%= player.stats.yards_allowed %> yds allowed, 
+                          <%= player.stats.ints %> INT, 
+                          <%= player.stats.sacks %> sacks
+                        </small>
+                      </div>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        
+        <!-- Team Totals -->
+        <div class="team-totals mt-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body py-2">
+              <h6 class="mb-1">TEAM TOTALS:</h6>
+              <% if (category === 'passing') { %>
+                <small>
+                  Yards: <%= game.team1.categories.passing.stats.yards %> | 
+                  TDs: <%= game.team1.categories.passing.stats.tds %> | 
+                  Comp%: <%= game.team1.categories.passing.stats.completion %>% | 
+                  INTs: <%= game.team1.categories.passing.stats.ints %>
+                </small>
+              <% } else if (category === 'rushing') { %>
+                <small>
+                  Yards: <%= game.team1.categories.rushing.stats.yards %> | 
+                  TDs: <%= game.team1.categories.rushing.stats.tds %> | 
+                  YPC: <%= game.team1.categories.rushing.stats.ypc %>
+                </small>
+              <% } else if (category === 'receiving') { %>
+                <small>
+                  Yards: <%= game.team1.categories.receiving.stats.yards %> | 
+                  TDs: <%= game.team1.categories.receiving.stats.tds %> | 
+                  Rec: <%= game.team1.categories.receiving.stats.receptions %> | 
+                  YPR: <%= game.team1.categories.receiving.stats.ypr %>
+                </small>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team 2 Players -->
+    <div class="col-6">
+      <div class="team-players">
+        <h6 class="team-name text-center mb-3"><%= game.team2.name %></h6>
+        <div class="players-list">
+          <% team2Players.forEach((player, index) => { %>
+            <div class="player-card mb-2 position-relative">
+              <div class="card bg-light">
+                <div class="card-body py-2">
+                  <div class="row align-items-center">
+                    <div class="col-4">
+                      <div class="player-status">
+                        <% if (player.active) { %>
+                          <i class="fas fa-check-circle text-success" title="Active Player"></i>
+                        <% } else { %>
+                          <i class="fas fa-times-circle text-danger" title="Inactive - DNP"></i>
+                        <% } %>
+                      </div>
+                    </div>
+                    <div class="col-8">
+                      <div class="player-info">
+                        <strong class="player-name"><%= player.name %></strong>
+                        <div class="team-info">
+                          <small class="text-muted">
+                            <%= player.team %> <%= player.opponent %>
+                            <span class="badge badge-sm <%= player.status === 'final' ? 'bg-success' : (player.status === 'live' ? 'bg-warning' : 'bg-secondary') %>">
+                              <%= player.status.toUpperCase() %>
+                            </span>
+                          </small>
+                        </div>
+                        
+                        <!-- Cascading Indicator -->
+                        <% if (player.cascaded) { %>
+                          <div class="cascade-indicator">
+                            <small class="text-info">
+                              <i class="fas fa-arrow-down"></i> Cascaded from inactive player
+                            </small>
+                          </div>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Player Stats -->
+                  <div class="player-stats mt-2">
+                    <% if (category === 'passing') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.comp %>/<%= player.stats.att %>, 
+                          <%= player.stats.yards %> yards, 
+                          <%= player.stats.tds %> TD<% if (player.stats.tds !== 1) { %>s<% } %><% if (player.stats.ints > 0) { %>, 
+                          <%= player.stats.ints %> INT<% if (player.stats.ints !== 1) { %>s<% } %><% } %>
+                        </small>
+                      </div>
+                    <% } else if (category === 'rushing') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.rush_att %> att, 
+                          <%= player.stats.rush_yards %> yards, 
+                          <%= player.stats.rush_tds %> TD<% if (player.stats.rush_tds !== 1) { %>s<% } %>
+                          <% if (player.stats.rec && player.stats.rec > 0) { %>
+                            | <%= player.stats.rec %> rec, <%= player.stats.rec_yards %> rec yds
+                          <% } %>
+                        </small>
+                      </div>
+                    <% } else if (category === 'receiving') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.rec %> rec, 
+                          <%= player.stats.rec_yards %> yards, 
+                          <%= player.stats.rec_tds %> TD<% if (player.stats.rec_tds !== 1) { %>s<% } %>
+                        </small>
+                      </div>
+                    <% } else if (category === 'kicking') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.fg_made %>/<%= player.stats.fg_att %> FG, 
+                          Long: <%= player.stats.long %>, 
+                          <%= player.stats.points %> pts
+                        </small>
+                      </div>
+                    <% } else if (category === 'defense') { %>
+                      <div class="stats-row">
+                        <small class="text-muted">
+                          <%= player.stats.points_allowed %> pts allowed, 
+                          <%= player.stats.yards_allowed %> yds allowed, 
+                          <%= player.stats.ints %> INT, 
+                          <%= player.stats.sacks %> sacks
+                        </small>
+                      </div>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+        
+        <!-- Team Totals -->
+        <div class="team-totals mt-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body py-2">
+              <h6 class="mb-1">TEAM TOTALS:</h6>
+              <% if (category === 'passing') { %>
+                <small>
+                  Yards: <%= game.team2.categories.passing.stats.yards %> | 
+                  TDs: <%= game.team2.categories.passing.stats.tds %> | 
+                  Comp%: <%= game.team2.categories.passing.stats.completion %>% | 
+                  INTs: <%= game.team2.categories.passing.stats.ints %>
+                </small>
+              <% } else if (category === 'rushing') { %>
+                <small>
+                  Yards: <%= game.team2.categories.rushing.stats.yards %> | 
+                  TDs: <%= game.team2.categories.rushing.stats.tds %> | 
+                  YPC: <%= game.team2.categories.rushing.stats.ypc %>
+                </small>
+              <% } else if (category === 'receiving') { %>
+                <small>
+                  Yards: <%= game.team2.categories.receiving.stats.yards %> | 
+                  TDs: <%= game.team2.categories.receiving.stats.tds %> | 
+                  Rec: <%= game.team2.categories.receiving.stats.receptions %> | 
+                  YPR: <%= game.team2.categories.receiving.stats.ypr %>
+                </small>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

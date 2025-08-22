@@ -1,0 +1,408 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/teams/<%= team.team_id %>"><%= team.team_name %></a></li>
+                <li class="breadcrumb-item active" aria-current="page">Waiver Requests</li>
+            </ol>
+        </nav>
+        <h1 class="mb-0">
+            <i class="bi bi-arrow-repeat"></i> Pending Waiver Requests
+        </h1>
+        <p class="text-muted mb-0">Team: <%= team.team_name %></p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="/players?availability=available" class="btn btn-outline-primary">
+            <i class="bi bi-plus-circle"></i> Submit New Request
+        </a>
+    </div>
+</div>
+
+<% if (requests.length === 0) { %>
+    <!-- No Requests -->
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-inbox display-4 text-muted mb-3"></i>
+            <h4>No Pending Waiver Requests</h4>
+            <p class="text-muted mb-4">You don't have any pending waiver wire requests at this time.</p>
+            <a href="/players?availability=available" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Submit Your First Request
+            </a>
+        </div>
+    </div>
+<% } else { %>
+    <!-- Instructions -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle-fill"></i>
+        <strong>Prioritize Your Requests:</strong> Drag and drop to reorder your waiver requests by priority. 
+        Higher priority requests will be processed first during waivers.
+    </div>
+
+    <!-- Waiver Requests List -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Your Waiver Requests (<%= requests.length %>)</h5>
+            <div>
+                <span class="text-muted small" id="saveStatus" style="display: none;">
+                    <i class="bi bi-check-circle text-success"></i> Auto-saved
+                </span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="waiver-requests-container" id="waiverRequestsList">
+                <% requests.forEach((request, index) => { %>
+                    <div class="waiver-request-item" data-request-id="<%= request.request_id %>" data-original-order="<%= request.request_order %>">
+                        <div class="d-flex align-items-center p-3">
+                            <!-- Drag Handle -->
+                            <div class="drag-handle me-3">
+                                <i class="bi bi-grip-vertical text-muted"></i>
+                            </div>
+                            
+                            <!-- Priority Number -->
+                            <div class="priority-number me-3">
+                                <span class="badge bg-primary priority-badge"><%= request.request_order %></span>
+                            </div>
+                            
+                            <!-- Request Details -->
+                            <div class="flex-grow-1">
+                                <div class="row">
+                                    <div class="col-md-5">
+                                        <div class="pickup-info">
+                                            <strong class="text-success">
+                                                <i class="bi bi-plus-circle"></i> Add: <%= request.pickup_name %>
+                                            </strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                <%= request.pickup_position %> - <%= request.pickup_team || 'FA' %>
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="drop-info">
+                                            <strong class="text-danger">
+                                                <i class="bi bi-dash-circle"></i> Drop: <%= request.drop_name %>
+                                            </strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                <%= request.drop_position %> - <%= request.drop_team || 'FA' %>
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="submitted-info text-md-end">
+                                            <small class="text-muted">
+                                                Submitted:<br>
+                                                <%= new Date(request.submitted_at).toLocaleDateString() %>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Cancel Button -->
+                            <div class="ms-3">
+                                <button class="btn btn-sm btn-outline-danger cancel-request-btn" 
+                                        data-request-id="<%= request.request_id %>"
+                                        data-pickup-name="<%= request.pickup_name %>"
+                                        title="Cancel this request">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Order Info -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0">
+                <i class="bi bi-info-circle"></i> How Waiver Processing Works
+            </h6>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li><strong>Priority Order:</strong> Your requests are processed in the order shown above (1 = highest priority)</li>
+                <li><strong>Availability:</strong> If a player you want is claimed by another team, that request will be skipped</li>
+                <li><strong>Roster Space:</strong> You must drop a player to add a new one - both actions happen together</li>
+            </ul>
+        </div>
+    </div>
+<% } %>
+
+<style>
+.waiver-request-item {
+    border-bottom: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.waiver-request-item:last-child {
+    border-bottom: none;
+}
+
+.waiver-request-item:hover {
+    background-color: #f8f9fa;
+}
+
+.waiver-request-item.dragging {
+    opacity: 0.8;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transform: rotate(2deg);
+    z-index: 1000;
+}
+
+.waiver-request-item.drag-over {
+    border-top: 3px solid #007bff;
+}
+
+.drag-handle {
+    cursor: grab;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.drag-handle:hover {
+    background-color: #e9ecef;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.priority-badge {
+    min-width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.pickup-info strong {
+    color: #28a745;
+}
+
+.drop-info strong {
+    color: #dc3545;
+}
+
+.waiver-requests-container {
+    min-height: 100px;
+}
+
+.cancel-request-btn {
+    transition: all 0.2s ease;
+}
+
+.cancel-request-btn:hover {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.sortable-ghost {
+    opacity: 0.4;
+    background: #f8f9fa;
+}
+
+.sortable-chosen {
+    background: #e3f2fd;
+}
+
+.sortable-drag {
+    background: #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+</style>
+
+<!-- Include SortableJS from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const requestsList = document.getElementById('waiverRequestsList');
+    const saveStatusSpan = document.getElementById('saveStatus');
+    const cancelRequestBtns = document.querySelectorAll('.cancel-request-btn');
+    
+    let originalOrder = [];
+    let saveTimeout;
+
+    if (requestsList) {
+        // Store original order
+        const items = requestsList.querySelectorAll('.waiver-request-item');
+        items.forEach(item => {
+            originalOrder.push({
+                request_id: parseInt(item.dataset.requestId),
+                order: parseInt(item.dataset.originalOrder)
+            });
+        });
+
+        // Initialize SortableJS
+        const sortable = new Sortable(requestsList, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            handle: '.drag-handle',
+            onStart: function(evt) {
+                evt.item.classList.add('dragging');
+            },
+            onEnd: function(evt) {
+                evt.item.classList.remove('dragging');
+                updatePriorityNumbers();
+                autoSaveOrder();
+            }
+        });
+
+        // Update priority numbers after reordering
+        function updatePriorityNumbers() {
+            const items = requestsList.querySelectorAll('.waiver-request-item');
+            items.forEach((item, index) => {
+                const priorityBadge = item.querySelector('.priority-badge');
+                priorityBadge.textContent = index + 1;
+            });
+        }
+
+        // Auto-save order with debouncing
+        function autoSaveOrder() {
+            // Clear any existing timeout
+            if (saveTimeout) {
+                clearTimeout(saveTimeout);
+            }
+            
+            // Show saving status
+            saveStatusSpan.style.display = 'inline-block';
+            saveStatusSpan.innerHTML = '<i class="bi bi-hourglass-split text-warning"></i> Saving...';
+            
+            // Debounce the save by 500ms
+            saveTimeout = setTimeout(() => {
+                const items = requestsList.querySelectorAll('.waiver-request-item');
+                const newOrder = [];
+                
+                items.forEach((item, index) => {
+                    newOrder.push({
+                        request_id: parseInt(item.dataset.requestId),
+                        order: index + 1
+                    });
+                });
+
+                fetch('/waivers/order', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ request_orders: newOrder })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update original order
+                        originalOrder = [...newOrder];
+                        
+                        // Show success status
+                        saveStatusSpan.innerHTML = '<i class="bi bi-check-circle text-success"></i> Auto-saved';
+                        
+                        // Hide status after 2 seconds
+                        setTimeout(() => {
+                            saveStatusSpan.style.display = 'none';
+                        }, 2000);
+                    } else {
+                        saveStatusSpan.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i> Save failed';
+                        showToast('Error saving order: ' + data.message, 'danger');
+                        setTimeout(() => {
+                            saveStatusSpan.style.display = 'none';
+                        }, 3000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    saveStatusSpan.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i> Save failed';
+                    showToast('Error saving request order. Please try again.', 'danger');
+                    setTimeout(() => {
+                        saveStatusSpan.style.display = 'none';
+                    }, 3000);
+                });
+            }, 500);
+        }
+
+    }
+
+    // Cancel request functionality
+    cancelRequestBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const requestId = this.dataset.requestId;
+            const pickupName = this.dataset.pickupName;
+            
+            if (confirm(`Cancel waiver request for ${pickupName}?`)) {
+                // Disable button
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+                fetch(`/waivers/request/${requestId}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        // Remove the request item from the list
+                        const requestItem = this.closest('.waiver-request-item');
+                        requestItem.style.transition = 'all 0.3s ease';
+                        requestItem.style.opacity = '0';
+                        requestItem.style.transform = 'translateX(100%)';
+                        
+                        setTimeout(() => {
+                            requestItem.remove();
+                            updatePriorityNumbers();
+                            
+                            // Check if no requests left
+                            if (requestsList.children.length === 0) {
+                                location.reload();
+                            }
+                        }, 300);
+                    } else {
+                        showToast('Error cancelling request: ' + data.message, 'danger');
+                        // Re-enable button
+                        this.disabled = false;
+                        this.innerHTML = '<i class="bi bi-x-lg"></i>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Error cancelling request. Please try again.', 'danger');
+                    // Re-enable button
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-x-lg"></i>';
+                });
+            }
+        });
+    });
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        toast.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+});
+</script>

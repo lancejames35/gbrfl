@@ -1,0 +1,149 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-0">Waiver Wire Approvals</h1>
+        <p class="text-muted">Manage waiver wire claims and priorities</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <button class="btn btn-primary">
+            <i class="bi bi-gear"></i> Process Waivers
+        </button>
+    </div>
+</div>
+
+<!-- Waiver Status Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-clock display-4 text-warning"></i>
+                <h5 class="card-title mt-3">Pending Claims</h5>
+                <h3 class="text-warning">7</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle display-4 text-success"></i>
+                <h5 class="card-title mt-3">Processed</h5>
+                <h3 class="text-success">15</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-x-circle display-4 text-danger"></i>
+                <h5 class="card-title mt-3">Failed</h5>
+                <h3 class="text-danger">3</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-event display-4 text-info"></i>
+                <h5 class="card-title mt-3">Next Process</h5>
+                <p class="text-info mb-0">Wed 12:00 PM</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Waiver Processing Settings -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-gear me-2"></i>Waiver Settings
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Processing Schedule</label>
+                    <select class="form-select">
+                        <option>Daily at 12:00 PM</option>
+                        <option>Wednesday/Saturday at 12:00 PM</option>
+                        <option>Manual Processing Only</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Waiver Period</label>
+                    <select class="form-select">
+                        <option>24 hours</option>
+                        <option>48 hours</option>
+                        <option>72 hours</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary">Save Settings</button>
+    </div>
+</div>
+
+<!-- Current Waiver Claims -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Current Waiver Claims</h5>
+        <span class="badge bg-warning">7 Pending</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Priority</th>
+                        <th>Team</th>
+                        <th>Claim Type</th>
+                        <th>Player Add</th>
+                        <th>Player Drop</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge bg-primary">1</span></td>
+                        <td>Team Alpha</td>
+                        <td>Add/Drop</td>
+                        <td>Cooper Kupp (RC)</td>
+                        <td>Mike Williams (RC)</td>
+                        <td>2 hours ago</td>
+                        <td><span class="badge bg-warning">Pending</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-success">
+                                <i class="bi bi-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge bg-primary">2</span></td>
+                        <td>Team Beta</td>
+                        <td>Add</td>
+                        <td>Josh Jacobs (RB)</td>
+                        <td>-</td>
+                        <td>1 hour ago</td>
+                        <td><span class="badge bg-warning">Pending</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-success">
+                                <i class="bi bi-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- More waiver claims would be here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,423 @@
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="row align-items-center mb-4">
+    <div class="col-md-8">
+      <h1 class="mb-0">Settings</h1>
+      <p class="text-muted">Manage your account, notifications, and preferences</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Settings Navigation -->
+    <div class="col-md-3">
+      <div class="list-group" id="settings-nav">
+        <a class="list-group-item list-group-item-action active" data-bs-toggle="list" href="#account-settings">
+          <i class="bi bi-person-circle me-2"></i> Account Settings
+        </a>
+        <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#notification-settings">
+          <i class="bi bi-bell me-2"></i> Notifications
+        </a>
+        <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#display-settings">
+          <i class="bi bi-display me-2"></i> Display & Theme
+        </a>
+        <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#privacy-settings">
+          <i class="bi bi-shield-lock me-2"></i> Privacy
+        </a>
+      </div>
+    </div>
+
+    <!-- Settings Content -->
+    <div class="col-md-9">
+      <div class="tab-content">
+        
+        <!-- Account Settings -->
+        <div class="tab-pane fade show active" id="account-settings">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Account Settings</h5>
+            </div>
+            <div class="card-body">
+              
+              <!-- Personal Information -->
+              <div class="mb-4">
+                <h6 class="border-bottom pb-2 mb-3">Personal Information</h6>
+                <form id="profile-form">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="firstName" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="firstName" 
+                               value="<%= currentUser.first_name || '' %>">
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" 
+                               value="<%= currentUser.last_name || '' %>">
+                      </div>
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Update Profile</button>
+                </form>
+              </div>
+
+              <!-- Account Security -->
+              <div class="mb-4">
+                <h6 class="border-bottom pb-2 mb-3">Account Security</h6>
+                
+                <!-- Current Account Info -->
+                <div class="bg-light p-3 rounded mb-3">
+                  <div class="row">
+                    <div class="col-md-4">
+                      <strong>Username:</strong> <%= currentUser.username %>
+                    </div>
+                    <div class="col-md-4">
+                      <strong>Email:</strong> <%= currentUser.email %>
+                    </div>
+                    <div class="col-md-4">
+                      <strong>Password:</strong> ••••••••••
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Security Update Form -->
+                <div class="accordion" id="securityAccordion">
+                  <!-- Change Username -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                              data-bs-target="#changeUsername" aria-expanded="false">
+                        <i class="bi bi-person me-2"></i> Change Username
+                      </button>
+                    </h2>
+                    <div id="changeUsername" class="accordion-collapse collapse" data-bs-parent="#securityAccordion">
+                      <div class="accordion-body">
+                        <form id="username-form">
+                          <div class="mb-3">
+                            <label for="newUsername" class="form-label">New Username</label>
+                            <input type="text" class="form-control" id="newUsername" 
+                                   placeholder="Enter your new username">
+                            <div class="form-text">Username must be 3-20 characters and unique</div>
+                          </div>
+                          <div class="mb-3">
+                            <label for="usernamePassword" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="usernamePassword" 
+                                   placeholder="Enter your current password to confirm">
+                            <div class="form-text">Required for security verification</div>
+                          </div>
+                          <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-info">Update Username</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="cancelUsernameChange()">Cancel</button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Change Email -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                              data-bs-target="#changeEmail" aria-expanded="false">
+                        <i class="bi bi-envelope me-2"></i> Change Email Address
+                      </button>
+                    </h2>
+                    <div id="changeEmail" class="accordion-collapse collapse" data-bs-parent="#securityAccordion">
+                      <div class="accordion-body">
+                        <form id="email-form">
+                          <div class="mb-3">
+                            <label for="newEmail" class="form-label">New Email Address</label>
+                            <input type="email" class="form-control" id="newEmail" 
+                                   placeholder="Enter your new email address">
+                          </div>
+                          <div class="mb-3">
+                            <label for="emailPassword" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="emailPassword" 
+                                   placeholder="Enter your current password to confirm">
+                            <div class="form-text">Required for security verification</div>
+                          </div>
+                          <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning">Update Email</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="cancelEmailChange()">Cancel</button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Change Password -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                              data-bs-target="#changePassword" aria-expanded="false">
+                        <i class="bi bi-lock me-2"></i> Change Password
+                      </button>
+                    </h2>
+                    <div id="changePassword" class="accordion-collapse collapse" data-bs-parent="#securityAccordion">
+                      <div class="accordion-body">
+                        <form id="password-form">
+                          <div class="mb-3">
+                            <label for="currentPassword" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="currentPassword" 
+                                   placeholder="Enter your current password">
+                          </div>
+                          <div class="row">
+                            <div class="col-md-6">
+                              <div class="mb-3">
+                                <label for="newPassword" class="form-label">New Password</label>
+                                <input type="password" class="form-control" id="newPassword" 
+                                       placeholder="Enter new password">
+                                <div class="form-text">Minimum 6 characters</div>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                <input type="password" class="form-control" id="confirmPassword" 
+                                       placeholder="Confirm new password">
+                                <div id="passwordMatch" class="form-text"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">Change Password</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="cancelPasswordChange()">Cancel</button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Notification Settings -->
+        <div class="tab-pane fade" id="notification-settings">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Notification Preferences</h5>
+            </div>
+            <div class="card-body">
+              
+              <!-- Email Notifications -->
+              <div class="mb-4">
+                <h6 class="border-bottom pb-2 mb-3">Email Notifications</h6>
+                <div class="row">
+                  <% 
+                  const notificationTypes = [
+                    { key: 'trade', label: 'Trade Proposals & Updates', icon: 'bi-arrow-left-right' },
+                    { key: 'waiver', label: 'Waiver Wire Results', icon: 'bi-clipboard-check' },
+                    { key: 'league', label: 'League Announcements', icon: 'bi-megaphone' },
+                    { key: 'keeper', label: 'Keeper Deadlines', icon: 'bi-shield-check' },
+                    { key: 'draft', label: 'Draft Notifications', icon: 'bi-trophy' },
+                    { key: 'player_update', label: 'Player Updates', icon: 'bi-person-exclamation' },
+                    { key: 'message', label: 'Private Messages', icon: 'bi-envelope' },
+                    { key: 'system', label: 'System & Security', icon: 'bi-gear' }
+                  ];
+                  %>
+                  <% notificationTypes.forEach(type => { %>
+                    <div class="col-md-6 mb-3">
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" 
+                               id="email_<%= type.key %>" 
+                               data-type="<%= type.key %>" 
+                               data-method="email"
+                               <%= (notificationPrefs[type.key] && notificationPrefs[type.key].email) ? 'checked' : '' %>>
+                        <label class="form-check-label" for="email_<%= type.key %>">
+                          <i class="bi <%= type.icon %> me-2"></i>
+                          <%= type.label %>
+                        </label>
+                      </div>
+                    </div>
+                  <% }); %>
+                </div>
+              </div>
+
+              <!-- In-App Notifications -->
+              <div class="mb-4">
+                <h6 class="border-bottom pb-2 mb-3">In-App Notifications</h6>
+                <div class="row">
+                  <% notificationTypes.forEach(type => { %>
+                    <div class="col-md-6 mb-3">
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" 
+                               id="site_<%= type.key %>" 
+                               data-type="<%= type.key %>" 
+                               data-method="site"
+                               <%= (notificationPrefs[type.key] && notificationPrefs[type.key].site) ? 'checked' : '' %>>
+                        <label class="form-check-label" for="site_<%= type.key %>">
+                          <i class="bi <%= type.icon %> me-2"></i>
+                          <%= type.label %>
+                        </label>
+                      </div>
+                    </div>
+                  <% }); %>
+                </div>
+              </div>
+
+              <!-- Notification Timing -->
+              <div class="mb-4">
+                <h6 class="border-bottom pb-2 mb-3">Notification Timing</h6>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="digestFrequency" class="form-label">Email Digest Frequency</label>
+                      <select class="form-select" id="digestFrequency">
+                        <option value="immediate" <%= (preferences.notifications && preferences.notifications.digest_frequency === 'immediate') ? 'selected' : '' %>>
+                          Immediate
+                        </option>
+                        <option value="daily" <%= (preferences.notifications && preferences.notifications.digest_frequency === 'daily') ? 'selected' : '' %>>
+                          Daily Summary
+                        </option>
+                        <option value="weekly" <%= (preferences.notifications && preferences.notifications.digest_frequency === 'weekly') ? 'selected' : '' %>>
+                          Weekly Summary
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check form-switch mt-4">
+                      <input class="form-check-input" type="checkbox" id="quietHours"
+                             <%= (preferences.notifications && preferences.notifications.quiet_hours_enabled) ? 'checked' : '' %>>
+                      <label class="form-check-label" for="quietHours">
+                        Enable Quiet Hours (no notifications between 10 PM - 8 AM)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button id="save-notifications" class="btn btn-primary">Save Notification Settings</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Display Settings -->
+        <div class="tab-pane fade" id="display-settings">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Display & Theme Preferences</h5>
+            </div>
+            <div class="card-body">
+              
+              <!-- Theme -->
+              <div class="mb-4">
+                <h6 class="border-bottom pb-2 mb-3">Theme</h6>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="theme" id="lightTheme" value="light"
+                             <%= (!preferences.theme || preferences.theme === 'light') ? 'checked' : '' %>>
+                      <label class="form-check-label" for="lightTheme">
+                        <i class="bi bi-sun me-2"></i> Light Theme
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="radio" name="theme" id="darkTheme" value="dark"
+                             <%= (preferences.theme === 'dark') ? 'checked' : '' %>>
+                      <label class="form-check-label" for="darkTheme">
+                        <i class="bi bi-moon me-2"></i> Dark Theme (Coming Soon)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Table Display -->
+              <div class="mb-4">
+                <h6 class="border-bottom pb-2 mb-3">Table Display</h6>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="tableDensity" class="form-label">Table Density</label>
+                      <select class="form-select" id="tableDensity">
+                        <option value="compact" <%= (preferences.display && preferences.display.table_density === 'compact') ? 'selected' : '' %>>
+                          Compact
+                        </option>
+                        <option value="comfortable" <%= (!preferences.display || preferences.display.table_density === 'comfortable') ? 'selected' : '' %>>
+                          Comfortable
+                        </option>
+                        <option value="spacious" <%= (preferences.display && preferences.display.table_density === 'spacious') ? 'selected' : '' %>>
+                          Spacious
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="itemsPerPage" class="form-label">Items Per Page</label>
+                      <select class="form-select" id="itemsPerPage">
+                        <option value="10" <%= (preferences.display && preferences.display.items_per_page === 10) ? 'selected' : '' %>>10</option>
+                        <option value="25" <%= (!preferences.display || preferences.display.items_per_page === 25) ? 'selected' : '' %>>25</option>
+                        <option value="50" <%= (preferences.display && preferences.display.items_per_page === 50) ? 'selected' : '' %>>50</option>
+                        <option value="100" <%= (preferences.display && preferences.display.items_per_page === 100) ? 'selected' : '' %>>100</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button id="save-display" class="btn btn-primary">Save Display Settings</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Privacy Settings -->
+        <div class="tab-pane fade" id="privacy-settings">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="card-title mb-0">Privacy Settings</h5>
+            </div>
+            <div class="card-body">
+              
+              <!-- Profile Visibility -->
+              <div class="mb-4">
+                <h6 class="border-bottom pb-2 mb-3">Profile Visibility</h6>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="profilePublic"
+                         <%= currentUser.is_profile_public ? 'checked' : '' %>>
+                  <label class="form-check-label" for="profilePublic">
+                    Make my profile visible to other league members
+                  </label>
+                </div>
+                <small class="text-muted">
+                  When enabled, other managers can view your profile, favorite team, and bio.
+                </small>
+              </div>
+
+              <!-- Trading Preferences -->
+              <div class="mb-4">
+                <h6 class="border-bottom pb-2 mb-3">Trading Preferences</h6>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="showTradeBlock"
+                         <%= (preferences.privacy && preferences.privacy.show_trade_block) ? 'checked' : '' %>>
+                  <label class="form-check-label" for="showTradeBlock">
+                    Show that I'm open to trade discussions
+                  </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="showActivity"
+                         <%= (preferences.privacy && preferences.privacy.show_activity) ? 'checked' : '' %>>
+                  <label class="form-check-label" for="showActivity">
+                    Show my transaction history to other managers
+                  </label>
+                </div>
+              </div>
+
+              <button id="save-privacy" class="btn btn-primary">Save Privacy Settings</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/settings.js"></script>

@@ -1,0 +1,190 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-6">
+        <h1 class="mb-0">NFL Players</h1>
+    </div>
+    <div class="col-md-6 text-md-end">
+        <a href="/players/create" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Add Player
+        </a>
+        <a href="/players/available" class="btn btn-outline-secondary">
+            <i class="bi bi-list-check"></i> Available Players
+        </a>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">Filter Players</h5>
+    </div>
+    <div class="card-body">
+        <form action="/players" method="GET" class="row g-3">
+            <!-- Position Filter -->
+            <div class="col-md-3">
+                <label for="position" class="form-label">Position</label>
+                <select class="form-select" id="position" name="position">
+                    <option value="">All Positions</option>
+                    <option value="QB" <%= filters.position === 'QB' ? 'selected' : '' %>>Quarterback (QB)</option>
+                    <option value="RB" <%= filters.position === 'RB' ? 'selected' : '' %>>Running Back (RB)</option>
+                    <option value="WR" <%= filters.position === 'WR' ? 'selected' : '' %>>Wide Receiver (WR)</option>
+                    <option value="TE" <%= filters.position === 'TE' ? 'selected' : '' %>>Tight End (TE)</option>
+                    <option value="K" <%= filters.position === 'K' ? 'selected' : '' %>>Kicker (K)</option>
+                    <option value="DEF" <%= filters.position === 'DEF' ? 'selected' : '' %>>Defense (DEF)</option>
+                </select>
+            </div>
+            
+            <!-- Team Filter -->
+            <div class="col-md-3">
+                <label for="team" class="form-label">NFL Team</label>
+                <select class="form-select" id="team" name="team">
+                    <option value="">All Teams</option>
+                    <% teams.forEach(team => { %>
+                        <option value="<%= team.nfl_team_id %>" <%= filters.team == team.nfl_team_id ? 'selected' : '' %>>
+                            <%= team.team_code %> - <%= team.team_name %>
+                        </option>
+                    <% }); %>
+                </select>
+            </div>
+            
+            <!-- Name Search -->
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Name</label>
+                <input type="text" class="form-control" id="search" name="search" placeholder="Search by name" value="<%= filters.search || '' %>">
+            </div>
+            
+            <!-- Rookie Filter -->
+            <div class="col-md-2">
+                <label for="rookie" class="form-label">Player Type</label>
+                <select class="form-select" id="rookie" name="rookie">
+                    <option value="">All Players</option>
+                    <option value="true" <%= filters.rookie === 'true' ? 'selected' : '' %>>Rookies Only</option>
+                    <option value="false" <%= filters.rookie === 'false' ? 'selected' : '' %>>Veterans Only</option>
+                </select>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="col-12 mt-4">
+                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                <a href="/players" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Players Table -->
+<div class="card">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Players List</h5>
+        <span class="badge bg-primary"><%= pagination.totalCount %> Players</span>
+    </div>
+    
+    <div class="card-body">
+        <% if (players.length === 0) { %>
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                No players found matching your criteria.
+            </div>
+        <% } else { %>
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Team</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% players.forEach(player => { %>
+                            <tr>
+                                <td>
+                                    <a href="/players/<%= player.player_id %>" class="text-decoration-none">
+                                        <%= player.display_name %>
+                                        <% if (player.is_rookie) { %>
+                                            <span class="badge bg-warning text-dark">R</span>
+                                        <% } %>
+                                    </a>
+                                </td>
+                                <td><%= player.position %></td>
+                                <td>
+                                    <% if (player.team_code) { %>
+                                        <%= player.team_code %> - <%= player.team_name %>
+                                    <% } else { %>
+                                        <span class="text-muted">Free Agent</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (player.status === 'Active') { %>
+                                        <span class="badge bg-success">Active</span>
+                                    <% } else if (player.status === 'Injured') { %>
+                                        <span class="badge bg-danger">Injured</span>
+                                    <% } else if (player.status === 'Suspended') { %>
+                                        <span class="badge bg-warning text-dark">Suspended</span>
+                                    <% } else { %>
+                                        <span class="badge bg-secondary"><%= player.status %></span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/players/<%= player.player_id %>" class="btn btn-outline-primary">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="/players/<%= player.player_id %>/edit" class="btn btn-outline-secondary">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Pagination -->
+    <% if (pagination.totalPages > 1) { %>
+        <div class="card-footer">
+            <nav aria-label="Player pagination">
+                <ul class="pagination justify-content-center mb-0">
+                    <!-- Previous Page -->
+                    <li class="page-item <%= !pagination.hasPrev ? 'disabled' : '' %>">
+                        <a class="page-link" href="/players?page=<%= pagination.currentPage - 1 %><%= filters.position ? `&position=${filters.position}` : '' %><%= filters.team ? `&team=${filters.team}` : '' %><%= filters.search ? `&search=${filters.search}` : '' %><%= filters.rookie ? `&rookie=${filters.rookie}` : '' %>" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    
+                    <!-- Page Numbers -->
+                    <% for(let i = 1; i <= pagination.totalPages; i++) { %>
+                        <% if (
+                            i === 1 || 
+                            i === pagination.totalPages || 
+                            (i >= pagination.currentPage - 2 && i <= pagination.currentPage + 2)
+                        ) { %>
+                            <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+                                <a class="page-link" href="/players?page=<%= i %><%= filters.position ? `&position=${filters.position}` : '' %><%= filters.team ? `&team=${filters.team}` : '' %><%= filters.search ? `&search=${filters.search}` : '' %><%= filters.rookie ? `&rookie=${filters.rookie}` : '' %>"><%= i %></a>
+                            </li>
+                        <% } else if (
+                            i === pagination.currentPage - 3 || 
+                            i === pagination.currentPage + 3
+                        ) { %>
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">...</a>
+                            </li>
+                        <% } %>
+                    <% } %>
+                    
+                    <!-- Next Page -->
+                    <li class="page-item <%= !pagination.hasNext ? 'disabled' : '' %>">
+                        <a class="page-link" href="/players?page=<%= pagination.currentPage + 1 %><%= filters.position ? `&position=${filters.position}` : '' %><%= filters.team ? `&team=${filters.team}` : '' %><%= filters.search ? `&search=${filters.search}` : '' %><%= filters.rookie ? `&rookie=${filters.rookie}` : '' %>" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    <% } %>
+</div>

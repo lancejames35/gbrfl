@@ -1,0 +1,91 @@
+<div id="sidebar" class="sidebar">
+  <button id="sidebar-pin" class="sidebar-pin" title="Pin sidebar">
+    <i class="bi bi-pin"></i>
+  </button>
+  <div class="sidebar-content">
+    <div class="sidebar-header">
+      <h2 class="h5 mb-0">Navigation</h2>
+    </div>
+    
+    <ul class="nav flex-column mt-3">
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+          <i class="bi bi-speedometer2 me-2"></i> <span class="nav-text">Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'teams' ? 'active' : '' %>" href="/teams">
+          <i class="bi bi-people-fill me-2"></i> <span class="nav-text">Teams</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'players' ? 'active' : '' %>" href="/players">
+          <i class="bi bi-person-fill me-2"></i> <span class="nav-text">Players</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'lineups' ? 'active' : '' %>" href="/lineups">
+          <i class="bi bi-clipboard-check me-2"></i> <span class="nav-text">Lineups</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'schedule' ? 'active' : '' %>" href="/schedule">
+          <i class="bi bi-calendar-week me-2"></i> <span class="nav-text">Schedule</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'message-board' ? 'active' : '' %>" href="/message-board">
+          <i class="bi bi-chat-dots me-2"></i> <span class="nav-text">Message Board</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'rules' ? 'active' : '' %>" href="/rules">
+          <i class="bi bi-book me-2"></i> <span class="nav-text">Rules/Scoring</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'champions' ? 'active' : '' %>" href="/champions">
+          <i class="bi bi-award me-2"></i> <span class="nav-text">Champions</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'history' ? 'active' : '' %>" href="/history">
+          <i class="bi bi-clock-history me-2"></i> <span class="nav-text">History</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <span class="nav-link disabled text-muted">
+          <i class="bi bi-arrow-left-right me-2"></i> 
+          <span class="nav-text">
+            Transactions
+            <br><small style="font-size: 0.7em; opacity: 0.7;">(coming soon)</small>
+          </span>
+        </span>
+      </li>
+      <li class="nav-item">
+        <span class="nav-link disabled text-muted">
+          <i class="bi bi-bar-chart me-2"></i> 
+          <span class="nav-text">
+            Scoreboard
+            <br><small style="font-size: 0.7em; opacity: 0.7;">(coming soon)</small>
+          </span>
+        </span>
+      </li>
+      <li class="nav-item">
+        <span class="nav-link disabled text-muted">
+          <i class="bi bi-trophy me-2"></i> 
+          <span class="nav-text">
+            Standings
+            <br><small style="font-size: 0.7em; opacity: 0.7;">(coming soon)</small>
+          </span>
+        </span>
+      </li>
+    </ul>
+    
+    <div id="mobile-toggle-wrapper" class="d-block d-md-none mt-4">
+      <button id="mobile-menu-close" class="btn btn-outline-secondary w-100">
+        <i class="bi bi-x-lg me-2"></i> <span>Close Menu</span>
+      </button>
+    </div>
+  </div>
+</div>

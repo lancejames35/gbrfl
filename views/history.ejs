@@ -1,0 +1,203 @@
+<div class="container py-5">
+  <div class="row">
+    <div class="col-lg-10 mx-auto">
+      <div class="card border-0 shadow">
+        <div class="card-header bg-primary text-white py-3">
+          <h1 class="display-5 mb-0">GBRFL History</h1>
+        </div>
+        <div class="card-body p-5">
+          <!-- Banner image - using Bootstrap icons instead of an image file -->
+          <div class="text-center mb-4">
+            <div class="bg-light p-4 rounded">
+              <i class="bi bi-trophy-fill text-warning" style="font-size: 5rem;"></i>
+              <i class="bi bi-football ms-4 text-dark" style="font-size: 5rem;"></i>
+            </div>
+            <p class="text-muted mt-2"><em><%= new Date().getFullYear() - 1993 %> years of fantasy football excellence</em></p>
+          </div>
+          
+          <div class="timeline">
+            <!-- Origin Story -->
+            <div class="mb-4 p-3 border-start border-primary border-4 bg-light rounded">
+              <h3 class="h5 fw-bold text-primary">The Beginning (1993-1998)</h3>
+              <div class="d-flex">
+                <div class="pe-3">
+                  <span class="badge bg-primary rounded-circle p-3">1993</span>
+                </div>
+                <div>
+                  <p>The George Blanda Rotisserie Football League (GBRFL) started in 1993 with eight teams as the George Blanda League of the Armchair Sports Group (ASG). ASG administered our league until 1997, when we began to run it independently. For the 1997 and 1998 seasons, we were simply known as the George Blanda League (GBL).</p>
+                  
+                  <p>During the ASG years, the league was run by phone, fax, and snail mail. The first two years of independent operation, we primarily used email, which was an improvement, but we recognized the need for a website.</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Name Change -->
+            <div class="mb-4 p-3 border-start border-success border-4 bg-light rounded">
+              <h3 class="h5 fw-bold text-success">Becoming the GBRFL (1999)</h3>
+              <div class="d-flex">
+                <div class="pe-3">
+                  <span class="badge bg-success rounded-circle p-3">1999</span>
+                </div>
+                <div>
+                  <p>In 1999, with the launch of our website, we renamed ourselves the George Blanda Rotisserie Football League (GBRFL). We kept the "George Blanda" name, particularly after a 1998 Pro Football Weekly article named George Blanda the number one all-time fantasy football player. The new name emphasized the rotisserie element of our unique fantasy system.</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Current Status -->
+            <div class="mb-4 p-3 border-start border-info border-4 bg-light rounded">
+              <h3 class="h5 fw-bold text-info">GBRFL Today</h3>
+              <p>We are now in year <strong class="text-info"><%= new Date().getFullYear() - 1993 %></strong>, having gone through many changes. We've added, removed, and modified rules, always handling issues democratically.</p>
+              
+              <div class="row mt-4">
+                <div class="col-md-6">
+                  <div class="card h-100 bg-info bg-opacity-10 border-info">
+                    <div class="card-header bg-info text-white">
+                      <h4 class="h6 mb-0">Original Members Still Active</h4>
+                    </div>
+                    <div class="card-body">
+                      <ul class="list-group list-group-flush">
+                        <li class="list-group-item bg-transparent"><strong>Steve Stegeman</strong> - 36 years</li>
+                        <li class="list-group-item bg-transparent"><strong>Frank Gonzalez</strong> - 35 years</li>
+                        <li class="list-group-item bg-transparent"><strong>Dave Bohrer</strong> - 34 years</li>
+                        <li class="list-group-item bg-transparent"><strong>Danny Feder</strong> - 33 years</li>
+                        <li class="list-group-item bg-transparent"><strong>Mark Hahn</strong> - 33 years</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card h-100 bg-info bg-opacity-10 border-info">
+                    <div class="card-header bg-info text-white">
+                      <h4 class="h6 mb-0">Current Members</h4>
+                    </div>
+                    <div class="card-body">
+                      <ul class="list-group list-group-flush">
+                        <li class="list-group-item bg-transparent"><strong>Steve Warner</strong> - 30 years</li>
+                        <li class="list-group-item bg-transparent"><strong>Travis Cooper</strong> - 22 years</li>
+                        <li class="list-group-item bg-transparent"><strong>James Bird</strong> - 24 years</li>
+                        <li class="list-group-item bg-transparent"><strong>Gene Nestro</strong> - 33 years</li>
+                        <li class="list-group-item bg-transparent"><strong>Lance Seamans</strong> - 21 years</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Notable Past Owners -->
+            <div class="mb-4 p-3 border-start border-warning border-4 bg-light rounded">
+              <h3 class="h5 fw-bold text-warning">Notable Past Owners</h3>
+              <div class="row">
+                <div class="col-md-6">
+                  <ul class="list-group">
+                    <li class="list-group-item"><strong>Dave Trout</strong> - 39 years</li>
+                    <li class="list-group-item"><strong>Joe Parsons</strong> - 29 years</li>
+                    <li class="list-group-item"><strong>Rob Pak</strong> - 21 years</li>
+                    <li class="list-group-item"><strong>Rob Murtha</strong> - 7 years</li>
+                  </ul>
+                </div>
+                <div class="col-md-6">
+                  <ul class="list-group">
+                    <li class="list-group-item"><strong>Doug Owens</strong> - 4 years</li>
+                    <li class="list-group-item"><strong>Vic Fattore</strong></li>
+                    <li class="list-group-item"><strong>Art Murphy</strong></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <!-- League Structure -->
+            <div class="mb-4 p-3 border-start border-secondary border-4 bg-light rounded">
+              <h3 class="h5 fw-bold text-secondary">League Structure</h3>
+              <div class="row">
+                <div class="col-md-8">
+                  <p>The GBRFL is a keeper league with ten teams. Rosters include 21 components of offensive skill positions and team defensive/special-team units. We typically protect twelve players per team from season to season, except during replacement or expansion years.</p>
+                  
+                  <p>Our weekly starting lineups are larger and more rigid than standard leagues, requiring two quarterbacks, three running backs, and three receivers with no swing positions. This structure emphasizes skill and minimizes luck.</p>
+                  
+                  <p>For the 2006 season, we added the flex lineup option and extended play into the postseason. Every team plays 29 games—three against every team with a two-game bumper week extending into the NFL postseason.</p>
+                </div>
+                <div class="col-md-4 d-flex align-items-center justify-content-center">
+                  <div class="text-center">
+                    <div class="bg-secondary text-white rounded-circle p-3 d-inline-block mb-2">
+                      <i class="bi bi-trophy fs-1"></i>
+                    </div>
+                    <p class="text-center fw-bold">10 Teams</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Geographic Reach -->
+            <div class="mb-4 p-3 border-start border-danger border-4 bg-light rounded">
+              <h3 class="h5 fw-bold text-danger">Geographic Reach</h3>
+              <p>The GBRFL's membership is not limited by region. We have had owners from all over:</p>
+              <div class="bg-light p-3 rounded">
+                <span class="badge bg-danger m-1">New Jersey</span>
+                <span class="badge bg-danger m-1">Colorado</span>
+                <span class="badge bg-danger m-1">Florida</span>
+                <span class="badge bg-danger m-1">Georgia</span>
+                <span class="badge bg-danger m-1">Pennsylvania</span>
+                <span class="badge bg-danger m-1">Texas</span>
+                <span class="badge bg-danger m-1">Virginia</span>
+                <span class="badge bg-danger m-1">Washington D.C.</span>
+                <span class="badge bg-danger m-1">California</span>
+                <span class="badge bg-danger m-1">Hawaii</span>
+                <span class="badge bg-danger m-1">Illinois</span>
+                <span class="badge bg-danger m-1">South Korea</span>
+              </div>
+            </div>
+            
+            <!-- GBRFL2 -->
+            <div class="mb-4 p-3 border-start border-dark border-4 bg-light rounded">
+              <h3 class="h5 fw-bold">GBRFL2</h3>
+              <p>The GBRFL2, an official spin-off, was disbanded in 2008 after five years. It continued under modified rules at another fantasy league management site for about another decade before finally disbanding completely.</p>
+            </div>
+            
+            <!-- Final Note -->
+            <div class="p-3 border-start border-success border-4 bg-light rounded">
+              <h3 class="h5 fw-bold text-success">For the Love of the Game</h3>
+              <div class="d-flex align-items-center">
+                <div class="me-3">
+                  <i class="bi bi-heart-fill text-danger fs-1"></i>
+                </div>
+                <p class="mb-0">In all the years the GBRFL has existed, no one has ever won a dime. There are awards for our top three finishers, but we all play for camaraderie, the love of the game, and bragging rights!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Function to get ordinal suffix for numbers
+  function ordinalSuffix(number) {
+    const english_ordinal_rules = new Intl.PluralRules("en", {
+      type: "ordinal"
+    });
+    const suffixes = {
+      one: "st",
+      two: "nd",
+      few: "rd",
+      other: "th"
+    };
+    
+    // Convert to words for 1-35
+    const words = [
+      "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth",
+      "eleventh", "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth", "seventeenth", "eighteenth", "nineteenth", "twentieth",
+      "twenty-first", "twenty-second", "twenty-third", "twenty-fourth", "twenty-fifth", "twenty-sixth", "twenty-seventh", "twenty-eighth", "twenty-ninth", "thirtieth",
+      "thirty-first", "thirty-second", "thirty-third", "thirty-fourth", "thirty-fifth"
+    ];
+    
+    if (number <= 35 && number >= 1) {
+      return words[number - 1];
+    }
+    
+    const suffix = suffixes[english_ordinal_rules.select(number)];
+    return number + suffix;
+  }
+</script>

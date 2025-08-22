@@ -1,0 +1,165 @@
+<header class="main-header">
+  <div class="container-fluid h-100">
+    <div class="d-flex justify-content-between align-items-center h-100">
+      <!-- Left side: Mobile Menu + GBRFL Brand -->
+      <div class="d-flex align-items-center">
+        <!-- Mobile Menu Button -->
+        <button id="mobile-menu-toggle" class="btn text-white me-3 d-block d-md-none" style="border: none; background: none; font-size: 1.25rem;">
+          <i class="bi bi-list"></i>
+        </button>
+        
+        <a href="/dashboard" class="text-decoration-none text-white">
+          <h1 class="h4 mb-0">GBRFL</h1>
+        </a>
+      </div>
+      
+      <!-- Center: Team Name (if user has a team) -->
+      <% if (locals.user && user) { %>
+        <a href="/teams/1" class="text-decoration-none text-white d-none d-md-block">
+          <h2 class="h5 mb-0 text-center fw-normal"><%= title ? title.split(' | ')[0] : 'My Team' %></h2>
+        </a>
+      <% } %>
+      
+      <!-- Right side: Tools and User Profile -->
+      <div class="d-flex align-items-center">
+        <!-- Settings -->
+        <a href="/settings" class="text-white me-3 d-flex align-items-center" title="Settings">
+          <i class="bi bi-gear"></i>
+        </a>
+        
+        <!-- Notifications -->
+        <div class="dropdown me-3 d-flex align-items-center">
+          <a class="text-white position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="bi bi-bell"></i>
+            <span id="notificationBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
+              0
+              <span class="visually-hidden">unread notifications</span>
+            </span>
+          </a>
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationsDropdown" style="min-width: 350px; max-height: 400px; overflow-y: auto;">
+            <li><h6 class="dropdown-header d-flex justify-content-between align-items-center">
+              Notifications
+              <button id="markAllReadBtn" class="btn btn-sm btn-link text-decoration-none p-0" style="display: none;">
+                Mark all read
+              </button>
+            </h6></li>
+            <li><div id="notificationsList" class="px-3 py-2">
+              <div class="text-center text-muted">
+                <div class="spinner-border spinner-border-sm" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="mt-1">Loading notifications...</div>
+              </div>
+            </div></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-center" href="/notifications">
+              <i class="bi bi-list-ul me-1"></i> View all notifications
+            </a></li>
+          </ul>
+        </div>
+        
+        <!-- User Profile -->
+        <% if (locals.user && user) { %>
+          <div class="dropdown d-flex align-items-center">
+            <a class="nav-link dropdown-toggle text-white d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-person-circle me-1"></i> 
+              <%= user.username %>
+              <% if (typeof originalAdmin !== 'undefined' && originalAdmin) { %>
+                <span class="badge bg-warning text-dark ms-2" title="Impersonating User">
+                  <i class="bi bi-person-fill-gear"></i>
+                </span>
+              <% } %>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <% if (typeof originalAdmin !== 'undefined' && originalAdmin) { %>
+                <!-- Currently impersonating - show switch back option -->
+                <li><h6 class="dropdown-header">
+                  <i class="bi bi-exclamation-triangle-fill text-warning"></i> 
+                  Viewing as: <%= user.firstName %> <%= user.lastName %>
+                </h6></li>
+                <li><a class="dropdown-item" href="#" onclick="switchBackToAdmin()">
+                  <i class="bi bi-arrow-left text-primary"></i> Switch Back to Admin
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+              <% } else if (user.isAdmin) { %>
+                <!-- Admin user - show admin tools and switch user options -->
+                <li><h6 class="dropdown-header">Admin Tools</h6></li>
+                <li><a class="dropdown-item" href="/admin">
+                  <i class="bi bi-speedometer2 text-primary"></i> Admin Dashboard
+                </a></li>
+                <li><a class="dropdown-item" href="/admin/schedules">
+                  <i class="bi bi-calendar-week text-primary"></i> Schedule Management
+                </a></li>
+                <li><a class="dropdown-item" href="/admin/trades">
+                  <i class="bi bi-arrow-left-right text-primary"></i> Trade Approvals
+                </a></li>
+                <li><a class="dropdown-item" href="/admin/waivers">
+                  <i class="bi bi-clipboard-check text-primary"></i> Waiver Wire Approvals
+                </a></li>
+                <li><a class="dropdown-item" href="/admin/users">
+                  <i class="bi bi-people text-primary"></i> User Management
+                </a></li>
+                <li><a class="dropdown-item" href="/admin/settings">
+                  <i class="bi bi-gear text-primary"></i> League Settings
+                </a></li>
+                <li><a class="dropdown-item" href="/admin/logs">
+                  <i class="bi bi-list-ul text-primary"></i> Activity Logs
+                </a></li>
+                <li><a class="dropdown-item" href="/admin/import-export">
+                  <i class="bi bi-download text-primary"></i> Import/Export Tools
+                </a></li>
+                
+                <!-- User switching submenu -->
+                <li class="position-relative">
+                  <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" id="switchUserToggle">
+                    <span><i class="bi bi-person-gear text-primary"></i> Switch User</span>
+                    <i class="bi bi-chevron-right" id="switchUserArrow"></i>
+                  </a>
+                  <div class="user-switch-submenu" id="userSwitchSubmenu" style="display: none;">
+                    <div class="submenu-content">
+                      <% if (locals.allUsers && locals.allUsers.length > 0) { %>
+                        <% locals.allUsers.forEach(targetUser => { %>
+                          <% if (targetUser.user_id !== user.id) { %>
+                            <a class="submenu-item" href="#" 
+                               data-user-id="<%= targetUser.user_id %>" 
+                               data-user-name="<%= targetUser.first_name %> <%= targetUser.last_name %>"
+                               data-team-name="<%= targetUser.team_name || 'No Team' %>"
+                               onclick="switchToUserSafe(this)">
+                              <div class="user-info">
+                                <div class="user-name"><%= targetUser.first_name %> <%= targetUser.last_name %></div>
+                                <% if (targetUser.team_name) { %>
+                                  <small class="text-muted">(<%= targetUser.team_name %>)</small>
+                                <% } %>
+                              </div>
+                            </a>
+                          <% } %>
+                        <% }); %>
+                      <% } else { %>
+                        <div class="submenu-item text-muted">No other users available</div>
+                      <% } %>
+                    </div>
+                  </div>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+              <% } %>
+              
+              <!-- Regular user menu items -->
+              <li><a class="dropdown-item" href="/profile">
+                <i class="bi bi-person"></i> My Profile
+              </a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/logout">
+                <i class="bi bi-box-arrow-right"></i> Logout
+              </a></li>
+            </ul>
+          </div>
+        <% } else { %>
+          <div class="d-flex align-items-center">
+            <a href="/login" class="btn btn-outline-light me-2">Login</a>
+            <a href="/register" class="btn btn-light">Sign Up</a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</header>

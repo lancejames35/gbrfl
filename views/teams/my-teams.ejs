@@ -1,0 +1,49 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/teams">Teams</a></li>
+                <li class="breadcrumb-item active" aria-current="page">My Teams</li>
+            </ol>
+        </nav>
+        <h1 class="mb-0">My Teams</h1>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="/teams/create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create Team
+        </a>
+    </div>
+</div>
+
+<!-- Team Cards -->
+<div class="row">
+            <% if (teams && teams.length > 0) { %>
+                <% teams.forEach(team => { %>
+                    <div class="col-lg-4 col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0"><%= team.team_name %></h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <small class="text-muted">Created: <%= new Date(team.created_at).toLocaleDateString() %></small>
+                                </div>
+                                <div class="btn-group w-100">
+                                    <a href="/teams/<%= team.team_id %>" class="btn btn-outline-primary">View</a>
+                                    <a href="/teams/<%= team.team_id %>/edit" class="btn btn-outline-secondary">Edit</a>
+                                    <a href="/teams/<%= team.team_id %>/roster/manage" class="btn btn-outline-success">Roster</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        You don't have any teams yet. <a href="/teams/create" class="alert-link">Create your first team</a>
+                    </div>
+                </div>
+            <% } %>
+        </div>
