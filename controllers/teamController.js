@@ -3,7 +3,7 @@
  * Handles fantasy team-related functionality
  */
 
-const FantasyTeam = require('../models/Fantasyteam');
+const FantasyTeam = require('../models/FantasyTeam');
 const { validationResult } = require('express-validator');
 
 /**

@@ -15,7 +15,7 @@ const teamController = require('../controllers/teamController');
  */
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
-    const FantasyTeam = require('../models/Fantasyteam');
+    const FantasyTeam = require('../models/FantasyTeam');
     const userTeams = await FantasyTeam.findByUserId(req.session.user.id);
     
     if (userTeams.length === 0) {

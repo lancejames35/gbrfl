@@ -5,7 +5,7 @@
 
 const WeeklySchedule = require('../models/WeeklySchedule');
 const ScheduleAssignment = require('../models/ScheduleAssignment');
-const FantasyTeam = require('../models/Fantasyteam');
+const FantasyTeam = require('../models/FantasyTeam');
 const LineupSubmission = require('../models/LineupSubmission');
 
 /**
