@@ -6,7 +6,7 @@
 const LineupSubmission = require('../models/LineupSubmission');
 const LineupPosition = require('../models/LineupPosition');
 const LineupLock = require('../models/LineupLock');
-const FantasyTeam = require('../models/FantasyTeam');
+const FantasyTeam = require('../models/Fantasyteam');
 const WeeklySchedule = require('../models/WeeklySchedule');
 const db = require('../config/database');
 const { validationResult } = require('express-validator');

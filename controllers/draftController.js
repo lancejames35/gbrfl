@@ -3,7 +3,7 @@
  * Handles all draft-related functionality
  */
 
-const FantasyTeam = require('../models/fantasyTeam');
+const FantasyTeam = require('../models/Fantasyteam');
 const db = require('../config/database');
 const CURRENT_SEASON = new Date().getFullYear();
 
