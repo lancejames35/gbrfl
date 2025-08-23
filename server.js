@@ -162,12 +162,20 @@ app.use('/api/preferences', require('./routes/api/preferences'));
 
 // Main homepage route
 app.get('/', (req, res) => {
+  console.log('=== HOMEPAGE ACCESS ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('Session user:', req.session?.user);
+  console.log('Session exists:', !!req.session);
+  console.log('=== END HOMEPAGE ===');
+  
   // If user is logged in, redirect to dashboard
-  if (req.session.user) {
+  if (req.session && req.session.user) {
+    console.log('Redirecting to dashboard');
     return res.redirect('/dashboard');
   }
   
   // Redirect non-logged-in users to login page
+  console.log('Redirecting to login');
   res.redirect('/login');
 });
 
