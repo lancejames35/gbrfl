@@ -122,8 +122,14 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Apply general rate limiting to all requests
-app.use(generalLimiter);
+// Apply general rate limiting to all requests except notifications
+app.use((req, res, next) => {
+  // Skip rate limiting for notification endpoints
+  if (req.path.startsWith('/api/notifications')) {
+    return next();
+  }
+  return generalLimiter(req, res, next);
+});
 
 // Apply stricter rate limiting to auth endpoints
 app.use('/login', authLimiter);

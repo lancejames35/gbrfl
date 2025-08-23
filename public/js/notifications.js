@@ -10,9 +10,17 @@ class NotificationManager {
     this.bindEvents();
     this.loadUnreadCount();
     
+    // Poll less frequently - every 2 minutes instead of 30 seconds
     setInterval(() => {
       this.loadUnreadCount();
-    }, 30000);
+    }, 120000);
+    
+    // Also check when page becomes visible again
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        this.loadUnreadCount();
+      }
+    });
   }
 
   bindEvents() {
