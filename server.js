@@ -117,7 +117,7 @@ const authLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes  
-  max: 100, // Limit each IP to 100 requests per windowMs for general endpoints
+  max: 500, // Limit each IP to 500 requests per windowMs for general endpoints
   standardHeaders: true,
   legacyHeaders: false,
 });
