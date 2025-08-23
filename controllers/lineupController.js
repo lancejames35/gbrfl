@@ -178,6 +178,15 @@ exports.saveLineup = async (req, res) => {
     // Update positions
     await LineupPosition.updatePositions(lineup.lineup_id, positions);
 
+    // Debug: Check what was actually saved
+    const savedPositions = await LineupPosition.getByLineup(lineup.lineup_id);
+    console.log('=== POSITIONS SAVED TO DATABASE ===');
+    console.log('Total saved:', savedPositions.length);
+    savedPositions.forEach(pos => {
+      console.log(`Position: ${pos.position_type}, Player ID: ${pos.player_id}, Sort: ${pos.sort_order}`);
+    });
+    console.log('=== END SAVED POSITIONS ===');
+
     // Update lineup status if specified
     if (status === 'submitted') {
       await LineupSubmission.updateLineup(lineup.lineup_id, {
