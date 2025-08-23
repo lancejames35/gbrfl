@@ -83,6 +83,11 @@ if (process.env.DATABASE_URL) {
 
 const sessionStore = new MySQLStore(sessionStoreConfig);
 
+// Trust proxy in production (Railway runs behind a proxy)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 app.use(session({
   key: 'gbrfl_session',
   secret: process.env.SESSION_SECRET || 'your-secret-key',
@@ -92,8 +97,10 @@ app.use(session({
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax' // Helps with cookie persistence
+  },
+  proxy: process.env.NODE_ENV === 'production' // Trust proxy in production
 }));
 
 // Flash messages
