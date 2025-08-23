@@ -75,6 +75,12 @@ const isAdmin = (req, res, next) => {
  * @param {Function} next - Express next function
  */
 const ensureAuthenticated = (req, res, next) => {
+  console.log('=== DEBUG SESSION ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('Session data:', JSON.stringify(req.session, null, 2));
+  console.log('Session user:', req.session.user);
+  console.log('=== END DEBUG ===');
+  
   if (req.session.user) {
     // Set req.user for later middleware to use
     req.user = req.session.user;
