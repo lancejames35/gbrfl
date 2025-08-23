@@ -1879,6 +1879,8 @@
             const selectedRound = roundFilterElement?.value;
 
             const currentOverallPick = ((draftStatus.current_round - 1) * 10) + draftStatus.current_pick;
+            console.log('Draft Status:', draftStatus);
+            console.log('Current overall pick:', currentOverallPick);
             
             // Filter by round if selected
             let filteredOrder = selectedRound ? 
@@ -1916,6 +1918,9 @@
                 // Display picks in this round
                 picksByRound[round].forEach((pick, index) => {
                     const isCurrentPick = draftStatus.is_active && pick.overall_pick === currentOverallPick;
+                    if (pick.overall_pick === currentOverallPick) {
+                        console.log('Checking current pick:', pick, 'is_active:', draftStatus.is_active, 'isCurrentPick:', isCurrentPick);
+                    }
                     const isCompleted = pick.drafted_player !== null;
                     const isUsersPick = pick.fantasy_team_id === currentUserTeamId;
                     const isTraded = pick.fantasy_team_id !== pick.original_team_id;

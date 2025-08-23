@@ -806,10 +806,19 @@ exports.startDraft = async (req, res) => {
       return res.json({ success: false, message: 'Draft is already active' });
     }
 
-    // Start the draft
+    // Ensure draft order exists before starting
+    await this.ensureDraftOrder();
+
+    // Start the draft - use INSERT ... ON DUPLICATE KEY UPDATE to handle existing records
     await db.query(`
       INSERT INTO draft_status (season, is_active, current_round, current_pick, start_time) 
       VALUES (?, 1, 1, 1, NOW())
+      ON DUPLICATE KEY UPDATE 
+        is_active = 1, 
+        current_round = 1, 
+        current_pick = 1, 
+        start_time = NOW(),
+        end_time = NULL
     `, [CURRENT_SEASON]);
 
     console.log(`Draft started by admin: ${req.session.user.username}`);
@@ -844,5 +853,70 @@ exports.stopDraft = async (req, res) => {
   } catch (error) {
     console.error('Error stopping draft:', error.message);
     res.status(500).json({ success: false, message: 'Error stopping draft' });
+  }
+};
+
+/**
+ * Ensure draft order exists for the current season
+ * Creates a basic draft order based on team standings if it doesn't exist
+ */
+exports.ensureDraftOrder = async function() {
+  try {
+    // Check if draft order already exists
+    const existingOrder = await db.query(
+      'SELECT COUNT(*) as count FROM draft_order WHERE season = ?',
+      [CURRENT_SEASON]
+    );
+    
+    if (existingOrder[0].count > 0) {
+      console.log('Draft order already exists');
+      return;
+    }
+
+    // Get all active teams
+    const teams = await db.query(`
+      SELECT team_id, team_name 
+      FROM fantasy_teams 
+      WHERE is_active = 1 
+      ORDER BY team_id
+    `);
+
+    if (teams.length === 0) {
+      throw new Error('No active teams found for draft order');
+    }
+
+    console.log(`Creating draft order for ${teams.length} teams`);
+
+    // Create draft order for 15 rounds (adjust as needed)
+    const rounds = 15;
+    const draftOrderEntries = [];
+
+    for (let round = 1; round <= rounds; round++) {
+      // Alternate draft order (snake draft)
+      const teamsForRound = round % 2 === 1 ? teams : [...teams].reverse();
+      
+      teamsForRound.forEach((team, index) => {
+        draftOrderEntries.push([
+          CURRENT_SEASON,
+          round,
+          index + 1, // pick_number
+          team.team_id, // fantasy_team_id
+          team.team_id  // original_team_id (same initially)
+        ]);
+      });
+    }
+
+    // Insert all draft order entries
+    const sql = `
+      INSERT INTO draft_order (season, round, pick_number, fantasy_team_id, original_team_id)
+      VALUES ?
+    `;
+    
+    await db.query(sql, [draftOrderEntries]);
+    console.log(`Created draft order with ${draftOrderEntries.length} picks`);
+
+  } catch (error) {
+    console.error('Error ensuring draft order:', error.message);
+    throw error;
   }
 };
