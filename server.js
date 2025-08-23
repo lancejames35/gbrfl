@@ -160,6 +160,17 @@ app.use('/api/scoreboard', require('./routes/api/scoreboard'));
 app.use('/api/notifications', require('./routes/api/notifications'));
 app.use('/api/preferences', require('./routes/api/preferences')); 
 
+// Main homepage route
+app.get('/', (req, res) => {
+  // If user is logged in, redirect to dashboard
+  if (req.session.user) {
+    return res.redirect('/dashboard');
+  }
+  
+  // Redirect non-logged-in users to login page
+  res.redirect('/login');
+});
+
 // Web routes
 app.use('/', require('./routes/webAuth'));
 app.use('/dashboard', require('./routes/dashboard'));
@@ -181,16 +192,7 @@ app.use('/notifications', require('./routes/notifications'));
 app.use('/settings', require('./routes/settings'));
 app.use('/profile', require('./routes/profile'));
 
-// Main homepage route
-app.get('/', (req, res) => {
-  // If user is logged in, redirect to dashboard
-  if (req.session.user) {
-    return res.redirect('/dashboard');
-  }
-  
-  // Redirect non-logged-in users to login page
-  res.redirect('/login');
-});
+
 
 // 404 handler
 app.use((req, res, next) => {
