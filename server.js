@@ -160,7 +160,7 @@ app.use('/api/scoreboard', require('./routes/api/scoreboard'));
 app.use('/api/notifications', require('./routes/api/notifications'));
 app.use('/api/preferences', require('./routes/api/preferences')); 
 
-// Main homepage route
+// Main homepage route - MUST be before any middleware that might handle /
 app.get('/', (req, res) => {
   console.log('=== HOMEPAGE ACCESS ===');
   console.log('Session ID:', req.sessionID);
