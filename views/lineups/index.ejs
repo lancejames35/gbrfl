@@ -1253,6 +1253,7 @@ const LineupManager = {
     weekNumber: <%= weekNumber %>,
     gameType: '<%= gameType %>',
     seasonYear: <%= seasonYear %>,
+    saveTimeout: null, // For debounced saving
     hasBonusGames: <%= hasBonusGames ? 'true' : 'false' %>,
     isDirty: false,
     autoSaveTimer: null,
@@ -1426,8 +1427,8 @@ const LineupManager = {
                         if (evt.oldIndex !== evt.newIndex) {
                             self.handlePositionReorder(position, evt);
                             self.updateStarterHighlighting(position, starterRequirements[position]);
-                            // Auto-save lineup after each movement
-                            self.saveLineupAfterMove();
+                            // Auto-save lineup after movement (debounced)
+                            self.debouncedSave();
                         }
                     }
                 };
@@ -1512,6 +1513,22 @@ const LineupManager = {
                 numEl.textContent = (index + 1) + '.';
             });
         }
+    },
+
+    // Debounced save to prevent too many requests
+    debouncedSave() {
+        // Clear existing timeout
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+        }
+        
+        // Show saving indicator
+        this.showSaving();
+        
+        // Set new timeout to save after 1 second of no changes
+        this.saveTimeout = setTimeout(() => {
+            this.saveLineupAfterMove();
+        }, 1000);
     },
 
     // Save lineup after player movement
@@ -1627,6 +1644,11 @@ const LineupManager = {
             handle.style.cursor = 'not-allowed';
             handle.onclick = () => false;
         });
+    },
+
+    // Show saving indicator
+    showSaving() {
+        console.log('Saving changes...');
     },
 
     // Show success message  
