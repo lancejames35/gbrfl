@@ -48,6 +48,7 @@ app.use(helmet({
       scriptSrc: [
         "'self'", 
         "'unsafe-inline'", // Required for EJS inline scripts - consider using nonces
+        "'unsafe-hashes'", // Required for inline event handlers (onclick, etc.)
         "https://cdn.jsdelivr.net", 
         "https://cdnjs.cloudflare.com"
       ],
