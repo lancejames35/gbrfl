@@ -139,6 +139,13 @@ exports.saveLineup = async (req, res) => {
     const userId = req.session.user.id;
     const { lineup_id, positions, status = 'draft' } = req.body;
 
+    console.log('=== SAVE LINEUP REQUEST ===');
+    console.log('User ID:', userId);
+    console.log('Lineup ID:', lineup_id);
+    console.log('Positions received:', JSON.stringify(positions, null, 2));
+    console.log('Total positions:', positions?.length || 0);
+    console.log('=== END SAVE LINEUP REQUEST ===');
+
     // Verify lineup belongs to user
     const lineup = await LineupSubmission.getByTeamAndWeek(
       req.body.fantasy_team_id,
