@@ -97,6 +97,9 @@ router.post('/login', [
       isAdmin: user.is_admin === 1
     };
     
+    console.log('Setting session user:', req.session.user);
+    console.log('Session ID before save:', req.sessionID);
+    
     // Success message
     req.flash('success_msg', 'You are now logged in');
     
@@ -104,7 +107,16 @@ router.post('/login', [
     const returnTo = req.body.returnTo || req.session.returnTo || '/dashboard';
     delete req.session.returnTo;
     
-    res.redirect(returnTo);
+    // Explicitly save session before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        req.flash('error_msg', 'An error occurred during login');
+        return res.redirect('/login');
+      }
+      console.log('Session saved successfully, redirecting to:', returnTo);
+      res.redirect(returnTo);
+    });
   } catch (error) {
     console.error('Login error:', error);
     req.flash('error_msg', 'An error occurred during login');
