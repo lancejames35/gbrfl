@@ -1573,13 +1573,17 @@ const LineupManager = {
                 playerItems.forEach((item, index) => {
                     const playerId = item.getAttribute('data-player-id');
                     const teamId = item.getAttribute('data-team-id');
+                    const playerStatus = item.getAttribute('data-player-status');
                     
-                    positions.push({
+                    const positionData = {
                         position_type: positionType,
                         player_id: playerId || null,
                         nfl_team_id: teamId || null,
                         sort_order: index + 1
-                    });
+                    };
+                    
+                    console.log('Collecting position:', positionData, 'Status:', playerStatus);
+                    positions.push(positionData);
                 });
             }
         });

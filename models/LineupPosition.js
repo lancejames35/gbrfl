@@ -199,10 +199,27 @@ class LineupPosition {
           sort_order
         } = position;
 
-        await connection.query(`
-          INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
-          VALUES (?, ?, ?, ?, ?, NOW())
-        `, [lineupId, position_type, player_id, nfl_team_id, sort_order]);
+        console.log('Inserting position:', {
+          lineupId,
+          position_type,
+          player_id,
+          nfl_team_id,
+          sort_order
+        });
+
+        try {
+          await connection.query(`
+            INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
+            VALUES (?, ?, ?, ?, ?, NOW())
+          `, [lineupId, position_type, player_id, nfl_team_id, sort_order]);
+        } catch (insertError) {
+          console.error('Error inserting position:', {
+            position,
+            error: insertError.message,
+            code: insertError.code
+          });
+          throw insertError;
+        }
       }
 
       await connection.commit();
