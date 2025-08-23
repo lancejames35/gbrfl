@@ -139,12 +139,6 @@ exports.saveLineup = async (req, res) => {
     const userId = req.session.user.id;
     const { lineup_id, positions, status = 'draft' } = req.body;
 
-    console.log('=== SAVE LINEUP REQUEST ===');
-    console.log('User ID:', userId);
-    console.log('Lineup ID:', lineup_id);
-    console.log('Positions received:', JSON.stringify(positions, null, 2));
-    console.log('Total positions:', positions?.length || 0);
-    console.log('=== END SAVE LINEUP REQUEST ===');
 
     // Verify lineup belongs to user
     const lineup = await LineupSubmission.getByTeamAndWeek(
@@ -178,14 +172,6 @@ exports.saveLineup = async (req, res) => {
     // Update positions
     await LineupPosition.updatePositions(lineup.lineup_id, positions);
 
-    // Debug: Check what was actually saved
-    const savedPositions = await LineupPosition.getByLineup(lineup.lineup_id);
-    console.log('=== POSITIONS SAVED TO DATABASE ===');
-    console.log('Total saved:', savedPositions.length);
-    savedPositions.forEach(pos => {
-      console.log(`Position: ${pos.position_type}, Player ID: ${pos.player_id}, Sort: ${pos.sort_order}`);
-    });
-    console.log('=== END SAVED POSITIONS ===');
 
     // Update lineup status if specified
     if (status === 'submitted') {

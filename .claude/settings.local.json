@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "/permissions allow write_files\n/permissions allow run_commands"
+      "/permissions allow write_files\n/permissions allow run_commands",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

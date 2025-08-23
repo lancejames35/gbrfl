@@ -117,17 +117,6 @@ class LineupPosition {
 
       const results = await db.query(query, [lineupId, teamId, lineupId, teamId]);
       
-      console.log('=== LOADING ROSTER BY POSITION ===');
-      console.log('Lineup ID:', lineupId, 'Team ID:', teamId);
-      console.log('Total results:', results.length);
-      
-      // Log pending players specifically
-      const pendingPlayers = results.filter(p => p.player_status === 'pending_waiver');
-      console.log('Pending waiver players found:', pendingPlayers.length);
-      pendingPlayers.forEach(p => {
-        console.log(`Pending: Player ${p.player_id}, Position: ${p.position_type}, Sort: ${p.sort_order}, In lineup: ${p.in_lineup}`);
-      });
-      console.log('=== END LOADING ROSTER ===');
       
       // Group by position
       const roster = {
@@ -214,27 +203,10 @@ class LineupPosition {
           sort_order
         } = position;
 
-        console.log('Inserting position:', {
-          lineupId,
-          position_type,
-          player_id,
-          nfl_team_id,
-          sort_order
-        });
-
-        try {
-          await connection.query(`
-            INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
-            VALUES (?, ?, ?, ?, ?, NOW())
-          `, [lineupId, position_type, player_id, nfl_team_id, sort_order]);
-        } catch (insertError) {
-          console.error('Error inserting position:', {
-            position,
-            error: insertError.message,
-            code: insertError.code
-          });
-          throw insertError;
-        }
+        await connection.query(`
+          INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
+          VALUES (?, ?, ?, ?, ?, NOW())
+        `, [lineupId, position_type, player_id, nfl_team_id, sort_order]);
       }
 
       await connection.commit();
