@@ -105,9 +105,12 @@ class LineupPosition {
         AND wr.status = 'pending'
         AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
         
-        ORDER BY position_type, 
-                 CASE WHEN player_status = 'rostered' THEN 0 ELSE 1 END,
-                 sort_order, 
+        ORDER BY position_type,
+                 CASE 
+                   WHEN sort_order IS NOT NULL THEN sort_order
+                   WHEN player_status = 'rostered' THEN 1000
+                   ELSE 1001
+                 END,
                  last_name, 
                  first_name
       `;
