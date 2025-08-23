@@ -52,6 +52,7 @@ app.use(helmet({
         "https://cdn.jsdelivr.net", 
         "https://cdnjs.cloudflare.com"
       ],
+      scriptSrcAttr: ["'unsafe-inline'", "'unsafe-hashes'"], // Allow inline event handlers
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
