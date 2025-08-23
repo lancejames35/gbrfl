@@ -15,27 +15,34 @@ const CURRENT_SEASON = new Date().getFullYear();
 exports.getDraftRoom = async (req, res) => {
   try {
     const userId = req.session.user.id;
+    console.log('Loading draft room for user:', userId);
     
     // Get user's team
     const userTeams = await FantasyTeam.findByUserId(userId);
     if (userTeams.length === 0) {
+      console.log('No teams found for user:', userId);
       req.flash('error_msg', 'You must have a team to access the draft');
       return res.redirect('/teams');
     }
     
     const userTeam = userTeams[0]; // Assuming one team per user
+    console.log('User team:', userTeam.team_name);
     
     // Get draft status
     const draftStatus = await this.getDraftStatus();
+    console.log('Draft status:', draftStatus);
     
     // Get all teams for team viewing
     const allTeams = await FantasyTeam.getAll();
+    console.log('All teams count:', allTeams.length);
     
     // Get NFL teams for filters
     const nflTeams = await db.query('SELECT * FROM nfl_teams ORDER BY team_name');
+    console.log('NFL teams count:', nflTeams.length);
     
     // Get user's queue
     const queue = await this.getUserQueue(userTeam.team_id);
+    console.log('User queue length:', queue.length);
     
     res.render('draft/room', {
       title: 'Draft Room',
