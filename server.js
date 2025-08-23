@@ -188,10 +188,8 @@ app.get('/', (req, res) => {
     return res.redirect('/dashboard');
   }
   
-  res.render('index', { 
-    title: process.env.SITE_NAME || 'Fantasy Football League',
-    message: 'Welcome to the Fantasy Football League Application'
-  });
+  // Redirect non-logged-in users to login page
+  res.redirect('/login');
 });
 
 // 404 handler
