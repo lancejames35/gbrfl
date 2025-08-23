@@ -787,3 +787,62 @@ exports.reorderQueueItems = async (teamId) => {
     console.error('Error reordering queue items:', error.message);
   }
 };
+
+/**
+ * Admin: Start the draft
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.startDraft = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (!req.session.user.isAdmin) {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    // Check if draft is already active
+    const currentStatus = await this.getDraftStatus();
+    if (currentStatus.is_active) {
+      return res.json({ success: false, message: 'Draft is already active' });
+    }
+
+    // Start the draft
+    await db.query(`
+      INSERT INTO draft_status (season, is_active, current_round, current_pick, start_time) 
+      VALUES (?, 1, 1, 1, NOW())
+    `, [CURRENT_SEASON]);
+
+    console.log(`Draft started by admin: ${req.session.user.username}`);
+    res.json({ success: true, message: 'Draft started successfully!' });
+  } catch (error) {
+    console.error('Error starting draft:', error.message);
+    res.status(500).json({ success: false, message: 'Error starting draft' });
+  }
+};
+
+/**
+ * Admin: Stop the draft
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.stopDraft = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (!req.session.user.isAdmin) {
+      return res.status(403).json({ success: false, message: 'Admin access required' });
+    }
+
+    // Stop the draft
+    await db.query(`
+      UPDATE draft_status 
+      SET is_active = 0, end_time = NOW() 
+      WHERE season = ? AND is_active = 1
+    `, [CURRENT_SEASON]);
+
+    console.log(`Draft stopped by admin: ${req.session.user.username}`);
+    res.json({ success: true, message: 'Draft stopped successfully!' });
+  } catch (error) {
+    console.error('Error stopping draft:', error.message);
+    res.status(500).json({ success: false, message: 'Error stopping draft' });
+  }
+};

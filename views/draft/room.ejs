@@ -707,6 +707,14 @@
                                     </button>
                                 <% } else { %>
                                     <!-- Admin controls -->
+                                    <div class="d-inline-block me-2">
+                                        <button id="startDraftBtn" class="btn btn-success btn-sm" onclick="startDraft()" style="display: none;">
+                                            <i class="bi bi-play-fill"></i> Start Draft
+                                        </button>
+                                        <button id="stopDraftBtn" class="btn btn-danger btn-sm" onclick="stopDraft()" style="display: none;">
+                                            <i class="bi bi-stop-fill"></i> Stop Draft
+                                        </button>
+                                    </div>
                                     <div class="dropdown d-inline-block me-2">
                                         <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                             <i class="bi bi-person-gear"></i> Switch User
@@ -2816,6 +2824,66 @@
                 alert('Error undoing pick');
             });
         }
+
+        // Admin draft control functions
+        function startDraft() {
+            if (!confirm('Are you sure you want to start the draft? This will make it live for all users.')) return;
+            
+            fetch('/draft/api/admin/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload(); // Refresh to show active draft
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Start draft error:', error);
+                alert('Error starting draft');
+            });
+        }
+
+        function stopDraft() {
+            if (!confirm('Are you sure you want to stop the draft? This will deactivate it for all users.')) return;
+            
+            fetch('/draft/api/admin/stop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload(); // Refresh to show inactive draft
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Stop draft error:', error);
+                alert('Error stopping draft');
+            });
+        }
+
+        // Show appropriate admin buttons based on draft status
+        window.addEventListener('DOMContentLoaded', function() {
+            const isDraftActive = <%= draftStatus.is_active ? 'true' : 'false' %>;
+            const startBtn = document.getElementById('startDraftBtn');
+            const stopBtn = document.getElementById('stopDraftBtn');
+            
+            if (isDraftActive) {
+                if (stopBtn) stopBtn.style.display = 'inline-block';
+                if (startBtn) startBtn.style.display = 'none';
+            } else {
+                if (startBtn) startBtn.style.display = 'inline-block';
+                if (stopBtn) stopBtn.style.display = 'none';
+            }
+        });
 
     </script>
 </body>

@@ -21,4 +21,8 @@ router.get('/api/team-roster', ensureAuthenticated, draftController.getTeamRoste
 router.get('/api/chat-messages', ensureAuthenticated, draftController.getChatMessages);
 router.post('/api/chat-message', ensureAuthenticated, draftController.sendChatMessage);
 
+// Admin routes
+router.post('/api/admin/start', ensureAuthenticated, draftController.startDraft);
+router.post('/api/admin/stop', ensureAuthenticated, draftController.stopDraft);
+
 module.exports = router;
