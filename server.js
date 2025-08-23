@@ -74,21 +74,27 @@ app.use(helmet({
 }));
 
 // Enable CORS with restrictions
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? [process.env.FRONTEND_URL, 'https://gbrfl-production.up.railway.app'].filter(Boolean)
-  : ['http://localhost:3000', 'http://localhost:8080', 'http://127.0.0.1:8080'];
-
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.some(allowedOrigin => 
-      allowedOrigin === origin || origin.endsWith('.railway.app')
-    )) {
-      return callback(null, true);
+    // In production, allow Railway domains and any custom domain
+    if (process.env.NODE_ENV === 'production') {
+      if (origin.includes('railway.app') || 
+          origin === process.env.FRONTEND_URL) {
+        return callback(null, true);
+      }
+    } else {
+      // In development, allow localhost variants
+      if (origin.includes('localhost') || 
+          origin.includes('127.0.0.1') || 
+          origin.includes('railway.app')) {
+        return callback(null, true);
+      }
     }
     
+    console.log('CORS blocked origin:', origin);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
