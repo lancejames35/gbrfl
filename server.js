@@ -82,6 +82,7 @@ app.use(cors({
     // In production, allow Railway domains and any custom domain
     if (process.env.NODE_ENV === 'production') {
       if (origin.includes('railway.app') || 
+          origin.includes('leaguestation.com') ||
           origin === process.env.FRONTEND_URL) {
         return callback(null, true);
       }
