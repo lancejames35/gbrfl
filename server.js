@@ -58,8 +58,35 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Set up session management
+const MySQLStore = require('express-mysql-session')(session);
+
+// Configure session store using same database connection as your app
+let sessionStoreConfig;
+if (process.env.DATABASE_URL) {
+  const url = new URL(process.env.DATABASE_URL);
+  sessionStoreConfig = {
+    host: url.hostname,
+    port: url.port || 3306,
+    user: url.username,
+    password: url.password,
+    database: url.pathname.slice(1)
+  };
+} else {
+  sessionStoreConfig = {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
+  };
+}
+
+const sessionStore = new MySQLStore(sessionStoreConfig);
+
 app.use(session({
+  key: 'gbrfl_session',
   secret: process.env.SESSION_SECRET || 'your-secret-key',
+  store: sessionStore,
   resave: false,
   saveUninitialized: false,
   cookie: { 
