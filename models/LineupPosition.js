@@ -114,6 +114,18 @@ class LineupPosition {
 
       const results = await db.query(query, [lineupId, teamId, lineupId, teamId]);
       
+      console.log('=== LOADING ROSTER BY POSITION ===');
+      console.log('Lineup ID:', lineupId, 'Team ID:', teamId);
+      console.log('Total results:', results.length);
+      
+      // Log pending players specifically
+      const pendingPlayers = results.filter(p => p.player_status === 'pending_waiver');
+      console.log('Pending waiver players found:', pendingPlayers.length);
+      pendingPlayers.forEach(p => {
+        console.log(`Pending: Player ${p.player_id}, Position: ${p.position_type}, Sort: ${p.sort_order}, In lineup: ${p.in_lineup}`);
+      });
+      console.log('=== END LOADING ROSTER ===');
+      
       // Group by position
       const roster = {
         quarterback: [],
