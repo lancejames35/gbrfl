@@ -335,6 +335,46 @@
         display: none;
     }
 
+    /* Mobile table column width optimization */
+    @media (max-width: 768px) {
+        .table th:nth-child(1), /* Name */
+        .table td:nth-child(1) {
+            width: 45%;
+            max-width: 45%;
+        }
+        
+        .table th:nth-child(2), /* Pos */
+        .table td:nth-child(2) {
+            width: 10%;
+            max-width: 10%;
+        }
+        
+        .table th:nth-child(3), /* NFL Team */
+        .table td:nth-child(3) {
+            width: 20%;
+            max-width: 20%;
+        }
+        
+        .table th:nth-child(4), /* Fantasy Team */
+        .table td:nth-child(4) {
+            width: 25%;
+            max-width: 25%;
+        }
+        
+        /* Ensure text doesn't wrap in small columns */
+        .table td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* Allow name column to wrap if needed */
+        .table td:nth-child(1) {
+            white-space: normal;
+            word-break: break-word;
+        }
+    }
+
     /* Modal fixes - grey background with clickable modal */
     .modal {
         z-index: 9999 !important;
