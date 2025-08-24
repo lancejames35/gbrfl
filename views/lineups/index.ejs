@@ -742,10 +742,11 @@
         .player-item {
             padding: 12px 10px;
             cursor: default;
+            position: relative;
         }
         
         .player-name {
-            max-width: 150px;
+            max-width: 180px; /* Increased for better readability */
             font-size: 0.9rem;
         }
 
@@ -757,6 +758,108 @@
 
         .drag-handle:active {
             cursor: grabbing;
+        }
+
+        /* Mobile-optimized pending player layout */
+        .pending-player {
+            background: linear-gradient(90deg, #fff8e1 0%, #fff3c4 100%);
+            border-left: 4px solid #ff9800;
+            position: relative;
+        }
+
+        .pending-player::before {
+            content: "PENDING WAIVER";
+            position: absolute;
+            top: 2px;
+            right: 10px;
+            background: #ff9800;
+            color: white;
+            font-size: 0.6rem;
+            padding: 2px 6px;
+            border-radius: 0 0 8px 8px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            z-index: 2;
+            box-shadow: 0 1px 3px rgba(255, 152, 0, 0.3);
+        }
+
+        /* Hide the inline pending badge on mobile */
+        .pending-player .pending-badge {
+            display: none;
+        }
+
+        /* Enhanced player info layout on mobile */
+        .player-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            min-width: 0;
+            padding-right: 70px; /* Space for pending indicator */
+        }
+
+        .mobile-player-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .mobile-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+        }
+
+        /* Adjust player name for mobile */
+        .player-item .player-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #333;
+            line-height: 1.2;
+            max-width: none; /* Remove width restriction */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Mobile team and position styling */
+        .player-item .player-team {
+            color: #666;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .player-item .player-position {
+            background: #007bff;
+            color: white;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .player-item .role-indicator {
+            font-size: 0.7rem;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        /* Enhanced visual feedback for pending players */
+        .pending-player:hover {
+            background: linear-gradient(90deg, #fff3c4 0%, #ffecb3 100%);
+            transform: translateX(2px);
+        }
+        
+        .pending-player .player-name {
+            color: #e65100;
+            font-weight: 700;
         }
     }
 
@@ -782,55 +885,76 @@
         /* Continue mobile drag handle behavior */
         .player-item {
             cursor: default;
+            padding: 10px 8px;
         }
 
         .drag-handle {
             cursor: grab;
             padding: 10px; /* Larger touch target on small screens */
+            font-size: 1.2rem;
+        }
+
+        /* Even more compact pending indicator for small screens */
+        .pending-player::before {
+            content: "PENDING";
+            font-size: 0.55rem;
+            padding: 1px 4px;
+            right: 8px;
+            top: 1px;
+        }
+
+        /* Adjust player info for very small screens */
+        .player-info {
+            padding-right: 60px; /* Less space needed for smaller indicator */
+        }
+
+        .player-item .player-name {
+            font-size: 0.9rem;
+        }
+
+        .mobile-meta-row {
+            font-size: 0.75rem;
+        }
+
+        .player-item .player-position {
+            font-size: 0.6rem;
+            min-width: 20px;
+        }
+
+        .player-item .role-indicator {
+            font-size: 0.65rem;
+            padding: 1px 4px;
         }
     }
 
 
-    /* Mobile optimizations */
-    @media (max-width: 768px) {
-        .lineup-header {
-            padding: 15px;
-            margin-bottom: 20px;
+    /* Additional mobile tweaks for better UX */
+    @media (max-width: 360px) {
+        /* Ultra-compact for very small screens */
+        .pending-player::before {
+            content: "P";
+            font-size: 0.5rem;
+            padding: 1px 3px;
+            right: 6px;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .week-selector {
-            flex-direction: column;
-            gap: 10px;
+        .player-info {
+            padding-right: 25px;
         }
 
-        .current-week {
-            font-size: 1.3rem;
-            margin: 10px 0;
+        .player-item .player-name {
+            font-size: 0.85rem;
         }
 
-        .status-bar {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .player-item {
-            padding: 15px;
-        }
-
-        .drag-handle {
-            font-size: 1.5rem;
-            margin-right: 20px;
-        }
-
-
-
-        .position-header {
-            padding: 12px 15px;
-        }
-
-        .section-label {
-            padding: 6px 15px;
+        .mobile-meta-row {
+            font-size: 0.7rem;
+            gap: 4px;
         }
     }
 
@@ -989,17 +1113,21 @@
             <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
             <div class="position-number"><%= i + 1 %>.</div>
             <div class="player-info">
-                <span class="player-name">
-                    <%= player.first_name %> <%= player.last_name %>
-                    <% if (player.player_status === 'pending_waiver') { %>
-                        <span class="pending-badge">PENDING</span>
-                    <% } %>
-                </span>
-                <span class="player-team">(<%= player.team_abbrev %>)</span>
-                <span class="player-position">QB</span>
-                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
-                    <%= isStarter ? 'Starter' : 'Backup' %>
-                </span>
+                <div class="mobile-player-row">
+                    <span class="player-name">
+                        <%= player.first_name %> <%= player.last_name %>
+                        <% if (player.player_status === 'pending_waiver') { %>
+                            <span class="pending-badge">PENDING</span>
+                        <% } %>
+                    </span>
+                </div>
+                <div class="mobile-meta-row">
+                    <span class="player-team">(<%= player.team_abbrev %>)</span>
+                    <span class="player-position">QB</span>
+                    <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                        <%= isStarter ? 'Starter' : 'Backup' %>
+                    </span>
+                </div>
             </div>
         </div>
         <% } 
@@ -1047,15 +1175,21 @@
             <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
             <div class="position-number"><%= i + 1 %>.</div>
             <div class="player-info">
-                <span class="player-name"><%= player.first_name %> <%= player.last_name %></span>
-                <span class="player-team">(<%= player.team_abbrev %>)</span>
-                <span class="player-position">RB</span>
-                <% if (player.player_status === 'pending_waiver') { %>
-                <span class="pending-badge">Pending</span>
-                <% } %>
-                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
-                    <%= isStarter ? 'Starter' : 'Backup' %>
-                </span>
+                <div class="mobile-player-row">
+                    <span class="player-name">
+                        <%= player.first_name %> <%= player.last_name %>
+                        <% if (player.player_status === 'pending_waiver') { %>
+                            <span class="pending-badge">PENDING</span>
+                        <% } %>
+                    </span>
+                </div>
+                <div class="mobile-meta-row">
+                    <span class="player-team">(<%= player.team_abbrev %>)</span>
+                    <span class="player-position">RB</span>
+                    <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                        <%= isStarter ? 'Starter' : 'Backup' %>
+                    </span>
+                </div>
             </div>
         </div>
         <% } 
@@ -1103,15 +1237,21 @@
             <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
             <div class="position-number"><%= i + 1 %>.</div>
             <div class="player-info">
-                <span class="player-name"><%= player.first_name %> <%= player.last_name %></span>
-                <span class="player-team">(<%= player.team_abbrev %>)</span>
-                <span class="player-position">RC</span>
-                <% if (player.player_status === 'pending_waiver') { %>
-                <span class="pending-badge">Pending</span>
-                <% } %>
-                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
-                    <%= isStarter ? 'Starter' : 'Backup' %>
-                </span>
+                <div class="mobile-player-row">
+                    <span class="player-name">
+                        <%= player.first_name %> <%= player.last_name %>
+                        <% if (player.player_status === 'pending_waiver') { %>
+                            <span class="pending-badge">PENDING</span>
+                        <% } %>
+                    </span>
+                </div>
+                <div class="mobile-meta-row">
+                    <span class="player-team">(<%= player.team_abbrev %>)</span>
+                    <span class="player-position">RC</span>
+                    <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                        <%= isStarter ? 'Starter' : 'Backup' %>
+                    </span>
+                </div>
             </div>
         </div>
         <% } 
@@ -1159,15 +1299,21 @@
             <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
             <div class="position-number"><%= i + 1 %>.</div>
             <div class="player-info">
-                <span class="player-name"><%= player.first_name %> <%= player.last_name %></span>
-                <span class="player-team">(<%= player.team_abbrev %>)</span>
-                <span class="player-position">PK</span>
-                <% if (player.player_status === 'pending_waiver') { %>
-                <span class="pending-badge">Pending</span>
-                <% } %>
-                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
-                    <%= isStarter ? 'Starter' : 'Backup' %>
-                </span>
+                <div class="mobile-player-row">
+                    <span class="player-name">
+                        <%= player.first_name %> <%= player.last_name %>
+                        <% if (player.player_status === 'pending_waiver') { %>
+                            <span class="pending-badge">PENDING</span>
+                        <% } %>
+                    </span>
+                </div>
+                <div class="mobile-meta-row">
+                    <span class="player-team">(<%= player.team_abbrev %>)</span>
+                    <span class="player-position">PK</span>
+                    <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                        <%= isStarter ? 'Starter' : 'Backup' %>
+                    </span>
+                </div>
             </div>
         </div>
         <% } 
@@ -1215,15 +1361,21 @@
             <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
             <div class="position-number"><%= i + 1 %>.</div>
             <div class="player-info">
-                <span class="player-name"><%= defense.first_name %> <%= defense.last_name %></span>
-                <span class="player-team">(<%= defense.team_abbrev %>)</span>
-                <span class="player-position">DU</span>
-                <% if (defense.player_status === 'pending_waiver') { %>
-                <span class="pending-badge">Pending</span>
-                <% } %>
-                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
-                    <%= isStarter ? 'Starter' : 'Backup' %>
-                </span>
+                <div class="mobile-player-row">
+                    <span class="player-name">
+                        <%= defense.first_name %> <%= defense.last_name %>
+                        <% if (defense.player_status === 'pending_waiver') { %>
+                            <span class="pending-badge">PENDING</span>
+                        <% } %>
+                    </span>
+                </div>
+                <div class="mobile-meta-row">
+                    <span class="player-team">(<%= defense.team_abbrev %>)</span>
+                    <span class="player-position">DU</span>
+                    <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                        <%= isStarter ? 'Starter' : 'Backup' %>
+                    </span>
+                </div>
             </div>
         </div>
         <% } 
