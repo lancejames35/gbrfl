@@ -63,11 +63,11 @@
                 </select>
             </div>
             
-            <!-- Fantasy Team Filter -->
-            <div class="col-md-2">
+            <!-- Fantasy Team Filter - Only show when not filtering for available players -->
+            <div class="col-md-2" id="fantasyTeamFilter" style="<%= filters.availability === 'available' ? 'display: none;' : '' %>">
                 <label for="fantasy_team" class="form-label">Fantasy Team</label>
                 <select class="form-select" id="fantasy_team" name="fantasy_team">
-                    <option value="">All Teams</option>
+                    <option value="">All Fantasy Teams</option>
                     <% 
                     // Sort fantasy teams alphabetically
                     const sortedFantasyTeams = [...(fantasyTeams || [])].sort((a, b) => 
@@ -84,7 +84,7 @@
             </div>
             
             <!-- Name Search -->
-            <div class="col-md-3">
+            <div class="col-md-4" id="nameSearchFilter">
                 <label for="search" class="form-label">Search Name</label>
                 <div class="input-group">
                     <input type="text" class="form-control" id="search" name="search" placeholder="Search by name" value="<%= filters.search || '' %>">
@@ -150,8 +150,8 @@
                 </select>
             </div>
             
-            <!-- Fantasy Team Filter -->
-            <div class="col-6">
+            <!-- Fantasy Team Filter - Only show when not filtering for available players -->
+            <div class="col-6" id="fantasyTeamFilterMobile" style="<%= filters.availability === 'available' ? 'display: none;' : '' %>">
                 <label for="fantasyTeamMobile" class="form-label">Fantasy Team</label>
                 <select class="form-select form-select-sm" id="fantasyTeamMobile" name="fantasy_team">
                     <option value="">All</option>
@@ -203,7 +203,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>Name</th>
-                            <th>Position</th>
+                            <th>Pos</th>
                             <th>NFL Team</th>
                             <th>Fantasy Team</th>
                         </tr>
@@ -472,6 +472,9 @@
             document.getElementById('fantasyTeamMobile').value = '';
             document.getElementById('searchMobile').value = '';
             
+            // Update fantasy team filter visibility
+            toggleFantasyTeamFilter();
+            
             // Submit the form to reload with reset filters
             document.getElementById('playerFilterForm').submit();
         }
@@ -491,9 +494,38 @@
             document.getElementById('playerFilterFormMobile').submit();
         });
         
+        // Function to toggle fantasy team filter visibility
+        function toggleFantasyTeamFilter() {
+            const availabilityDesktop = document.getElementById('availability').value;
+            const availabilityMobile = document.getElementById('availabilityMobile').value;
+            const fantasyFilterDesktop = document.getElementById('fantasyTeamFilter');
+            const fantasyFilterMobile = document.getElementById('fantasyTeamFilterMobile');
+            const nameSearchFilter = document.getElementById('nameSearchFilter');
+            
+            // Show fantasy team filter when not filtering for "available" players
+            const showFilter = availabilityDesktop !== 'available';
+            const showFilterMobile = availabilityMobile !== 'available';
+            
+            if (fantasyFilterDesktop) {
+                fantasyFilterDesktop.style.display = showFilter ? 'block' : 'none';
+            }
+            if (fantasyFilterMobile) {
+                fantasyFilterMobile.style.display = showFilterMobile ? 'block' : 'none';
+            }
+            
+            // Adjust name search column size - bigger when fantasy filter is hidden
+            if (nameSearchFilter) {
+                nameSearchFilter.className = showFilter ? 'col-md-4' : 'col-md-6';
+            }
+        }
+
         // Auto-submit forms when filters change
         document.querySelectorAll('#availability, #position, #team, #fantasy_team').forEach(element => {
             element.addEventListener('change', function() {
+                // Handle availability changes to show/hide fantasy team filter
+                if (this.id === 'availability') {
+                    toggleFantasyTeamFilter();
+                }
                 document.getElementById('playerFilterForm').submit();
             });
         });
@@ -661,6 +693,10 @@
         
         document.querySelectorAll('#availabilityMobile, #positionMobile, #teamMobile, #fantasyTeamMobile').forEach(element => {
             element.addEventListener('change', function() {
+                // Handle mobile availability changes to show/hide fantasy team filter
+                if (this.id === 'availabilityMobile') {
+                    toggleFantasyTeamFilter();
+                }
                 document.getElementById('playerFilterFormMobile').submit();
             });
         });
