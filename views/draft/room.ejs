@@ -2633,7 +2633,7 @@
             window.audioContextUnlocked = false;
             window.audioUnlockInProgress = false;
             window.audioUnlockListeners = [];
-            window.lastUserInteraction = 0;
+            window.lastUserInteraction = Date.now(); // Start with current time
             
             // Add universal interaction listeners that refresh audio permission
             const refreshAudioPermission = (eventType) => {
@@ -2641,7 +2641,8 @@
                 
                 if (!window.audioContextUnlocked) {
                     console.log('🎯 User interaction detected:', eventType, '- attempting audio unlock');
-                    unlockAudio();
+                    // For mobile, we need to unlock synchronously within the event handler
+                    unlockAudioSync();
                 }
             };
             
@@ -2656,40 +2657,61 @@
             console.log('🎵 Universal audio interaction listeners added');
         }
 
-        // Simplified audio unlock
-        async function unlockAudio() {
+        // Synchronous audio unlock (must be called directly in event handler)
+        function unlockAudioSync() {
             if (window.audioContextUnlocked || window.audioUnlockInProgress) return;
             
             window.audioUnlockInProgress = true;
-            console.log('🔓 Attempting to unlock audio...');
+            console.log('🔓 Attempting synchronous audio unlock...');
+            
+            const audio = document.getElementById('draftTurnSound');
+            if (!audio) {
+                console.log('❌ Audio element not found');
+                window.audioUnlockInProgress = false;
+                return;
+            }
             
             try {
-                const audio = document.getElementById('draftTurnSound');
-                if (!audio) {
-                    console.log('❌ Audio element not found');
-                    return;
-                }
-                
-                // Simple unlock approach
+                // Must be synchronous for mobile browsers
                 audio.volume = 0.01;
-                await audio.play();
-                audio.pause();
-                audio.currentTime = 0;
+                const playPromise = audio.play();
                 
-                window.audioContextUnlocked = true;
-                console.log('✅ Audio unlocked successfully');
-                
-                // Resume audio context if it exists and is suspended
-                if (window.draftAudioContext && window.draftAudioContext.state === 'suspended') {
-                    await window.draftAudioContext.resume();
-                    console.log('🔄 Audio context resumed');
+                if (playPromise) {
+                    playPromise.then(() => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        window.audioContextUnlocked = true;
+                        console.log('✅ Audio unlocked successfully (sync)');
+                        
+                        // Resume audio context if needed
+                        if (window.draftAudioContext && window.draftAudioContext.state === 'suspended') {
+                            window.draftAudioContext.resume().then(() => {
+                                console.log('🔄 Audio context resumed');
+                            });
+                        }
+                    }).catch(error => {
+                        console.log('❌ Sync audio unlock failed:', error.message);
+                    }).finally(() => {
+                        window.audioUnlockInProgress = false;
+                    });
+                } else {
+                    // Older browsers - play() doesn't return promise
+                    audio.pause();
+                    audio.currentTime = 0;
+                    window.audioContextUnlocked = true;
+                    console.log('✅ Audio unlocked successfully (legacy)');
+                    window.audioUnlockInProgress = false;
                 }
                 
             } catch (error) {
-                console.log('❌ Audio unlock failed:', error.message);
-            } finally {
+                console.log('❌ Sync audio unlock failed:', error.message);
                 window.audioUnlockInProgress = false;
             }
+        }
+
+        // Async unlock for backwards compatibility
+        async function unlockAudio() {
+            return unlockAudioSync();
         }
 
         // Mobile audio enablement helper (legacy - kept for compatibility)
@@ -2881,21 +2903,18 @@
 
         function playTurnNotification() {
             const enabled = document.getElementById('enableDraftSound').checked;
-            const timeSinceInteraction = Date.now() - (window.lastUserInteraction || 0);
+            const timeSinceInteraction = window.lastUserInteraction ? Date.now() - window.lastUserInteraction : 999999;
             
             console.log('🎯 playTurnNotification called - enabled:', enabled, 'unlocked:', window.audioContextUnlocked, 'time since interaction:', timeSinceInteraction + 'ms');
             
             if (!enabled) return;
             
-            // If audio isn't unlocked or interaction is too old (>5 seconds), try to unlock first
-            if (!window.audioContextUnlocked || timeSinceInteraction > 5000) {
-                console.log('🔄 Audio needs refresh - attempting unlock before playing');
-                unlockAudio().then(() => {
-                    if (window.playNFLDraftHorn) {
-                        window.playNFLDraftHorn();
-                    }
-                });
-            } else if (window.playNFLDraftHorn) {
+            // If audio isn't unlocked, try to play immediately and handle failure
+            if (!window.audioContextUnlocked) {
+                console.log('🔄 Audio not unlocked - will attempt direct play (may fail)');
+            }
+            
+            if (window.playNFLDraftHorn) {
                 window.playNFLDraftHorn();
             }
         }
