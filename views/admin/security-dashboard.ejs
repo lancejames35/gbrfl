@@ -1,0 +1,471 @@
+<%- contentFor('head') %>
+<style>
+.security-card {
+    border-left: 4px solid #007bff;
+    transition: all 0.3s ease;
+}
+.security-card.high { border-left-color: #dc3545; }
+.security-card.medium { border-left-color: #fd7e14; }
+.security-card.low { border-left-color: #28a745; }
+
+.event-severity {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.event-severity.high { background-color: #dc3545; color: white; }
+.event-severity.medium { background-color: #fd7e14; color: white; }
+.event-severity.low { background-color: #28a745; color: white; }
+
+.refresh-btn {
+    transition: transform 0.3s ease;
+}
+.refresh-btn:hover {
+    transform: rotate(180deg);
+}
+
+.ip-address {
+    font-family: 'Courier New', monospace;
+    background-color: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+.ip-address:hover {
+    background-color: #e9ecef;
+}
+
+#loadingIndicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+</style>
+
+<div class="container-fluid mt-4">
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator" class="d-none">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-shield-alt"></i> Security Dashboard</h2>
+        <div class="btn-group">
+            <select id="timeframeSelect" class="form-select form-select-sm">
+                <option value="1">Last Hour</option>
+                <option value="6">Last 6 Hours</option>
+                <option value="24" selected>Last 24 Hours</option>
+                <option value="168">Last Week</option>
+            </select>
+            <button id="refreshBtn" class="btn btn-outline-primary btn-sm ms-2 refresh-btn">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Current Status Alert -->
+    <div id="statusAlert" class="alert alert-info d-none" role="alert">
+        <i class="fas fa-info-circle"></i> <span id="statusMessage"></span>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card security-card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Events</h5>
+                    <h2 id="totalEvents" class="text-primary">-</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card security-card high">
+                <div class="card-body text-center">
+                    <h5 class="card-title">High Severity</h5>
+                    <h2 id="highSeverity" class="text-danger">-</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card security-card medium">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Unique IPs</h5>
+                    <h2 id="uniqueIPs" class="text-warning">-</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card security-card low">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Currently Monitored</h5>
+                    <h2 id="activeIPs" class="text-success">-</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Types Chart -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-bar"></i> Event Types</h5>
+                </div>
+                <div class="card-body">
+                    <div id="eventTypesChart"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-clock"></i> Activity Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div id="timelineChart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Events -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5><i class="fas fa-list"></i> Recent Security Events</h5>
+            <button id="refreshEvents" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="eventsTable">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Severity</th>
+                            <th>Event Type</th>
+                            <th>IP Address</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="sr-only">Loading...</span>
+                                </div>
+                                Loading events...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- IP Details Modal -->
+<div class="modal fade" id="ipDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">IP Address Analysis</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="ipDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentTimeframe = 24;
+let eventsData = [];
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboard();
+    
+    // Event listeners
+    document.getElementById('timeframeSelect').addEventListener('change', function() {
+        currentTimeframe = parseInt(this.value);
+        loadDashboard();
+    });
+    
+    document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+    document.getElementById('refreshEvents').addEventListener('click', loadEvents);
+});
+
+// Load dashboard data
+async function loadDashboard() {
+    showLoading(true);
+    try {
+        await Promise.all([loadSummary(), loadEvents()]);
+        showStatus('Dashboard updated successfully', 'success');
+    } catch (error) {
+        console.error('Dashboard load error:', error);
+        showStatus('Error loading dashboard data', 'danger');
+    }
+    showLoading(false);
+}
+
+// Load summary data
+async function loadSummary() {
+    try {
+        const response = await fetch(`/admin/security/api/summary?hours=${currentTimeframe}`);
+        const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        updateSummaryCards(data);
+        updateEventTypesChart(data.summary || []);
+        
+    } catch (error) {
+        console.error('Summary load error:', error);
+        throw error;
+    }
+}
+
+// Load events data
+async function loadEvents() {
+    try {
+        const response = await fetch(`/admin/security/api/events?hours=${currentTimeframe}&limit=50`);
+        const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        eventsData = data;
+        updateEventsTable(data);
+        
+    } catch (error) {
+        console.error('Events load error:', error);
+        throw error;
+    }
+}
+
+// Update summary cards
+function updateSummaryCards(data) {
+    const summary = data.summary || [];
+    const currentlyTracked = data.currentlyTracked || {};
+    
+    let totalEvents = 0;
+    let highSeverityCount = 0;
+    let uniqueIPs = new Set();
+    
+    summary.forEach(item => {
+        totalEvents += item.event_count;
+        uniqueIPs.add(item.unique_ips);
+        
+        if (['POTENTIAL_BRUTE_FORCE', 'SQL_INJECTION_PATTERN', 'COMMAND_INJECTION_PATTERN'].includes(item.action_type)) {
+            highSeverityCount += item.event_count;
+        }
+    });
+    
+    document.getElementById('totalEvents').textContent = totalEvents;
+    document.getElementById('highSeverity').textContent = highSeverityCount;
+    document.getElementById('uniqueIPs').textContent = uniqueIPs.size;
+    document.getElementById('activeIPs').textContent = currentlyTracked.activeIPs || 0;
+}
+
+// Update events table
+function updateEventsTable(events) {
+    const tbody = document.getElementById('eventsTableBody');
+    
+    if (events.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No security events found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = events.map(event => {
+        const details = event.details || {};
+        const time = new Date(event.created_at).toLocaleString();
+        
+        return `
+            <tr>
+                <td>${time}</td>
+                <td><span class="event-severity ${event.severity.toLowerCase()}">${event.severity}</span></td>
+                <td>${formatEventType(event.action_type)}</td>
+                <td>
+                    <span class="ip-address" onclick="showIPDetails('${event.ip_address}')">
+                        ${event.ip_address}
+                    </span>
+                </td>
+                <td>${formatEventDetails(event.action_type, details)}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Format event type for display
+function formatEventType(actionType) {
+    return actionType.replace(/_/g, ' ').toLowerCase()
+        .replace(/\b\w/g, l => l.toUpperCase());
+}
+
+// Format event details for display
+function formatEventDetails(actionType, details) {
+    switch (actionType) {
+        case 'HIGH_FREQUENCY_REQUESTS':
+            return `${details.requestCount} requests in ${details.timeWindow}`;
+        case 'POTENTIAL_SCANNING':
+            return `${details.uniquePaths} unique paths, ${details.totalRequests} requests`;
+        case 'FAILED_LOGIN':
+            return `Username: ${details.username}`;
+        case 'POTENTIAL_BRUTE_FORCE':
+            return `${details.consecutiveFailures} consecutive failures`;
+        case 'SQL_INJECTION_PATTERN':
+        case 'XSS_PATTERN':
+            return `Pattern: ${details.matchedPattern?.substring(0, 50)}...`;
+        default:
+            return details.url ? `${details.method} ${details.url.substring(0, 50)}...` : 'Security event detected';
+    }
+}
+
+// Show IP details modal
+async function showIPDetails(ipAddress) {
+    const modal = new bootstrap.Modal(document.getElementById('ipDetailsModal'));
+    const content = document.getElementById('ipDetailsContent');
+    
+    content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+    modal.show();
+    
+    try {
+        const response = await fetch(`/admin/security/api/ip/${ipAddress}`);
+        const data = await response.json();
+        
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        
+        content.innerHTML = `
+            <h6>IP Address: <code>${data.ip}</code></h6>
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>Total Events</h6>
+                            <h4>${data.stats.total_events || 0}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>Security Events</h6>
+                            <h4>${data.stats.security_events || 0}</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>First Seen</h6>
+                            <small>${data.stats.first_seen ? new Date(data.stats.first_seen).toLocaleString() : 'N/A'}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6>Last Seen</h6>
+                            <small>${data.stats.last_seen ? new Date(data.stats.last_seen).toLocaleString() : 'N/A'}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <h6>Recent Activity</h6>
+            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.recentActivity.map(activity => `
+                            <tr>
+                                <td><small>${new Date(activity.created_at).toLocaleString()}</small></td>
+                                <td><small>${formatEventType(activity.action_type)}</small></td>
+                                <td><small>${activity.details?.url || activity.details?.username || 'N/A'}</small></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+    } catch (error) {
+        content.innerHTML = `<div class="alert alert-danger">Error loading IP details: ${error.message}</div>`;
+    }
+}
+
+// Update event types chart (simple text-based for now)
+function updateEventTypesChart(summary) {
+    const chartDiv = document.getElementById('eventTypesChart');
+    
+    if (summary.length === 0) {
+        chartDiv.innerHTML = '<p class="text-muted text-center">No events to display</p>';
+        return;
+    }
+    
+    // Sort by event count
+    summary.sort((a, b) => b.event_count - a.event_count);
+    
+    const maxCount = summary[0].event_count;
+    
+    chartDiv.innerHTML = summary.slice(0, 8).map(item => {
+        const percentage = (item.event_count / maxCount) * 100;
+        return `
+            <div class="mb-2">
+                <div class="d-flex justify-content-between">
+                    <small>${formatEventType(item.action_type)}</small>
+                    <small>${item.event_count}</small>
+                </div>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar" style="width: ${percentage}%"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Utility functions
+function showLoading(show) {
+    const indicator = document.getElementById('loadingIndicator');
+    if (show) {
+        indicator.classList.remove('d-none');
+    } else {
+        indicator.classList.add('d-none');
+    }
+}
+
+function showStatus(message, type) {
+    const alert = document.getElementById('statusAlert');
+    const messageSpan = document.getElementById('statusMessage');
+    
+    alert.className = `alert alert-${type}`;
+    messageSpan.textContent = message;
+    alert.classList.remove('d-none');
+    
+    setTimeout(() => {
+        alert.classList.add('d-none');
+    }, 3000);
+}
+</script>

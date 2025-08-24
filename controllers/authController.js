@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/user');
 const db = require('../config/database');
+const { trackLoginAttempt, getClientIP } = require('../middleware/securityMonitor');
 require('dotenv').config();
 
 /**
@@ -96,6 +97,9 @@ exports.login = async (req, res) => {
         [null, 'Failed', req.ip || '', req.get('User-Agent') || '']
       );
       
+      // Track security event
+      trackLoginAttempt(req, false, username);
+      
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -113,11 +117,17 @@ exports.login = async (req, res) => {
         [user.user_id, 'Failed', req.ip || '', req.get('User-Agent') || '']
       );
       
+      // Track security event
+      trackLoginAttempt(req, false, username);
+      
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     // Update last login timestamp
     await User.updateLastLogin(user.user_id, req.ip || '', req.get('User-Agent') || '');
+
+    // Track successful login
+    trackLoginAttempt(req, true, username);
 
     // Generate JWT token
     const token = jwt.sign(
