@@ -1,3 +1,6 @@
+// Set timezone for the application
+process.env.TZ = process.env.TZ || 'America/Chicago';
+
 /**
  * GBRFL Fantasy Football League Web Application
  * Main server file
@@ -411,4 +414,5 @@ messageBoardNamespace.on('connection', (socket) => {
 });
 
 // Make io available to other modules
+
 app.set('io', io);
