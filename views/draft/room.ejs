@@ -2592,9 +2592,9 @@
         }
 
         function createNFLDraftSound() {
-            // Desktop-focused audio playback function
+            // Universal audio playback function with aggressive mobile support
             window.playNFLDraftHorn = async function() {
-                console.log('🔊 Desktop - Attempting to play draft sound...');
+                console.log('🔊 Attempting to play draft sound...');
                 const audio = document.getElementById('draftTurnSound');
                 if (!audio) {
                     console.log('❌ Draft sound audio element not found');
@@ -2607,28 +2607,89 @@
                 
                 console.log(`🎵 Playing draft sound at ${Math.round(volume * 100)}% volume (readyState: ${audio.readyState})`);
                 
+                // Force audio to be ready and loaded
+                if (audio.readyState < 2) {
+                    audio.load();
+                    console.log('📂 Audio not ready, forcing load...');
+                }
+                
                 try {
-                    // Force audio to be ready
-                    if (audio.readyState < 2) {
-                        audio.load();
-                        await new Promise(resolve => {
-                            audio.addEventListener('canplay', resolve, { once: true });
-                        });
+                    // Create a new audio element as backup for mobile
+                    if (isMobile() && audio.paused) {
+                        console.log('📱 Mobile backup approach - creating fresh audio element');
+                        const mobileAudio = new Audio('/sounds/draft-horn.mp3');
+                        mobileAudio.volume = volume;
+                        mobileAudio.preload = 'auto';
+                        
+                        try {
+                            await mobileAudio.play();
+                            console.log('✅ Mobile backup audio played successfully');
+                            return;
+                        } catch (mobileError) {
+                            console.log('❌ Mobile backup failed:', mobileError.message, 'trying original...');
+                        }
                     }
                     
+                    // Try original audio element
                     await audio.play();
-                    console.log('✅ Desktop draft sound played successfully');
-                } catch (error) {
-                    console.log('❌ Desktop audio play failed:', error.message);
+                    console.log('✅ Draft sound played successfully');
                     
-                    // Try to unlock audio on desktop with user interaction
-                    if (!isMobile()) {
+                } catch (error) {
+                    console.log('❌ Audio play failed:', error.message);
+                    console.log('📊 Audio state - readyState:', audio.readyState, 'paused:', audio.paused, 'duration:', audio.duration);
+                    
+                    // Last resort: try to trigger user interaction prompt
+                    if (isMobile()) {
+                        console.log('📱 Mobile audio failed - showing minimal interaction prompt');
+                        showMobileAudioPrompt();
+                    } else {
                         console.log('🖥️ Desktop audio failed - showing click instruction');
                         showDesktopAudioNotification();
                     }
                 }
             };
         }
+
+        // Minimal mobile audio prompt (less intrusive than popup)
+        function showMobileAudioPrompt() {
+            const existing = document.getElementById('mobileAudioPrompt');
+            if (existing) return; // Don't show multiple
+            
+            const prompt = document.createElement('div');
+            prompt.id = 'mobileAudioPrompt';
+            prompt.innerHTML = `
+                <div class="alert alert-info position-fixed" style="
+                    bottom: 20px; left: 20px; right: 20px; z-index: 9999;
+                    text-align: center; margin: 0;
+                " onclick="playDraftSoundDirectly(); this.parentElement.remove();">
+                    <i class="bi bi-volume-up"></i> <strong>Tap to play draft sound</strong>
+                </div>
+            `;
+            
+            document.body.appendChild(prompt);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                const stillExists = document.getElementById('mobileAudioPrompt');
+                if (stillExists) stillExists.remove();
+            }, 5000);
+        }
+
+        // Direct sound play for mobile prompt
+        window.playDraftSoundDirectly = function() {
+            console.log('🎵 Direct mobile sound play via tap');
+            const audio = document.getElementById('draftTurnSound');
+            if (audio) {
+                const volume = document.getElementById('draftSoundVolume').value / 100;
+                audio.volume = volume;
+                audio.currentTime = 0;
+                audio.play().then(() => {
+                    console.log('✅ Direct mobile play successful');
+                }).catch(err => {
+                    console.log('❌ Even direct mobile play failed:', err.message);
+                });
+            }
+        };
 
         // Show desktop notification when audio fails
         function showDesktopAudioNotification() {
@@ -2657,36 +2718,81 @@
             }, 5000);
         }
 
-        // Universal audio system initialization
+        // Universal audio system initialization with aggressive mobile support
         function initializeAudioSystem() {
-            console.log('🎵 Initializing universal audio system...');
+            console.log('🎵 Initializing aggressive mobile audio system...');
             
             // Reset audio state
             window.audioContextUnlocked = false;
             window.audioUnlockInProgress = false;
-            window.audioUnlockListeners = [];
-            window.lastUserInteraction = Date.now(); // Start with current time
+            window.lastUserInteraction = Date.now();
             
-            // Add universal interaction listeners that refresh audio permission
-            const refreshAudioPermission = (eventType) => {
+            // Preload and prepare audio for mobile
+            const audio = document.getElementById('draftTurnSound');
+            if (audio && isMobile()) {
+                console.log('📱 Pre-configuring audio for mobile');
+                audio.muted = false;
+                audio.loop = false;
+                audio.preload = 'auto';
+                audio.load();
+            }
+            
+            // More aggressive interaction tracking for mobile
+            const keepAudioAlive = (eventType) => {
                 window.lastUserInteraction = Date.now();
                 
-                if (!window.audioContextUnlocked) {
-                    console.log('🎯 User interaction detected:', eventType, '- attempting audio unlock');
-                    // For mobile, we need to unlock synchronously within the event handler
-                    unlockAudioSync();
+                // On mobile, constantly refresh audio permission
+                if (isMobile()) {
+                    if (!window.audioUnlockInProgress) {
+                        window.audioUnlockInProgress = true;
+                        
+                        // Tiny silent play to maintain audio context
+                        if (audio) {
+                            const originalVolume = audio.volume;
+                            audio.volume = 0;
+                            audio.currentTime = 0;
+                            
+                            const playPromise = audio.play();
+                            if (playPromise) {
+                                playPromise.then(() => {
+                                    audio.pause();
+                                    audio.currentTime = 0;
+                                    audio.volume = originalVolume;
+                                    window.audioContextUnlocked = true;
+                                    console.log('🔄 Mobile audio context refreshed silently');
+                                }).catch(() => {
+                                    // Silent failure is OK
+                                }).finally(() => {
+                                    window.audioUnlockInProgress = false;
+                                });
+                            } else {
+                                window.audioUnlockInProgress = false;
+                            }
+                        } else {
+                            window.audioUnlockInProgress = false;
+                        }
+                    }
+                } else {
+                    // Desktop - simpler unlock
+                    if (!window.audioContextUnlocked) {
+                        unlockAudioSync();
+                    }
                 }
             };
             
-            // Listen for ANY user interaction to keep audio permission fresh
-            ['click', 'touchstart', 'keydown', 'mousedown'].forEach(eventType => {
-                document.addEventListener(eventType, () => refreshAudioPermission(eventType), {
+            // Listen for ALL possible user interactions
+            const events = isMobile() ? 
+                ['touchstart', 'touchend', 'touchmove', 'click', 'tap'] : 
+                ['click', 'keydown', 'mousedown'];
+            
+            events.forEach(eventType => {
+                document.addEventListener(eventType, () => keepAudioAlive(eventType), {
                     passive: true,
                     capture: false
                 });
             });
             
-            console.log('🎵 Universal audio interaction listeners added');
+            console.log('🎵 Audio system initialized with', events.length, 'interaction listeners');
         }
 
         // Synchronous audio unlock (must be called directly in event handler)
@@ -2940,16 +3046,10 @@
             
             if (!enabled) return;
             
-            // Different approach for mobile vs desktop
-            if (isMobile()) {
-                console.log('📱 Mobile detected - showing turn notification with play button');
-                showMobileTurnNotification();
-            } else {
-                // Desktop - try direct audio play
-                console.log('🖥️ Desktop - attempting direct audio play');
-                if (window.playNFLDraftHorn) {
-                    window.playNFLDraftHorn();
-                }
+            // Try direct audio play for both mobile and desktop
+            console.log('🔊 Attempting direct audio play for all devices');
+            if (window.playNFLDraftHorn) {
+                window.playNFLDraftHorn();
             }
         }
 
