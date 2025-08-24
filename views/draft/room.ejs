@@ -2617,23 +2617,72 @@
                 }
                 
                 const volume = document.getElementById('draftSoundVolume').value / 100;
-                audio.volume = volume;
-                audio.currentTime = 0;
+                
+                // Mobile-specific audio preparation
+                if (isMobile()) {
+                    console.log('📱 Preparing mobile audio playback...');
+                    
+                    // Force audio element focus and preparation
+                    audio.muted = false;
+                    audio.loop = false;
+                    audio.autoplay = false;
+                    
+                    // Ensure volume is set properly
+                    audio.volume = Math.max(0.1, volume); // Minimum 0.1 on mobile
+                    audio.currentTime = 0;
+                    
+                    // Force load the audio
+                    audio.load();
+                    
+                    console.log('📱 Mobile audio prepared - volume:', audio.volume, 'readyState:', audio.readyState);
+                } else {
+                    audio.volume = volume;
+                    audio.currentTime = 0;
+                }
                 
                 // Enhanced mobile audio playing with user interaction tracking
                 const playAudio = async () => {
                     try {
-                        console.log(`🎵 Playing draft sound at ${Math.round(volume * 100)}% volume`);
-                        await audio.play();
+                        console.log(`🎵 Playing draft sound at ${Math.round(audio.volume * 100)}% volume (readyState: ${audio.readyState})`);
+                        
+                        // For mobile, try a different approach
+                        if (isMobile()) {
+                            // Create a promise-based play with timeout
+                            const playPromise = audio.play();
+                            
+                            if (playPromise !== undefined) {
+                                await Promise.race([
+                                    playPromise,
+                                    new Promise((_, reject) => setTimeout(() => reject(new Error('Play timeout')), 3000))
+                                ]);
+                            }
+                        } else {
+                            await audio.play();
+                        }
+                        
                         console.log('✅ Draft sound played successfully');
                     } catch (error) {
                         console.log('❌ Audio play failed:', error.message);
+                        console.log('📊 Audio state - paused:', audio.paused, 'currentTime:', audio.currentTime, 'duration:', audio.duration);
                         
                         // Special handling for mobile
                         if (isMobile()) {
-                            console.log('📱 Mobile audio failed - attempting to re-enable on next interaction');
-                            window.audioContextUnlocked = false;
-                            enableAudioOnNextInteraction();
+                            console.log('📱 Mobile audio failed - checking if audio context needs re-unlock');
+                            
+                            // Try one more time with a fresh unlock
+                            try {
+                                audio.volume = 0.01;
+                                await audio.play();
+                                audio.pause();
+                                audio.volume = Math.max(0.1, volume);
+                                audio.currentTime = 0;
+                                await audio.play();
+                                console.log('✅ Mobile audio recovered and played');
+                            } catch (secondError) {
+                                console.log('❌ Mobile audio recovery failed:', secondError.message);
+                                window.audioContextUnlocked = false;
+                                enableAudioOnNextInteraction();
+                            }
                         }
                     }
                 };
@@ -2645,6 +2694,11 @@
                     audio.addEventListener('canplay', () => {
                         playAudio();
                     }, { once: true });
+                    
+                    // Force load if needed
+                    if (audio.readyState === 0) {
+                        audio.load();
+                    }
                 }
             };
         }
@@ -2838,8 +2892,29 @@
 
         function playTurnNotification() {
             const enabled = document.getElementById('enableDraftSound').checked;
+            console.log('🎯 playTurnNotification called - enabled:', enabled, 'playNFLDraftHorn exists:', !!window.playNFLDraftHorn);
+            
             if (enabled && window.playNFLDraftHorn) {
-                window.playNFLDraftHorn();
+                // Check if we're on mobile and audio context might be suspended
+                if (isMobile()) {
+                    console.log('📱 Mobile turn notification - checking audio context state');
+                    
+                    // Try to resume audio context if suspended
+                    if (window.draftAudioContext && window.draftAudioContext.state === 'suspended') {
+                        console.log('⏸️ Audio context suspended, trying to resume...');
+                        window.draftAudioContext.resume().then(() => {
+                            console.log('▶️ Audio context resumed');
+                            window.playNFLDraftHorn();
+                        }).catch(err => {
+                            console.log('❌ Failed to resume audio context:', err);
+                            window.playNFLDraftHorn();
+                        });
+                    } else {
+                        window.playNFLDraftHorn();
+                    }
+                } else {
+                    window.playNFLDraftHorn();
+                }
             }
         }
 
