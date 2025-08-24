@@ -63,8 +63,28 @@
                 </select>
             </div>
             
+            <!-- Fantasy Team Filter -->
+            <div class="col-md-2">
+                <label for="fantasy_team" class="form-label">Fantasy Team</label>
+                <select class="form-select" id="fantasy_team" name="fantasy_team">
+                    <option value="">All Teams</option>
+                    <% 
+                    // Sort fantasy teams alphabetically
+                    const sortedFantasyTeams = [...(fantasyTeams || [])].sort((a, b) => 
+                        a.team_name.localeCompare(b.team_name)
+                    );
+                    
+                    // Add the sorted fantasy teams
+                    sortedFantasyTeams.forEach(team => { %>
+                        <option value="<%= team.team_id %>" <%= filters.fantasy_team == team.team_id ? 'selected' : '' %>>
+                            <%= team.team_name %>
+                        </option>
+                    <% }); %>
+                </select>
+            </div>
+            
             <!-- Name Search -->
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="search" class="form-label">Search Name</label>
                 <div class="input-group">
                     <input type="text" class="form-control" id="search" name="search" placeholder="Search by name" value="<%= filters.search || '' %>">
@@ -117,7 +137,7 @@
             </div>
             
             <!-- Team Filter -->
-            <div class="col-12">
+            <div class="col-6">
                 <label for="teamMobile" class="form-label">NFL Team</label>
                 <select class="form-select form-select-sm" id="teamMobile" name="team">
                     <option value="">All Teams</option>
@@ -127,6 +147,19 @@
                         </option>
                     <% }); %>
                     <option value="null" <%= filters.team === 'null' ? 'selected' : '' %>>Free Agents</option>
+                </select>
+            </div>
+            
+            <!-- Fantasy Team Filter -->
+            <div class="col-6">
+                <label for="fantasyTeamMobile" class="form-label">Fantasy Team</label>
+                <select class="form-select form-select-sm" id="fantasyTeamMobile" name="fantasy_team">
+                    <option value="">All</option>
+                    <% sortedFantasyTeams.forEach(team => { %>
+                        <option value="<%= team.team_id %>" <%= filters.fantasy_team == team.team_id ? 'selected' : '' %>>
+                            <%= team.team_name %>
+                        </option>
+                    <% }); %>
                 </select>
             </div>
             
@@ -204,9 +237,9 @@
                                 <td><%= player.position %></td>
                                 <td>
                                     <% if (player.team_code) { %>
-                                        <%= player.team_name %>
+                                        <%= player.team_code %>
                                     <% } else { %>
-                                        <span class="text-muted">Free Agent</span>
+                                        <span class="text-muted">FA</span>
                                     <% } %>
                                 </td>
                                 <td>
@@ -429,12 +462,14 @@
             document.getElementById('availability').value = 'available';
             document.getElementById('position').value = '';
             document.getElementById('team').value = '';
+            document.getElementById('fantasy_team').value = '';
             document.getElementById('search').value = '';
             
             // Reset mobile form elements
             document.getElementById('availabilityMobile').value = 'available';
             document.getElementById('positionMobile').value = '';
             document.getElementById('teamMobile').value = '';
+            document.getElementById('fantasyTeamMobile').value = '';
             document.getElementById('searchMobile').value = '';
             
             // Submit the form to reload with reset filters
@@ -457,7 +492,7 @@
         });
         
         // Auto-submit forms when filters change
-        document.querySelectorAll('#availability, #position, #team').forEach(element => {
+        document.querySelectorAll('#availability, #position, #team, #fantasy_team').forEach(element => {
             element.addEventListener('change', function() {
                 document.getElementById('playerFilterForm').submit();
             });
@@ -528,7 +563,7 @@
                         }
                     </td>
                     <td>${player.position}</td>
-                    <td>${player.team_code ? player.team_name : '<span class="text-muted">Free Agent</span>'}</td>
+                    <td>${player.team_code ? player.team_code : '<span class="text-muted">FA</span>'}</td>
                     <td>
                         ${player.is_rostered ? 
                             `<a href="/teams/${player.fantasy_team_id}" class="text-decoration-none"><span class="badge bg-success">${player.fantasy_team_name}</span></a>` : 
@@ -624,7 +659,7 @@
             return params.toString();
         }
         
-        document.querySelectorAll('#availabilityMobile, #positionMobile, #teamMobile').forEach(element => {
+        document.querySelectorAll('#availabilityMobile, #positionMobile, #teamMobile, #fantasyTeamMobile').forEach(element => {
             element.addEventListener('change', function() {
                 document.getElementById('playerFilterFormMobile').submit();
             });

@@ -7,6 +7,8 @@ const express = require('express');
 const router = express.Router();
 const { ensureAuthenticated } = require('../middleware/auth');
 const User = require('../models/user');
+const FantasyTeam = require('../models/FantasyTeam');
+const { parseDateInTimezone, createEndOfDayDate } = require('../utils/timezoneFix');
 
 /**
  * @route   GET /dashboard
@@ -19,12 +21,11 @@ router.get('/', ensureAuthenticated, async (req, res) => {
     
     // Check current dates for conditional content
     const now = new Date();
-    const keeperDeadline = new Date('2025-08-24');
     const draftDate = new Date('2025-08-31');
     const seasonStart = new Date('2025-09-04');
     
-    // Determine current phase
-    const isKeeperPeriodActive = now < keeperDeadline;
+    // Determine current phase using timezone-aware keeper deadline check
+    const isKeeperPeriodActive = !(await FantasyTeam.isKeeperDeadlinePassed());
     const isDraftDay = now.toDateString() === draftDate.toDateString();
     const isPostDraft = now > draftDate;
     

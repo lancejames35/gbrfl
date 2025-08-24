@@ -60,6 +60,7 @@ static async getAll(options = {}) {
       team = null,
       nameSearch = null,
       availability = 'available',
+      fantasy_team = null,
       limit = 50,
       offset = 0,
       sortBy = 'last_name',
@@ -110,6 +111,11 @@ static async getAll(options = {}) {
       params.push(searchTerm, searchTerm, searchTerm);
     }
     
+    if (fantasy_team) {
+      query += ' AND ftp.fantasy_team_id = ?';
+      params.push(fantasy_team);
+    }
+    
     // Add sorting
     const allowedSortFields = ['first_name', 'last_name', 'display_name', 'position'];
     const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'last_name';
@@ -139,7 +145,8 @@ static async getAll(options = {}) {
         position = null,
         team = null,
         nameSearch = null,
-        availability = 'available'
+        availability = 'available',
+        fantasy_team = null
       } = options;
   
       // Build the query
@@ -180,6 +187,11 @@ static async getAll(options = {}) {
         query += ' AND (p.first_name LIKE ? OR p.last_name LIKE ? OR p.display_name LIKE ?)';
         const searchTerm = `%${nameSearch}%`;
         params.push(searchTerm, searchTerm, searchTerm);
+      }
+      
+      if (fantasy_team) {
+        query += ' AND ftp.fantasy_team_id = ?';
+        params.push(fantasy_team);
       }
       
       const result = await db.query(query, params);

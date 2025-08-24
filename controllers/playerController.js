@@ -5,6 +5,7 @@
 
 const Player = require('../models/player');
 const NFLTeam = require('../models/nflTeam');
+const FantasyTeam = require('../models/FantasyTeam');
 const { validationResult } = require('express-validator');
 
 /**
@@ -20,6 +21,7 @@ exports.getAllPlayers = async (req, res) => {
       team, 
       search, 
       availability = 'available', // Default to available players
+      fantasy_team, // Add fantasy team filter
       page = 1, 
       limit = 50, // Set to 50 players per page to ensure pagination shows
       sortBy = 'last_name',
@@ -36,6 +38,7 @@ exports.getAllPlayers = async (req, res) => {
       team: team || null, // Keep as-is, including "null" string
       nameSearch: search || null,
       availability: availability || 'available',
+      fantasy_team: fantasy_team || null, // Add fantasy team filter
       limit,
       offset,
       sortBy,
@@ -48,8 +51,11 @@ exports.getAllPlayers = async (req, res) => {
       Player.count(options)
     ]);
     
-    // Get NFL teams for the filter dropdown
-    const teams = await NFLTeam.getAll();
+    // Get NFL teams and fantasy teams for the filter dropdowns
+    const [teams, fantasyTeams] = await Promise.all([
+      NFLTeam.getAll(),
+      FantasyTeam.getAll()
+    ]);
     
     // Calculate pagination info
     const totalPages = Math.ceil(totalCount / limit);
@@ -73,11 +79,13 @@ exports.getAllPlayers = async (req, res) => {
       title: 'NFL Players',
       players,
       teams,
+      fantasyTeams,
       filters: {
         position,
         team,
         search,
-        availability
+        availability,
+        fantasy_team
       },
       pagination: {
         currentPage: parseInt(page),

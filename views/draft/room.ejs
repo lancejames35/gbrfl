@@ -1296,6 +1296,11 @@
             setupEventListeners();
             initializeSounds();
             
+            // Initialize mobile audio unlock on page load
+            if (isMobile()) {
+                enableAudioOnNextInteraction();
+            }
+            
             // Set initial player list height since filter starts collapsed
             const playerTableContainer = document.querySelector('.mobile-only #playersTab .table-responsive');
             if (playerTableContainer) {
@@ -2597,15 +2602,57 @@
                     audio.volume = volume;
                     audio.currentTime = 0;
                     
+                    // Enhanced mobile audio playing with user interaction tracking
+                    const playAudio = async () => {
+                        try {
+                            await audio.play();
+                            console.log('Draft sound played successfully');
+                        } catch (error) {
+                            console.log('Audio play failed:', error.message);
+                            // On mobile, try to enable audio on next user interaction
+                            enableAudioOnNextInteraction();
+                        }
+                    };
+                    
                     if (audio.readyState >= 2) {
-                        audio.play().catch(() => {});
+                        playAudio();
                     } else {
                         audio.addEventListener('canplay', () => {
-                            audio.play().catch(() => {});
+                            playAudio();
                         }, { once: true });
                     }
                 }
             };
+        }
+
+        // Mobile audio enablement helper
+        function enableAudioOnNextInteraction() {
+            if (window.audioContextUnlocked) return;
+            
+            const enableAudio = () => {
+                const audio = document.getElementById('draftTurnSound');
+                if (audio) {
+                    // Play and immediately pause to unlock audio context on mobile
+                    audio.play().then(() => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        window.audioContextUnlocked = true;
+                        console.log('Mobile audio context unlocked');
+                        
+                        // Remove event listeners
+                        document.removeEventListener('touchstart', enableAudio);
+                        document.removeEventListener('touchend', enableAudio);
+                        document.removeEventListener('click', enableAudio);
+                    }).catch(() => {
+                        console.log('Failed to unlock mobile audio');
+                    });
+                }
+            };
+            
+            // Add event listeners for mobile touch and click
+            document.addEventListener('touchstart', enableAudio, { once: true, passive: true });
+            document.addEventListener('touchend', enableAudio, { once: true, passive: true });
+            document.addEventListener('click', enableAudio, { once: true, passive: true });
         }
 
         function createChatPopSound() {
