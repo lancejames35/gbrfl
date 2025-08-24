@@ -1299,10 +1299,6 @@
             // Initialize audio system for both mobile and desktop
             initializeAudioSystem();
             
-            if (isMobile()) {
-                showMobileAudioNotification();
-            }
-            
             // Set initial player list height since filter starts collapsed
             const playerTableContainer = document.querySelector('.mobile-only #playersTab .table-responsive');
             if (playerTableContainer) {
@@ -2596,9 +2592,9 @@
         }
 
         function createNFLDraftSound() {
-            // Simplified audio playback function
+            // Desktop-focused audio playback function
             window.playNFLDraftHorn = async function() {
-                console.log('🔊 Attempting to play draft sound...');
+                console.log('🔊 Desktop - Attempting to play draft sound...');
                 const audio = document.getElementById('draftTurnSound');
                 if (!audio) {
                     console.log('❌ Draft sound audio element not found');
@@ -2612,17 +2608,53 @@
                 console.log(`🎵 Playing draft sound at ${Math.round(volume * 100)}% volume (readyState: ${audio.readyState})`);
                 
                 try {
-                    await audio.play();
-                    console.log('✅ Draft sound played successfully');
-                } catch (error) {
-                    console.log('❌ Audio play failed:', error.message);
-                    console.log('📊 Audio state - paused:', audio.paused, 'currentTime:', audio.currentTime, 'duration:', audio.duration);
+                    // Force audio to be ready
+                    if (audio.readyState < 2) {
+                        audio.load();
+                        await new Promise(resolve => {
+                            audio.addEventListener('canplay', resolve, { once: true });
+                        });
+                    }
                     
-                    // Mark audio as needing unlock and show user what to do
-                    window.audioContextUnlocked = false;
-                    console.log('❗ Audio permission lost - click/tap anywhere to restore');
+                    await audio.play();
+                    console.log('✅ Desktop draft sound played successfully');
+                } catch (error) {
+                    console.log('❌ Desktop audio play failed:', error.message);
+                    
+                    // Try to unlock audio on desktop with user interaction
+                    if (!isMobile()) {
+                        console.log('🖥️ Desktop audio failed - showing click instruction');
+                        showDesktopAudioNotification();
+                    }
                 }
             };
+        }
+
+        // Show desktop notification when audio fails
+        function showDesktopAudioNotification() {
+            // Remove existing notification
+            const existing = document.getElementById('desktopAudioNotification');
+            if (existing) existing.remove();
+            
+            const notification = document.createElement('div');
+            notification.id = 'desktopAudioNotification';
+            notification.innerHTML = `
+                <div class="alert alert-warning alert-dismissible position-fixed" style="
+                    top: 20px; right: 20px; z-index: 9999; width: 350px;
+                ">
+                    <strong><i class="bi bi-volume-mute"></i> Audio Blocked</strong><br>
+                    Click anywhere on the page to enable draft sounds.
+                    <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                const stillExists = document.getElementById('desktopAudioNotification');
+                if (stillExists) stillExists.remove();
+            }, 5000);
         }
 
         // Universal audio system initialization
@@ -2903,21 +2935,114 @@
 
         function playTurnNotification() {
             const enabled = document.getElementById('enableDraftSound').checked;
-            const timeSinceInteraction = window.lastUserInteraction ? Date.now() - window.lastUserInteraction : 999999;
             
-            console.log('🎯 playTurnNotification called - enabled:', enabled, 'unlocked:', window.audioContextUnlocked, 'time since interaction:', timeSinceInteraction + 'ms');
+            console.log('🎯 playTurnNotification called - enabled:', enabled);
             
             if (!enabled) return;
             
-            // If audio isn't unlocked, try to play immediately and handle failure
-            if (!window.audioContextUnlocked) {
-                console.log('🔄 Audio not unlocked - will attempt direct play (may fail)');
-            }
-            
-            if (window.playNFLDraftHorn) {
-                window.playNFLDraftHorn();
+            // Different approach for mobile vs desktop
+            if (isMobile()) {
+                console.log('📱 Mobile detected - showing turn notification with play button');
+                showMobileTurnNotification();
+            } else {
+                // Desktop - try direct audio play
+                console.log('🖥️ Desktop - attempting direct audio play');
+                if (window.playNFLDraftHorn) {
+                    window.playNFLDraftHorn();
+                }
             }
         }
+
+        // Mobile-specific turn notification with user-activated sound
+        function showMobileTurnNotification() {
+            // Remove any existing turn notification
+            const existing = document.getElementById('mobileTurnNotification');
+            if (existing) existing.remove();
+            
+            // Create prominent turn notification
+            const notification = document.createElement('div');
+            notification.id = 'mobileTurnNotification';
+            notification.innerHTML = `
+                <div class="alert alert-success position-fixed" style="
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    z-index: 10000;
+                    min-width: 300px;
+                    text-align: center;
+                    border: 3px solid #198754;
+                    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+                    animation: pulse 1s infinite;
+                ">
+                    <h4 class="alert-heading mb-3">
+                        <i class="bi bi-clock-fill text-success"></i> Your Turn!
+                    </h4>
+                    <p class="mb-3"><strong>It's your turn to pick a player</strong></p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success btn-lg" onclick="playTurnSoundAndDismiss()">
+                            <i class="bi bi-volume-up"></i> Play Draft Sound
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="dismissTurnNotification()">
+                            <i class="bi bi-x"></i> Dismiss (Silent)
+                        </button>
+                    </div>
+                </div>
+                <style>
+                    @keyframes pulse {
+                        0% { transform: translate(-50%, -50%) scale(1); }
+                        50% { transform: translate(-50%, -50%) scale(1.02); }
+                        100% { transform: translate(-50%, -50%) scale(1); }
+                    }
+                </style>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-dismiss after 15 seconds if no interaction
+            setTimeout(() => {
+                const stillExists = document.getElementById('mobileTurnNotification');
+                if (stillExists) {
+                    console.log('📱 Auto-dismissing turn notification after 15 seconds');
+                    stillExists.remove();
+                }
+            }, 15000);
+            
+            console.log('📱 Mobile turn notification displayed');
+        }
+
+        // Play sound when user explicitly taps the button (guaranteed to work)
+        window.playTurnSoundAndDismiss = function() {
+            console.log('🎵 User tapped play sound - direct interaction');
+            
+            const audio = document.getElementById('draftTurnSound');
+            if (audio) {
+                const volume = document.getElementById('draftSoundVolume').value / 100;
+                audio.volume = volume;
+                audio.currentTime = 0;
+                
+                console.log('🎵 Playing sound via direct user interaction');
+                audio.play().then(() => {
+                    console.log('✅ Mobile turn sound played successfully!');
+                }).catch(error => {
+                    console.log('❌ Even direct user interaction failed:', error.message);
+                });
+            }
+            
+            // Dismiss notification
+            dismissTurnNotification();
+        };
+
+        // Dismiss notification without sound
+        window.dismissTurnNotification = function() {
+            const notification = document.getElementById('mobileTurnNotification');
+            if (notification) {
+                notification.style.animation = 'none';
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
+                setTimeout(() => notification.remove(), 300);
+                console.log('📱 Turn notification dismissed');
+            }
+        };
 
         function playChatNotification() {
             const enabled = document.getElementById('enableChatSound').checked;
