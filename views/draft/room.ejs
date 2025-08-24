@@ -2637,86 +2637,13 @@
                 } catch (error) {
                     console.log('❌ Audio play failed:', error.message);
                     console.log('📊 Audio state - readyState:', audio.readyState, 'paused:', audio.paused, 'duration:', audio.duration);
-                    
-                    // Last resort: try to trigger user interaction prompt
-                    if (isMobile()) {
-                        console.log('📱 Mobile audio failed - showing minimal interaction prompt');
-                        showMobileAudioPrompt();
-                    } else {
-                        console.log('🖥️ Desktop audio failed - showing click instruction');
-                        showDesktopAudioNotification();
-                    }
+                    console.log('🔇 Audio will work after next user interaction (silent)');
+                    // No notifications or prompts - just wait for next interaction
                 }
             };
         }
 
-        // Minimal mobile audio prompt (less intrusive than popup)
-        function showMobileAudioPrompt() {
-            const existing = document.getElementById('mobileAudioPrompt');
-            if (existing) return; // Don't show multiple
-            
-            const prompt = document.createElement('div');
-            prompt.id = 'mobileAudioPrompt';
-            prompt.innerHTML = `
-                <div class="alert alert-info position-fixed" style="
-                    bottom: 20px; left: 20px; right: 20px; z-index: 9999;
-                    text-align: center; margin: 0;
-                " onclick="playDraftSoundDirectly(); this.parentElement.remove();">
-                    <i class="bi bi-volume-up"></i> <strong>Tap to play draft sound</strong>
-                </div>
-            `;
-            
-            document.body.appendChild(prompt);
-            
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                const stillExists = document.getElementById('mobileAudioPrompt');
-                if (stillExists) stillExists.remove();
-            }, 5000);
-        }
-
-        // Direct sound play for mobile prompt
-        window.playDraftSoundDirectly = function() {
-            console.log('🎵 Direct mobile sound play via tap');
-            const audio = document.getElementById('draftTurnSound');
-            if (audio) {
-                const volume = document.getElementById('draftSoundVolume').value / 100;
-                audio.volume = volume;
-                audio.currentTime = 0;
-                audio.play().then(() => {
-                    console.log('✅ Direct mobile play successful');
-                }).catch(err => {
-                    console.log('❌ Even direct mobile play failed:', err.message);
-                });
-            }
-        };
-
-        // Show desktop notification when audio fails
-        function showDesktopAudioNotification() {
-            // Remove existing notification
-            const existing = document.getElementById('desktopAudioNotification');
-            if (existing) existing.remove();
-            
-            const notification = document.createElement('div');
-            notification.id = 'desktopAudioNotification';
-            notification.innerHTML = `
-                <div class="alert alert-warning alert-dismissible position-fixed" style="
-                    top: 20px; right: 20px; z-index: 9999; width: 350px;
-                ">
-                    <strong><i class="bi bi-volume-mute"></i> Audio Blocked</strong><br>
-                    Click anywhere on the page to enable draft sounds.
-                    <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto-remove after 5 seconds
-            setTimeout(() => {
-                const stillExists = document.getElementById('desktopAudioNotification');
-                if (stillExists) stillExists.remove();
-            }, 5000);
-        }
+        // Removed all audio prompts and notifications - system works silently
 
         // Universal audio system initialization with aggressive mobile support
         function initializeAudioSystem() {
@@ -2737,45 +2664,48 @@
                 audio.load();
             }
             
-            // More aggressive interaction tracking for mobile
+            // Universal interaction tracking for audio context
             const keepAudioAlive = (eventType) => {
                 window.lastUserInteraction = Date.now();
                 
-                // On mobile, constantly refresh audio permission
-                if (isMobile()) {
-                    if (!window.audioUnlockInProgress) {
-                        window.audioUnlockInProgress = true;
+                // For both mobile and desktop, establish audio context on any interaction
+                if (!window.audioUnlockInProgress) {
+                    window.audioUnlockInProgress = true;
+                    
+                    // Silent audio play to establish context
+                    if (audio) {
+                        const originalVolume = audio.volume;
+                        audio.volume = 0;
+                        audio.currentTime = 0;
                         
-                        // Tiny silent play to maintain audio context
-                        if (audio) {
-                            const originalVolume = audio.volume;
-                            audio.volume = 0;
-                            audio.currentTime = 0;
-                            
-                            const playPromise = audio.play();
-                            if (playPromise) {
-                                playPromise.then(() => {
-                                    audio.pause();
-                                    audio.currentTime = 0;
-                                    audio.volume = originalVolume;
-                                    window.audioContextUnlocked = true;
-                                    console.log('🔄 Mobile audio context refreshed silently');
-                                }).catch(() => {
-                                    // Silent failure is OK
-                                }).finally(() => {
-                                    window.audioUnlockInProgress = false;
-                                });
-                            } else {
+                        const playPromise = audio.play();
+                        if (playPromise) {
+                            playPromise.then(() => {
+                                audio.pause();
+                                audio.currentTime = 0;
+                                audio.volume = originalVolume;
+                                window.audioContextUnlocked = true;
+                                console.log('🔄 Audio context established silently (' + eventType + ')');
+                            }).catch(() => {
+                                // Silent failure - will try again on next interaction
+                            }).finally(() => {
                                 window.audioUnlockInProgress = false;
-                            }
+                            });
                         } else {
+                            // Older browsers without promise support
+                            try {
+                                audio.pause();
+                                audio.currentTime = 0;
+                                audio.volume = originalVolume;
+                                window.audioContextUnlocked = true;
+                                console.log('🔄 Audio context established (legacy)');
+                            } catch (e) {
+                                // Silent failure
+                            }
                             window.audioUnlockInProgress = false;
                         }
-                    }
-                } else {
-                    // Desktop - simpler unlock
-                    if (!window.audioContextUnlocked) {
-                        unlockAudioSync();
+                    } else {
+                        window.audioUnlockInProgress = false;
                     }
                 }
             };
@@ -2945,68 +2875,7 @@
             }
         }
 
-        // Show mobile audio notification
-        function showMobileAudioNotification() {
-            if (!isMobile()) return;
-            
-            // Create a small notification banner
-            const notification = document.createElement('div');
-            notification.id = 'mobileAudioNotification';
-            notification.innerHTML = `
-                <div class="alert alert-info alert-dismissible fade show" style="
-                    position: fixed; 
-                    top: 10px; 
-                    left: 10px; 
-                    right: 10px; 
-                    z-index: 9999; 
-                    font-size: 0.9rem;
-                    background: linear-gradient(135deg, #4fc3f7, #29b6f6);
-                    border: none;
-                    color: white;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                ">
-                    <i class="bi bi-volume-up me-2"></i>
-                    <strong>Tap anywhere to enable draft sounds</strong>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto-hide after audio is unlocked or 10 seconds
-            const hideNotification = () => {
-                const alertElement = notification.querySelector('.alert');
-                if (alertElement) {
-                    alertElement.classList.remove('show');
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            notification.parentNode.removeChild(notification);
-                        }
-                    }, 300);
-                }
-            };
-            
-            // Hide when audio is unlocked
-            const checkAudioUnlocked = () => {
-                if (window.audioContextUnlocked) {
-                    console.log('🎉 Audio unlocked, hiding notification');
-                    hideNotification();
-                } else {
-                    setTimeout(checkAudioUnlocked, 200);
-                }
-            };
-            
-            // Auto-hide after 15 seconds (give more time)
-            setTimeout(() => {
-                if (!window.audioContextUnlocked) {
-                    console.log('⏰ Auto-hiding notification after 15 seconds');
-                    hideNotification();
-                }
-            }, 15000);
-            
-            // Start checking for audio unlock
-            setTimeout(checkAudioUnlocked, 1000);
-        }
+        // Removed all audio notifications - system is completely silent
 
         function createChatPopSound() {
             // Create WhatsApp-style pop sound programmatically (reuse existing context)
@@ -3053,96 +2922,7 @@
             }
         }
 
-        // Mobile-specific turn notification with user-activated sound
-        function showMobileTurnNotification() {
-            // Remove any existing turn notification
-            const existing = document.getElementById('mobileTurnNotification');
-            if (existing) existing.remove();
-            
-            // Create prominent turn notification
-            const notification = document.createElement('div');
-            notification.id = 'mobileTurnNotification';
-            notification.innerHTML = `
-                <div class="alert alert-success position-fixed" style="
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    z-index: 10000;
-                    min-width: 300px;
-                    text-align: center;
-                    border: 3px solid #198754;
-                    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-                    animation: pulse 1s infinite;
-                ">
-                    <h4 class="alert-heading mb-3">
-                        <i class="bi bi-clock-fill text-success"></i> Your Turn!
-                    </h4>
-                    <p class="mb-3"><strong>It's your turn to pick a player</strong></p>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-success btn-lg" onclick="playTurnSoundAndDismiss()">
-                            <i class="bi bi-volume-up"></i> Play Draft Sound
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="dismissTurnNotification()">
-                            <i class="bi bi-x"></i> Dismiss (Silent)
-                        </button>
-                    </div>
-                </div>
-                <style>
-                    @keyframes pulse {
-                        0% { transform: translate(-50%, -50%) scale(1); }
-                        50% { transform: translate(-50%, -50%) scale(1.02); }
-                        100% { transform: translate(-50%, -50%) scale(1); }
-                    }
-                </style>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto-dismiss after 15 seconds if no interaction
-            setTimeout(() => {
-                const stillExists = document.getElementById('mobileTurnNotification');
-                if (stillExists) {
-                    console.log('📱 Auto-dismissing turn notification after 15 seconds');
-                    stillExists.remove();
-                }
-            }, 15000);
-            
-            console.log('📱 Mobile turn notification displayed');
-        }
-
-        // Play sound when user explicitly taps the button (guaranteed to work)
-        window.playTurnSoundAndDismiss = function() {
-            console.log('🎵 User tapped play sound - direct interaction');
-            
-            const audio = document.getElementById('draftTurnSound');
-            if (audio) {
-                const volume = document.getElementById('draftSoundVolume').value / 100;
-                audio.volume = volume;
-                audio.currentTime = 0;
-                
-                console.log('🎵 Playing sound via direct user interaction');
-                audio.play().then(() => {
-                    console.log('✅ Mobile turn sound played successfully!');
-                }).catch(error => {
-                    console.log('❌ Even direct user interaction failed:', error.message);
-                });
-            }
-            
-            // Dismiss notification
-            dismissTurnNotification();
-        };
-
-        // Dismiss notification without sound
-        window.dismissTurnNotification = function() {
-            const notification = document.getElementById('mobileTurnNotification');
-            if (notification) {
-                notification.style.animation = 'none';
-                notification.style.opacity = '0';
-                notification.style.transition = 'opacity 0.3s';
-                setTimeout(() => notification.remove(), 300);
-                console.log('📱 Turn notification dismissed');
-            }
-        };
+        // Removed mobile turn notifications - audio now works silently
 
         function playChatNotification() {
             const enabled = document.getElementById('enableChatSound').checked;
