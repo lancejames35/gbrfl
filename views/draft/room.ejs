@@ -1298,6 +1298,11 @@
             
             // Initialize mobile audio unlock on page load
             if (isMobile()) {
+                // Reset audio unlock variables to prevent stale state
+                window.audioContextUnlocked = false;
+                window.audioUnlockInProgress = false;
+                window.audioUnlockListeners = [];
+                
                 enableAudioOnNextInteraction();
                 showMobileAudioNotification();
             }
@@ -2646,56 +2651,95 @@
 
         // Mobile audio enablement helper
         function enableAudioOnNextInteraction() {
-            if (window.audioContextUnlocked) return;
+            // Prevent multiple calls
+            if (window.audioContextUnlocked || window.audioUnlockInProgress) {
+                console.log('Audio unlock already in progress or completed');
+                return;
+            }
             
-            const enableAudio = async () => {
-                console.log('Attempting to unlock mobile audio...');
+            window.audioUnlockInProgress = true;
+            
+            const enableAudio = async (event) => {
+                console.log('🎯 Attempting to unlock mobile audio via:', event.type);
+                
+                // Prevent multiple simultaneous unlock attempts
+                if (window.audioContextUnlocked) {
+                    console.log('Audio already unlocked, skipping');
+                    return;
+                }
+                
                 const audio = document.getElementById('draftTurnSound');
-                if (audio) {
-                    try {
-                        // Set volume very low for the unlock attempt
-                        const originalVolume = audio.volume;
-                        audio.volume = 0.01;
-                        
-                        // Play and immediately pause to unlock audio context on mobile
-                        await audio.play();
-                        audio.pause();
-                        audio.currentTime = 0;
-                        
-                        // Restore original volume
-                        audio.volume = originalVolume;
-                        
-                        window.audioContextUnlocked = true;
-                        console.log('✅ Mobile audio context unlocked successfully');
-                        
-                        // Show user a confirmation (optional)
-                        if (isMobile()) {
-                            console.log('🔊 Draft sounds are now enabled for mobile');
-                        }
-                        
-                    } catch (error) {
-                        console.log('❌ Failed to unlock mobile audio:', error.message);
-                        // Try again on next interaction
-                        setTimeout(() => {
-                            window.audioContextUnlocked = false;
-                            enableAudioOnNextInteraction();
-                        }, 1000);
+                if (!audio) {
+                    console.log('❌ Audio element not found');
+                    window.audioUnlockInProgress = false;
+                    return;
+                }
+                
+                try {
+                    // Set volume very low for the unlock attempt
+                    const originalVolume = audio.volume;
+                    audio.volume = 0.01;
+                    
+                    // Play and immediately pause to unlock audio context on mobile
+                    console.log('🎮 Playing audio to unlock context...');
+                    await audio.play();
+                    audio.pause();
+                    audio.currentTime = 0;
+                    
+                    // Restore original volume
+                    audio.volume = originalVolume;
+                    
+                    window.audioContextUnlocked = true;
+                    window.audioUnlockInProgress = false;
+                    
+                    console.log('✅ Mobile audio context unlocked successfully!');
+                    
+                    // Remove ALL event listeners to prevent multiple calls
+                    removeAudioUnlockListeners();
+                    
+                    // Show user a confirmation
+                    if (isMobile()) {
+                        console.log('🔊 Draft sounds are now enabled for mobile');
                     }
+                    
+                } catch (error) {
+                    console.log('❌ Failed to unlock mobile audio:', error.message);
+                    window.audioUnlockInProgress = false;
+                    // Don't retry automatically to avoid infinite loops
                 }
             };
             
-            // Add event listeners for ALL types of user interaction
-            const events = ['touchstart', 'touchend', 'click', 'tap', 'pointerdown', 'mousedown'];
+            // Store event listener references for cleanup
+            if (!window.audioUnlockListeners) {
+                window.audioUnlockListeners = [];
+            }
+            
+            // Add event listeners for user interaction (reduced set to avoid conflicts)
+            const events = ['touchstart', 'click'];
             
             events.forEach(eventType => {
-                document.addEventListener(eventType, enableAudio, { 
-                    once: true, 
+                const listener = (event) => enableAudio(event);
+                document.addEventListener(eventType, listener, { 
                     passive: true,
-                    capture: true 
+                    capture: false 
                 });
+                
+                // Store reference for cleanup
+                window.audioUnlockListeners.push({ event: eventType, listener });
             });
             
             console.log('🎵 Mobile audio unlock listeners added. Tap anywhere to enable draft sounds.');
+        }
+
+        // Remove audio unlock event listeners
+        function removeAudioUnlockListeners() {
+            if (window.audioUnlockListeners) {
+                console.log('🧹 Removing', window.audioUnlockListeners.length, 'audio unlock listeners');
+                window.audioUnlockListeners.forEach(({ event, listener }) => {
+                    document.removeEventListener(event, listener);
+                });
+                window.audioUnlockListeners = [];
+            }
         }
 
         // Show mobile audio notification
@@ -2742,17 +2786,23 @@
             // Hide when audio is unlocked
             const checkAudioUnlocked = () => {
                 if (window.audioContextUnlocked) {
+                    console.log('🎉 Audio unlocked, hiding notification');
                     hideNotification();
                 } else {
-                    setTimeout(checkAudioUnlocked, 500);
+                    setTimeout(checkAudioUnlocked, 200);
                 }
             };
             
-            // Auto-hide after 10 seconds
-            setTimeout(hideNotification, 10000);
+            // Auto-hide after 15 seconds (give more time)
+            setTimeout(() => {
+                if (!window.audioContextUnlocked) {
+                    console.log('⏰ Auto-hiding notification after 15 seconds');
+                    hideNotification();
+                }
+            }, 15000);
             
             // Start checking for audio unlock
-            checkAudioUnlocked();
+            setTimeout(checkAudioUnlocked, 1000);
         }
 
         function createChatPopSound() {
