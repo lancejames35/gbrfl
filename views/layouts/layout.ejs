@@ -191,5 +191,71 @@
     
     <!-- Notifications JavaScript -->
     <script src="/js/notifications.js"></script>
+    
+    <!-- Admin Clock JavaScript -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const clockElement = document.getElementById('admin-clock');
+        const timezoneElement = document.getElementById('admin-timezone');
+        
+        if (clockElement && timezoneElement) {
+            // Function to update the clock
+            function updateClock() {
+                const now = new Date();
+                
+                // Format time with seconds
+                const timeString = now.toLocaleString('en-US', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    month: '2-digit',
+                    day: '2-digit',
+                    year: 'numeric'
+                });
+                
+                clockElement.textContent = timeString;
+                
+                // Get timezone info
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const offset = now.getTimezoneOffset();
+                const offsetHours = Math.floor(Math.abs(offset) / 60);
+                const offsetMinutes = Math.abs(offset) % 60;
+                const offsetSign = offset <= 0 ? '+' : '-';
+                
+                timezoneElement.innerHTML = `
+                    ${timezone}<br>
+                    <small>UTC${offsetSign}${offsetHours.toString().padStart(2, '0')}:${offsetMinutes.toString().padStart(2, '0')}</small>
+                `;
+            }
+            
+            // Update immediately and then every second
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            // Fetch server timezone info
+            fetch('/api/server-time')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.serverTime && data.serverTimezone) {
+                        const serverTime = new Date(data.serverTime);
+                        const timeDiff = Math.abs(new Date().getTime() - serverTime.getTime());
+                        
+                        if (timeDiff > 5000) { // More than 5 seconds difference
+                            timezoneElement.innerHTML += `<br><small class="text-warning">⚠️ Server time differs by ${Math.round(timeDiff/1000)}s</small>`;
+                        }
+                        
+                        // Show server timezone if different from client
+                        if (data.serverTimezone !== Intl.DateTimeFormat().resolvedOptions().timeZone) {
+                            timezoneElement.innerHTML += `<br><small class="text-info">Server: ${data.serverTimezone}</small>`;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.log('Could not fetch server time info:', error);
+                });
+        }
+    });
+    </script>
 </body>
 </html>

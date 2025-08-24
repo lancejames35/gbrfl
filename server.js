@@ -23,6 +23,9 @@ const expressLayouts = require('express-ejs-layouts');
 // Initialize database connection
 const db = require('./config/database');
 
+// Security monitoring (non-disruptive)
+const { monitorRequestPatterns } = require('./middleware/securityMonitor');
+
 // Initialize the app
 const app = express();
 
@@ -111,20 +114,40 @@ app.use(cors({
 // Request logging
 app.use(morgan('dev'));
 
-// Rate limiting for authentication endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs for auth endpoints
-  message: { error: 'Too many authentication attempts, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Security monitoring (runs after CORS and headers, before rate limiting)
+app.use(monitorRequestPatterns);
+
+// Smart rate limiting for authentication endpoints
+const { createProgressiveAuthLimiter } = require('./middleware/smartRateLimiter');
+
+const authLimiter = createProgressiveAuthLimiter();
+
+const { logSecurityEvent, getClientIP } = require('./middleware/securityMonitor');
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes  
-  max: 500, // Limit each IP to 500 requests per windowMs for general endpoints
+  max: 1000, // Increased from 500 to 1000 requests per 15 minutes for general endpoints
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting in development for localhost
+    if (process.env.NODE_ENV === 'development') {
+      const clientIP = getClientIP(req);
+      if (clientIP.includes('127.0.0.1') || clientIP.includes('localhost') || clientIP === '::1') {
+        return true;
+      }
+    }
+    return false;
+  },
+  handler: async (req, res) => {
+    // Log rate limit exceeded event
+    await logSecurityEvent('RATE_LIMIT_EXCEEDED_GENERAL', req, {
+      limit: 1000,
+      windowMs: 15 * 60 * 1000,
+      endpoint: 'general'
+    });
+    res.status(429).json({ error: 'Too many requests, please slow down.' });
+  }
 });
 
 // Apply general rate limiting to all requests except notifications
@@ -247,12 +270,14 @@ app.use('/downloads', express.static(path.join(__dirname, 'downloads')));
 // API routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/admin', require('./routes/admin'));
+app.use('/admin/security', require('./routes/admin/security'));
 app.use('/api/players', require('./routes/api/players')); 
 app.use('/api/transactions', require('./routes/api/transactions'));
 app.use('/api/teams', require('./routes/api/teams'));
 app.use('/api/scoreboard', require('./routes/api/scoreboard'));
 app.use('/api/notifications', require('./routes/api/notifications'));
-app.use('/api/preferences', require('./routes/api/preferences')); 
+app.use('/api/preferences', require('./routes/api/preferences'));
+app.use('/api', require('./routes/api/serverInfo')); 
 
 // Main homepage route - MUST be before any middleware that might handle /
 app.get('/', (req, res) => {

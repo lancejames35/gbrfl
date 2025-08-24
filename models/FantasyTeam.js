@@ -499,20 +499,32 @@ static async getPlayers(teamId) {
   }
 
   /**
-   * Check if keeper deadline has passed
+   * Check if keeper deadline has passed (with proper timezone handling)
    * @returns {Promise<boolean>} - True if deadline has passed
    */
   static async isKeeperDeadlinePassed() {
     try {
+      const { checkDeadline } = require('../utils/timezoneFix');
+      
       const settings = await this.getLeagueSettings();
       if (!settings || !settings.keeper_deadline_date) {
+        console.log('No keeper deadline set, allowing changes');
         return false; // No deadline set, allow changes
       }
       
-      const deadline = new Date(settings.keeper_deadline_date);
-      const now = new Date();
+      // Use proper timezone-aware deadline checking
+      const result = checkDeadline(settings.keeper_deadline_date, 'America/Chicago');
       
-      return now > deadline;
+      // Log detailed information for debugging
+      console.log('=== KEEPER DEADLINE CHECK ===');
+      console.log('Deadline setting:', settings.keeper_deadline_date);
+      console.log('Parsed deadline (Chicago):', result.formattedDeadline);
+      console.log('Current time (Chicago):', result.formattedNow);
+      console.log('Time remaining (hours):', result.timeRemainingHours);
+      console.log('Is deadline passed?', result.isPast);
+      console.log('==============================');
+      
+      return result.isPast;
     } catch (error) {
       console.error('Error checking keeper deadline:', error.message);
       return false; // Allow changes if error occurs
