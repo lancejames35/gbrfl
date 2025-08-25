@@ -5,12 +5,20 @@
 
 /**
  * Parse a date string in a specific timezone (defaults to America/Chicago for GBRFL)
- * @param {string} dateString - Date string like '2025-08-24' or '2025-08-24 23:59:59'
+ * @param {string|Date} dateInput - Date string like '2025-08-24' or '2025-08-24 23:59:59', or Date object
  * @param {string} timezone - Target timezone (default: 'America/Chicago')
  * @returns {Date} - Properly timezone-adjusted Date object
  */
-function parseDateInTimezone(dateString, timezone = 'America/Chicago') {
+function parseDateInTimezone(dateInput, timezone = 'America/Chicago') {
   try {
+    // Handle both string and Date object inputs
+    let dateString;
+    if (dateInput instanceof Date) {
+      dateString = dateInput.toISOString();
+    } else {
+      dateString = dateInput.toString();
+    }
+    
     // If no time is specified, assume end of day (23:59:59)
     let fullDateString = dateString.trim();
     
@@ -41,12 +49,20 @@ function parseDateInTimezone(dateString, timezone = 'America/Chicago') {
 
 /**
  * Create a date at end of day in specific timezone
- * @param {string} dateString - Date string like '2025-08-24'
+ * @param {string|Date} dateInput - Date string like '2025-08-24' or Date object
  * @param {string} timezone - Target timezone
  * @returns {Date} - Date set to 11:59:59 PM in the target timezone
  */
-function createEndOfDayDate(dateString, timezone = 'America/Chicago') {
+function createEndOfDayDate(dateInput, timezone = 'America/Chicago') {
   try {
+    // Handle both string and Date object inputs
+    let dateString;
+    if (dateInput instanceof Date) {
+      dateString = dateInput.toISOString();
+    } else {
+      dateString = dateInput.toString();
+    }
+    
     // Parse just the date part
     const datePart = dateString.split(' ')[0].split('T')[0];
     
@@ -87,14 +103,14 @@ function createEndOfDayDate(dateString, timezone = 'America/Chicago') {
 
 /**
  * Check if current time is past a deadline, with proper timezone handling
- * @param {string} deadlineString - Deadline date string
+ * @param {string|Date} deadlineInput - Deadline date string or Date object
  * @param {string} timezone - Timezone for deadline interpretation
  * @returns {Object} - { isPast: boolean, deadline: Date, now: Date, timeRemaining: number }
  */
-function checkDeadline(deadlineString, timezone = 'America/Chicago') {
+function checkDeadline(deadlineInput, timezone = 'America/Chicago') {
   try {
     const now = new Date();
-    const deadline = createEndOfDayDate(deadlineString, timezone);
+    const deadline = createEndOfDayDate(deadlineInput, timezone);
     
     const timeRemaining = deadline.getTime() - now.getTime();
     const isPast = timeRemaining <= 0;
