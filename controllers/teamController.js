@@ -413,14 +413,14 @@ exports.toggleKeeperStatus = async (req, res) => {
       return res.status(403).json({ success: false, message: 'You do not have permission to modify this team' });
     }
     
+    // Check if keeper deadline has passed (for any keeper changes)
+    const deadlinePassed = await FantasyTeam.isKeeperDeadlinePassed();
+    if (deadlinePassed) {
+      return res.status(400).json({ success: false, message: 'Keeper deadline has passed' });
+    }
+    
     // If setting as keeper, check if keeper slots are available
     if (isKeeper) {
-      // Check if keeper deadline has passed
-      const deadlinePassed = await FantasyTeam.isKeeperDeadlinePassed();
-      if (deadlinePassed) {
-        return res.status(400).json({ success: false, message: 'Keeper deadline has passed' });
-      }
-      
       const keeperCount = await FantasyTeam.getKeeperCount(teamId);
       const maxKeepers = await FantasyTeam.getKeeperLimit(teamId);
       
@@ -508,7 +508,7 @@ exports.getTeamKeepers = async (req, res) => {
     }
     
     // Check if user owns the team or is admin
-    const canEdit = (parseInt(req.session.user.id) === parseInt(team.user_id)) || req.session.user.is_admin;
+    const canEdit = (parseInt(req.session.user.id) === parseInt(team.user_id)) || req.session.user.isAdmin;
     
     if (!canEdit) {
       req.flash('error_msg', 'You do not have permission to manage keepers for this team');
@@ -573,7 +573,7 @@ exports.updateKeepersFromKeeperPage = async (req, res) => {
     }
     
     // Validate ownership
-    if (team.user_id !== req.session.user.id && !req.session.user.is_admin) {
+    if (team.user_id !== req.session.user.id && !req.session.user.isAdmin) {
       req.flash('error_msg', 'You do not have permission to modify this team');
       return res.redirect(`/keepers/${teamId}`);
     }
