@@ -515,18 +515,23 @@ static async getPlayers(teamId) {
       // Use proper timezone-aware deadline checking
       const result = checkDeadline(settings.keeper_deadline_date, 'America/Chicago');
       
-      // Log detailed information for debugging
+      // Enhanced logging for debugging
       console.log('=== KEEPER DEADLINE CHECK ===');
-      console.log('Deadline setting:', settings.keeper_deadline_date);
+      console.log('Deadline setting from DB:', settings.keeper_deadline_date);
       console.log('Parsed deadline (Chicago):', result.formattedDeadline);
       console.log('Current time (Chicago):', result.formattedNow);
+      console.log('Current time (UTC):', new Date().toISOString());
       console.log('Time remaining (hours):', result.timeRemainingHours);
       console.log('Is deadline passed?', result.isPast);
+      console.log('Raw deadline object:', result.deadline);
+      console.log('Raw now object:', result.now);
+      console.log('Time difference (ms):', result.timeRemaining);
       console.log('==============================');
       
       return result.isPast;
     } catch (error) {
       console.error('Error checking keeper deadline:', error.message);
+      console.error('Stack trace:', error.stack);
       return false; // Allow changes if error occurs
     }
   }
