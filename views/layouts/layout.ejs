@@ -136,6 +136,12 @@
             
             if (submenuToggle && submenuDropdown) {
                 let isHoverMode = false;
+                let isMobileMenuOpen = false;
+                
+                // Function to check if we're on mobile
+                function isMobile() {
+                    return window.innerWidth <= 768;
+                }
                 
                 // Function to check if device supports hover
                 function supportsHover() {
@@ -144,29 +150,44 @@
                 
                 // Click handler for submenu toggle
                 submenuToggle.addEventListener('click', function(e) {
-                    console.log('Switch User clicked!');
+                    console.log('Switch User clicked! Mobile:', isMobile());
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    // For touch devices or explicit click, always toggle
-                    const isVisible = submenuDropdown.style.display === 'block';
-                    if (isVisible) {
-                        submenuDropdown.style.display = 'none';
-                        if (arrow) arrow.classList.remove('rotated');
-                        console.log('Hiding submenu');
+                    if (isMobile()) {
+                        // Mobile behavior: always toggle and stay open until explicitly closed
+                        isMobileMenuOpen = !isMobileMenuOpen;
+                        
+                        if (isMobileMenuOpen) {
+                            submenuDropdown.style.display = 'block';
+                            console.log('Opening mobile submenu');
+                            // Re-add touch handlers after opening
+                            setTimeout(() => addMobileTouchHandlers(), 100);
+                        } else {
+                            submenuDropdown.style.display = 'none';
+                            console.log('Closing mobile submenu');
+                        }
                     } else {
-                        submenuDropdown.style.display = 'block';
-                        if (arrow) arrow.classList.add('rotated');
-                        console.log('Showing submenu');
+                        // Desktop behavior: toggle visibility
+                        const isVisible = submenuDropdown.style.display === 'block';
+                        if (isVisible) {
+                            submenuDropdown.style.display = 'none';
+                            if (arrow) arrow.classList.remove('rotated');
+                            console.log('Hiding desktop submenu');
+                        } else {
+                            submenuDropdown.style.display = 'block';
+                            if (arrow) arrow.classList.add('rotated');
+                            console.log('Showing desktop submenu');
+                        }
                     }
                     
                     isHoverMode = false; // Disable hover mode after click
                 });
                 
-                // Handle hover for desktop (only if device supports hover)
+                // Handle hover for desktop only (not mobile)
                 if (supportsHover()) {
                     submenuToggle.parentElement.addEventListener('mouseenter', function() {
-                        if (window.innerWidth > 768 && !isHoverMode) {
+                        if (!isMobile() && !isHoverMode) {
                             setTimeout(() => {
                                 if (submenuDropdown.style.display !== 'block') {
                                     submenuDropdown.style.display = 'block';
@@ -178,7 +199,7 @@
                     });
                     
                     submenuToggle.parentElement.addEventListener('mouseleave', function() {
-                        if (window.innerWidth > 768 && isHoverMode) {
+                        if (!isMobile() && isHoverMode) {
                             setTimeout(() => {
                                 if (!submenuDropdown.matches(':hover')) {
                                     submenuDropdown.style.display = 'none';
@@ -189,9 +210,9 @@
                         }
                     });
                     
-                    // Keep submenu open when hovering over it
+                    // Keep submenu open when hovering over it (desktop only)
                     submenuDropdown.addEventListener('mouseleave', function() {
-                        if (window.innerWidth > 768 && isHoverMode) {
+                        if (!isMobile() && isHoverMode) {
                             setTimeout(() => {
                                 submenuDropdown.style.display = 'none';
                                 if (arrow) arrow.classList.remove('rotated');
@@ -201,18 +222,81 @@
                     });
                 }
                 
-                // Close submenu when clicking outside
+                // Close submenu when clicking outside (but be more careful on mobile)
                 document.addEventListener('click', function(e) {
                     if (!submenuToggle.parentElement.contains(e.target)) {
                         submenuDropdown.style.display = 'none';
                         if (arrow) arrow.classList.remove('rotated');
                         isHoverMode = false;
+                        isMobileMenuOpen = false;
                     }
                 });
                 
                 // Prevent submenu from closing when clicking inside it
                 submenuDropdown.addEventListener('click', function(e) {
                     e.stopPropagation();
+                });
+                
+                // Function to add touch event handling for mobile submenu items
+                function addMobileTouchHandlers() {
+                    if (isMobile()) {
+                        console.log('Adding mobile touch event handlers');
+                        
+                        // Add touch feedback for all submenu items
+                        const submenuItems = submenuDropdown.querySelectorAll('.submenu-item');
+                        submenuItems.forEach(item => {
+                            // Remove any existing touch handlers first
+                            item.removeEventListener('touchstart', item._touchStartHandler);
+                            item.removeEventListener('touchend', item._touchEndHandler);
+                            item.removeEventListener('touchcancel', item._touchCancelHandler);
+                            
+                            // Touch start feedback
+                            item._touchStartHandler = function(e) {
+                                console.log('Touch start on:', this.textContent.trim());
+                                this.style.backgroundColor = '#007bff';
+                                this.style.color = '#fff';
+                            };
+                            
+                            // Touch end cleanup
+                            item._touchEndHandler = function(e) {
+                                const self = this;
+                                console.log('Touch end on:', this.textContent.trim());
+                                // Small delay to show visual feedback
+                                setTimeout(() => {
+                                    if (!self.matches(':hover')) {
+                                        self.style.backgroundColor = '';
+                                        self.style.color = '';
+                                    }
+                                }, 150);
+                            };
+                            
+                            // Touch cancel cleanup
+                            item._touchCancelHandler = function(e) {
+                                console.log('Touch cancel on:', this.textContent.trim());
+                                this.style.backgroundColor = '';
+                                this.style.color = '';
+                            };
+                            
+                            item.addEventListener('touchstart', item._touchStartHandler, { passive: true });
+                            item.addEventListener('touchend', item._touchEndHandler, { passive: true });
+                            item.addEventListener('touchcancel', item._touchCancelHandler, { passive: true });
+                        });
+                    }
+                }
+                
+                // Add touch handlers initially
+                addMobileTouchHandlers();
+                
+                // Handle window resize to reset mobile state
+                window.addEventListener('resize', function() {
+                    if (isMobile()) {
+                        // Reset hover mode on mobile
+                        isHoverMode = false;
+                        if (arrow) arrow.classList.remove('rotated');
+                    } else {
+                        // Reset mobile state on desktop
+                        isMobileMenuOpen = false;
+                    }
                 });
                 
                 console.log('User switching submenu functionality loaded successfully');

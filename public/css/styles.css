@@ -178,23 +178,70 @@ footer {
 /* Responsive submenu positioning */
 @media (max-width: 768px) {
     .user-switch-submenu {
-        position: static;
-        width: 100%;
-        margin: 0;
-        border: none;
-        box-shadow: none;
-        background-color: #f8f9fa;
-        border-radius: 0;
-        border-left: 3px solid #007bff;
+        position: static !important;
+        width: 100% !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        background-color: #f8f9fa !important;
+        border-radius: 0 !important;
+        border-left: 3px solid #007bff !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
     
     .submenu-content {
-        padding-left: 1rem;
+        padding: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
     
     .submenu-item {
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
+        padding: 1rem 1rem !important;
+        font-size: 0.95rem !important;
+        border-bottom: 1px solid #e9ecef;
+        display: block !important;
+        width: 100% !important;
+        text-align: left !important;
+        background: #fff !important;
+        margin: 0 !important;
+        min-height: 60px !important;
+        -webkit-tap-highlight-color: transparent !important;
+        touch-action: manipulation !important;
+        cursor: pointer !important;
+    }
+    
+    .submenu-item:hover, .submenu-item:focus, .submenu-item:active, .submenu-item:focus-within {
+        background-color: #007bff !important;
+        color: #fff !important;
+        text-decoration: none !important;
+    }
+    
+    .submenu-item:active {
+        transform: scale(0.98) !important;
+        transition: transform 0.1s ease !important;
+    }
+    
+    .submenu-item .user-info .user-name {
+        color: inherit !important;
+    }
+    
+    .submenu-item:hover .user-info .user-name,
+    .submenu-item:focus .user-info .user-name,
+    .submenu-item:active .user-info .user-name {
+        color: #fff !important;
+    }
+    
+    /* Hide the arrow on mobile since it's not a flyout */
+    #switchUserArrow {
+        display: none !important;
+    }
+    
+    /* Make the switch user item look more like a section header on mobile */
+    #switchUserToggle {
+        background-color: #e9ecef !important;
+        font-weight: 600 !important;
+        color: #495057 !important;
     }
 }
 
