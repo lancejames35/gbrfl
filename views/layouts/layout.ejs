@@ -125,16 +125,20 @@
             console.log('Initializing user switching submenu...');
             
             const submenuToggle = document.getElementById('switchUserToggle');
-            const submenuDropdown = document.getElementById('userSwitchSubmenu');
+            const desktopSubmenu = document.getElementById('userSwitchSubmenu');
+            const mobileUserList = document.getElementById('mobileUserList');
             const arrow = document.getElementById('switchUserArrow');
+            const mobileArrow = document.getElementById('switchUserArrowMobile');
             
             console.log('Elements found:', {
                 toggle: !!submenuToggle,
-                dropdown: !!submenuDropdown,
-                arrow: !!arrow
+                desktop: !!desktopSubmenu,
+                mobile: !!mobileUserList,
+                arrow: !!arrow,
+                mobileArrow: !!mobileArrow
             });
             
-            if (submenuToggle && submenuDropdown) {
+            if (submenuToggle) {
                 let isHoverMode = false;
                 let isMobileMenuOpen = false;
                 
@@ -155,29 +159,33 @@
                     e.stopPropagation();
                     
                     if (isMobile()) {
-                        // Mobile behavior: always toggle and stay open until explicitly closed
+                        // Mobile behavior: toggle inline user list
                         isMobileMenuOpen = !isMobileMenuOpen;
                         
-                        if (isMobileMenuOpen) {
-                            submenuDropdown.style.display = 'block';
-                            console.log('Opening mobile submenu');
-                            // Re-add touch handlers after opening
-                            setTimeout(() => addMobileTouchHandlers(), 100);
-                        } else {
-                            submenuDropdown.style.display = 'none';
-                            console.log('Closing mobile submenu');
+                        if (mobileUserList) {
+                            if (isMobileMenuOpen) {
+                                mobileUserList.style.display = 'block';
+                                if (mobileArrow) mobileArrow.classList.replace('bi-chevron-down', 'bi-chevron-up');
+                                console.log('Opening mobile user list');
+                            } else {
+                                mobileUserList.style.display = 'none';
+                                if (mobileArrow) mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
+                                console.log('Closing mobile user list');
+                            }
                         }
                     } else {
-                        // Desktop behavior: toggle visibility
-                        const isVisible = submenuDropdown.style.display === 'block';
-                        if (isVisible) {
-                            submenuDropdown.style.display = 'none';
-                            if (arrow) arrow.classList.remove('rotated');
-                            console.log('Hiding desktop submenu');
-                        } else {
-                            submenuDropdown.style.display = 'block';
-                            if (arrow) arrow.classList.add('rotated');
-                            console.log('Showing desktop submenu');
+                        // Desktop behavior: toggle flyout submenu
+                        if (desktopSubmenu) {
+                            const isVisible = desktopSubmenu.style.display === 'block';
+                            if (isVisible) {
+                                desktopSubmenu.style.display = 'none';
+                                if (arrow) arrow.classList.remove('rotated');
+                                console.log('Hiding desktop submenu');
+                            } else {
+                                desktopSubmenu.style.display = 'block';
+                                if (arrow) arrow.classList.add('rotated');
+                                console.log('Showing desktop submenu');
+                            }
                         }
                     }
                     
@@ -185,36 +193,36 @@
                 });
                 
                 // Handle hover for desktop only (not mobile)
-                if (supportsHover()) {
+                if (supportsHover() && desktopSubmenu) {
                     submenuToggle.parentElement.addEventListener('mouseenter', function() {
                         if (!isMobile() && !isHoverMode) {
                             setTimeout(() => {
-                                if (submenuDropdown.style.display !== 'block') {
-                                    submenuDropdown.style.display = 'block';
+                                if (desktopSubmenu.style.display !== 'block') {
+                                    desktopSubmenu.style.display = 'block';
                                     if (arrow) arrow.classList.add('rotated');
                                     isHoverMode = true;
                                 }
-                            }, 100); // Small delay to prevent accidental triggers
+                            }, 100);
                         }
                     });
                     
                     submenuToggle.parentElement.addEventListener('mouseleave', function() {
                         if (!isMobile() && isHoverMode) {
                             setTimeout(() => {
-                                if (!submenuDropdown.matches(':hover')) {
-                                    submenuDropdown.style.display = 'none';
+                                if (!desktopSubmenu.matches(':hover')) {
+                                    desktopSubmenu.style.display = 'none';
                                     if (arrow) arrow.classList.remove('rotated');
                                     isHoverMode = false;
                                 }
-                            }, 300); // Delay to allow moving to submenu
+                            }, 300);
                         }
                     });
                     
                     // Keep submenu open when hovering over it (desktop only)
-                    submenuDropdown.addEventListener('mouseleave', function() {
+                    desktopSubmenu.addEventListener('mouseleave', function() {
                         if (!isMobile() && isHoverMode) {
                             setTimeout(() => {
-                                submenuDropdown.style.display = 'none';
+                                desktopSubmenu.style.display = 'none';
                                 if (arrow) arrow.classList.remove('rotated');
                                 isHoverMode = false;
                             }, 100);
@@ -222,79 +230,58 @@
                     });
                 }
                 
-                // Close submenu when clicking outside (but be more careful on mobile)
+                // Close submenu when clicking outside
                 document.addEventListener('click', function(e) {
-                    if (!submenuToggle.parentElement.contains(e.target)) {
-                        submenuDropdown.style.display = 'none';
-                        if (arrow) arrow.classList.remove('rotated');
+                    const switchUserContainer = submenuToggle.parentElement;
+                    const isClickInside = switchUserContainer.contains(e.target) || 
+                                         (mobileUserList && mobileUserList.contains(e.target));
+                    
+                    if (!isClickInside) {
+                        // Close desktop submenu
+                        if (desktopSubmenu) {
+                            desktopSubmenu.style.display = 'none';
+                            if (arrow) arrow.classList.remove('rotated');
+                        }
+                        
+                        // Close mobile user list
+                        if (mobileUserList) {
+                            mobileUserList.style.display = 'none';
+                            if (mobileArrow) mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
+                        }
+                        
                         isHoverMode = false;
                         isMobileMenuOpen = false;
                     }
                 });
                 
                 // Prevent submenu from closing when clicking inside it
-                submenuDropdown.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                });
-                
-                // Function to add touch event handling for mobile submenu items
-                function addMobileTouchHandlers() {
-                    if (isMobile()) {
-                        console.log('Adding mobile touch event handlers');
-                        
-                        // Add touch feedback for all submenu items
-                        const submenuItems = submenuDropdown.querySelectorAll('.submenu-item');
-                        submenuItems.forEach(item => {
-                            // Remove any existing touch handlers first
-                            item.removeEventListener('touchstart', item._touchStartHandler);
-                            item.removeEventListener('touchend', item._touchEndHandler);
-                            item.removeEventListener('touchcancel', item._touchCancelHandler);
-                            
-                            // Touch start feedback
-                            item._touchStartHandler = function(e) {
-                                console.log('Touch start on:', this.textContent.trim());
-                                this.style.backgroundColor = '#007bff';
-                                this.style.color = '#fff';
-                            };
-                            
-                            // Touch end cleanup
-                            item._touchEndHandler = function(e) {
-                                const self = this;
-                                console.log('Touch end on:', this.textContent.trim());
-                                // Small delay to show visual feedback
-                                setTimeout(() => {
-                                    if (!self.matches(':hover')) {
-                                        self.style.backgroundColor = '';
-                                        self.style.color = '';
-                                    }
-                                }, 150);
-                            };
-                            
-                            // Touch cancel cleanup
-                            item._touchCancelHandler = function(e) {
-                                console.log('Touch cancel on:', this.textContent.trim());
-                                this.style.backgroundColor = '';
-                                this.style.color = '';
-                            };
-                            
-                            item.addEventListener('touchstart', item._touchStartHandler, { passive: true });
-                            item.addEventListener('touchend', item._touchEndHandler, { passive: true });
-                            item.addEventListener('touchcancel', item._touchCancelHandler, { passive: true });
-                        });
-                    }
+                if (desktopSubmenu) {
+                    desktopSubmenu.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                    });
                 }
                 
-                // Add touch handlers initially
-                addMobileTouchHandlers();
+                if (mobileUserList) {
+                    mobileUserList.addEventListener('click', function(e) {
+                        // Don't stop propagation for user items - let them work normally
+                        // Only stop propagation for container clicks
+                        if (e.target === this) {
+                            e.stopPropagation();
+                        }
+                    });
+                }
                 
-                // Handle window resize to reset mobile state
+                // Handle window resize
                 window.addEventListener('resize', function() {
                     if (isMobile()) {
-                        // Reset hover mode on mobile
-                        isHoverMode = false;
+                        // Hide desktop submenu on mobile
+                        if (desktopSubmenu) desktopSubmenu.style.display = 'none';
                         if (arrow) arrow.classList.remove('rotated');
+                        isHoverMode = false;
                     } else {
-                        // Reset mobile state on desktop
+                        // Hide mobile list on desktop
+                        if (mobileUserList) mobileUserList.style.display = 'none';
+                        if (mobileArrow) mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
                         isMobileMenuOpen = false;
                     }
                 });

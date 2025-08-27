@@ -128,9 +128,12 @@
                 <li class="position-relative">
                   <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" id="switchUserToggle">
                     <span><i class="bi bi-person-gear text-primary"></i> Switch User</span>
-                    <i class="bi bi-chevron-right" id="switchUserArrow"></i>
+                    <i class="bi bi-chevron-right d-none d-md-inline" id="switchUserArrow"></i>
+                    <i class="bi bi-chevron-down d-md-none" id="switchUserArrowMobile"></i>
                   </a>
-                  <div class="user-switch-submenu" id="userSwitchSubmenu" style="display: none;">
+                  
+                  <!-- Desktop submenu (flyout) -->
+                  <div class="user-switch-submenu d-none d-md-block" id="userSwitchSubmenu" style="display: none;">
                     <div class="submenu-content">
                       <% if (locals.allUsers && locals.allUsers.length > 0) { %>
                         <% locals.allUsers.forEach(targetUser => { %>
@@ -155,6 +158,31 @@
                     </div>
                   </div>
                 </li>
+                
+                <!-- Mobile user list (inline) -->
+                <div class="d-md-none" id="mobileUserList" style="display: none;">
+                  <% if (locals.allUsers && locals.allUsers.length > 0) { %>
+                    <% locals.allUsers.forEach(targetUser => { %>
+                      <% if (targetUser.user_id !== user.id) { %>
+                        <li>
+                          <a class="dropdown-item ps-4" href="#" 
+                             data-user-id="<%= targetUser.user_id %>" 
+                             data-user-name="<%= targetUser.first_name %> <%= targetUser.last_name %>"
+                             data-team-name="<%= targetUser.team_name || 'No Team' %>"
+                             onclick="switchToUserSafe(this)">
+                            <i class="bi bi-person-circle text-muted me-2"></i>
+                            <span class="fw-medium"><%= targetUser.first_name %> <%= targetUser.last_name %></span>
+                            <% if (targetUser.team_name) { %>
+                              <br><small class="text-muted ps-4">(<%= targetUser.team_name %>)</small>
+                            <% } %>
+                          </a>
+                        </li>
+                      <% } %>
+                    <% }); %>
+                  <% } else { %>
+                    <li><span class="dropdown-item-text ps-4 text-muted">No other users available</span></li>
+                  <% } %>
+                </div>
                 <li><hr class="dropdown-divider"></li>
               <% } %>
               
