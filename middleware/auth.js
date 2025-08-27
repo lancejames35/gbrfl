@@ -10,8 +10,30 @@ const db = require('../config/database');
 // Routes that should not be logged in activity logs to reduce noise
 const EXCLUDED_ROUTES = [
   '/api/notifications/unread-count',
-  '/api/server-time'
+  '/api/server-time',
+  '/api/notifications/count', // Also exclude variations
+  '/api/unread-count' // In case the route is different
 ];
+
+// Helper function to check if route should be excluded from logging
+function shouldExcludeFromLogging(url) {
+  // Get the pathname without query parameters
+  const path = url.split('?')[0];
+  
+  // Check if the path matches any excluded routes
+  const shouldExclude = EXCLUDED_ROUTES.some(excludedRoute => 
+    path === excludedRoute || 
+    path.startsWith(excludedRoute) ||
+    path.includes('unread-count') || // Catch any route with unread-count
+    path.includes('server-time') // Catch any route with server-time
+  );
+  
+  if (shouldExclude) {
+    console.log(`Excluding route from activity log: ${path}`);
+  }
+  
+  return shouldExclude;
+}
 
 /**
  * Middleware to authenticate JWT tokens
@@ -43,7 +65,7 @@ const authenticate = async (req, res, next) => {
     req.userId = decoded.userId;
     
     // Log user activity (skip excluded routes to reduce noise)
-    if (!EXCLUDED_ROUTES.includes(req.originalUrl)) {
+    if (!shouldExcludeFromLogging(req.originalUrl)) {
       await db.query(
         'INSERT INTO activity_logs (user_id, action_type, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)',
         [req.userId, 'API_ACCESS', 'ROUTE', null, `Accessed route: ${req.originalUrl}`]
@@ -127,7 +149,7 @@ const authenticateHybrid = async (req, res, next) => {
           req.userId = decoded.userId;
           
           // Log user activity only if userId is valid (skip excluded routes to reduce noise)
-          if (req.userId && !EXCLUDED_ROUTES.includes(req.originalUrl)) {
+          if (req.userId && !shouldExcludeFromLogging(req.originalUrl)) {
             await db.query(
               'INSERT INTO activity_logs (user_id, action_type, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)',
               [req.userId, 'API_ACCESS', 'ROUTE', null, `Accessed route: ${req.originalUrl}`]
@@ -148,7 +170,7 @@ const authenticateHybrid = async (req, res, next) => {
       req.userId = req.session.user.id;
       
       // Log user activity only if userId is valid (skip excluded routes to reduce noise)
-      if (req.userId && !EXCLUDED_ROUTES.includes(req.originalUrl)) {
+      if (req.userId && !shouldExcludeFromLogging(req.originalUrl)) {
         await db.query(
           'INSERT INTO activity_logs (user_id, action_type, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)',
           [req.userId, 'API_ACCESS', 'ROUTE', null, `Accessed route: ${req.originalUrl}`]
