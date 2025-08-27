@@ -7,6 +7,12 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const db = require('../config/database');
 
+// Routes that should not be logged in activity logs to reduce noise
+const EXCLUDED_ROUTES = [
+  '/api/notifications/unread-count',
+  '/api/server-time'
+];
+
 /**
  * Middleware to authenticate JWT tokens
  * @param {Object} req - Express request object
@@ -36,11 +42,13 @@ const authenticate = async (req, res, next) => {
     req.user = users[0];
     req.userId = decoded.userId;
     
-    // Log user activity
-    await db.query(
-      'INSERT INTO activity_logs (user_id, action_type, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)',
-      [req.userId, 'API_ACCESS', 'ROUTE', null, `Accessed route: ${req.originalUrl}`]
-    );
+    // Log user activity (skip excluded routes to reduce noise)
+    if (!EXCLUDED_ROUTES.includes(req.originalUrl)) {
+      await db.query(
+        'INSERT INTO activity_logs (user_id, action_type, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)',
+        [req.userId, 'API_ACCESS', 'ROUTE', null, `Accessed route: ${req.originalUrl}`]
+      );
+    }
     
     next();
   } catch (error) {
@@ -118,8 +126,8 @@ const authenticateHybrid = async (req, res, next) => {
           req.user = users[0];
           req.userId = decoded.userId;
           
-          // Log user activity only if userId is valid
-          if (req.userId) {
+          // Log user activity only if userId is valid (skip excluded routes to reduce noise)
+          if (req.userId && !EXCLUDED_ROUTES.includes(req.originalUrl)) {
             await db.query(
               'INSERT INTO activity_logs (user_id, action_type, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)',
               [req.userId, 'API_ACCESS', 'ROUTE', null, `Accessed route: ${req.originalUrl}`]
@@ -139,8 +147,8 @@ const authenticateHybrid = async (req, res, next) => {
       req.user = req.session.user;
       req.userId = req.session.user.id;
       
-      // Log user activity only if userId is valid
-      if (req.userId) {
+      // Log user activity only if userId is valid (skip excluded routes to reduce noise)
+      if (req.userId && !EXCLUDED_ROUTES.includes(req.originalUrl)) {
         await db.query(
           'INSERT INTO activity_logs (user_id, action_type, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)',
           [req.userId, 'API_ACCESS', 'ROUTE', null, `Accessed route: ${req.originalUrl}`]

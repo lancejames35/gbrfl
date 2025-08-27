@@ -86,9 +86,11 @@
                                                 <td><%= player.position %></td>
                                                 <td>
                                                     <% if (player.team_code) { %>
-                                                        <%= player.team_code %> - <%= player.team_name %>
+                                                        <span class="d-none d-md-inline"><%= player.team_code %> - <%= player.team_name %></span>
+                                                        <span class="d-md-none"><%= player.team_code %></span>
                                                     <% } else { %>
-                                                        <span class="text-muted">Free Agent</span>
+                                                        <span class="text-muted d-none d-md-inline">Free Agent</span>
+                                                        <span class="text-muted d-md-none">FA</span>
                                                     <% } %>
                                                 </td>
                                                 <td>

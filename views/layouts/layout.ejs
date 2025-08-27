@@ -135,13 +135,20 @@
             });
             
             if (submenuToggle && submenuDropdown) {
+                let isHoverMode = false;
+                
+                // Function to check if device supports hover
+                function supportsHover() {
+                    return window.matchMedia('(hover: hover)').matches;
+                }
+                
                 // Click handler for submenu toggle
                 submenuToggle.addEventListener('click', function(e) {
                     console.log('Switch User clicked!');
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    // Toggle submenu visibility
+                    // For touch devices or explicit click, always toggle
                     const isVisible = submenuDropdown.style.display === 'block';
                     if (isVisible) {
                         submenuDropdown.style.display = 'none';
@@ -152,28 +159,54 @@
                         if (arrow) arrow.classList.add('rotated');
                         console.log('Showing submenu');
                     }
+                    
+                    isHoverMode = false; // Disable hover mode after click
                 });
                 
-                // Handle hover for desktop
-                submenuToggle.parentElement.addEventListener('mouseenter', function() {
-                    if (window.innerWidth > 768) {
-                        submenuDropdown.style.display = 'block';
-                        if (arrow) arrow.classList.add('rotated');
-                    }
-                });
-                
-                submenuToggle.parentElement.addEventListener('mouseleave', function() {
-                    if (window.innerWidth > 768) {
-                        submenuDropdown.style.display = 'none';
-                        if (arrow) arrow.classList.remove('rotated');
-                    }
-                });
+                // Handle hover for desktop (only if device supports hover)
+                if (supportsHover()) {
+                    submenuToggle.parentElement.addEventListener('mouseenter', function() {
+                        if (window.innerWidth > 768 && !isHoverMode) {
+                            setTimeout(() => {
+                                if (submenuDropdown.style.display !== 'block') {
+                                    submenuDropdown.style.display = 'block';
+                                    if (arrow) arrow.classList.add('rotated');
+                                    isHoverMode = true;
+                                }
+                            }, 100); // Small delay to prevent accidental triggers
+                        }
+                    });
+                    
+                    submenuToggle.parentElement.addEventListener('mouseleave', function() {
+                        if (window.innerWidth > 768 && isHoverMode) {
+                            setTimeout(() => {
+                                if (!submenuDropdown.matches(':hover')) {
+                                    submenuDropdown.style.display = 'none';
+                                    if (arrow) arrow.classList.remove('rotated');
+                                    isHoverMode = false;
+                                }
+                            }, 300); // Delay to allow moving to submenu
+                        }
+                    });
+                    
+                    // Keep submenu open when hovering over it
+                    submenuDropdown.addEventListener('mouseleave', function() {
+                        if (window.innerWidth > 768 && isHoverMode) {
+                            setTimeout(() => {
+                                submenuDropdown.style.display = 'none';
+                                if (arrow) arrow.classList.remove('rotated');
+                                isHoverMode = false;
+                            }, 100);
+                        }
+                    });
+                }
                 
                 // Close submenu when clicking outside
                 document.addEventListener('click', function(e) {
                     if (!submenuToggle.parentElement.contains(e.target)) {
                         submenuDropdown.style.display = 'none';
                         if (arrow) arrow.classList.remove('rotated');
+                        isHoverMode = false;
                     }
                 });
                 
