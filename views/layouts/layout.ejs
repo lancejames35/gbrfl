@@ -125,27 +125,17 @@
             console.log('Initializing user switching submenu...');
             
             const submenuToggle = document.getElementById('switchUserToggle');
-            const desktopSubmenu = document.getElementById('userSwitchSubmenu');
-            const mobileUserItems = document.querySelectorAll('.mobile-user-item');
+            const submenuDropdown = document.getElementById('userSwitchSubmenu');
             const arrow = document.getElementById('switchUserArrow');
-            const mobileArrow = document.getElementById('switchUserArrowMobile');
             
             console.log('Elements found:', {
                 toggle: !!submenuToggle,
-                desktop: !!desktopSubmenu,
-                mobileItems: mobileUserItems.length,
-                arrow: !!arrow,
-                mobileArrow: !!mobileArrow
+                dropdown: !!submenuDropdown,
+                arrow: !!arrow
             });
             
-            if (submenuToggle) {
+            if (submenuToggle && submenuDropdown) {
                 let isHoverMode = false;
-                let isMobileMenuOpen = false;
-                
-                // Function to check if we're on mobile
-                function isMobile() {
-                    return window.innerWidth <= 768;
-                }
                 
                 // Function to check if device supports hover
                 function supportsHover() {
@@ -154,96 +144,69 @@
                 
                 // Click handler for submenu toggle
                 submenuToggle.addEventListener('click', function(e) {
-                    console.log('=== SWITCH USER DEBUG ===');
-                    console.log('Mobile detected:', isMobile());
-                    console.log('Window width:', window.innerWidth);
-                    console.log('Mobile user items found:', mobileUserItems.length);
-                    console.log('desktopSubmenu exists:', !!desktopSubmenu);
-                    console.log('Event target:', e.target);
-                    console.log('Event currentTarget:', e.currentTarget);
-                    console.log('isMobileMenuOpen before:', isMobileMenuOpen);
-                    console.log('=========================');
-                    
+                    console.log('Switch User clicked!');
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    if (isMobile()) {
-                        // Mobile behavior: toggle inline user list items
-                        isMobileMenuOpen = !isMobileMenuOpen;
-                        
-                        console.log('Toggling mobile menu to:', isMobileMenuOpen);
-                        console.log('Mobile user items to toggle:', mobileUserItems.length);
-                        
-                        mobileUserItems.forEach(item => {
-                            if (isMobileMenuOpen) {
-                                item.style.display = 'block';
-                                console.log('Showing item:', item.textContent.trim());
-                            } else {
-                                item.style.display = 'none';
-                                console.log('Hiding item:', item.textContent.trim());
-                            }
-                        });
-                        
-                        // Update arrow
-                        if (mobileArrow) {
-                            if (isMobileMenuOpen) {
-                                mobileArrow.classList.replace('bi-chevron-down', 'bi-chevron-up');
-                            } else {
-                                mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
-                            }
+                    // Check if we're on mobile
+                    if (window.innerWidth <= 768) {
+                        // On mobile: open modal instead of submenu
+                        console.log('Mobile detected - opening modal');
+                        const switchUserModal = document.getElementById('switchUserModal');
+                        if (switchUserModal) {
+                            const modal = new bootstrap.Modal(switchUserModal);
+                            modal.show();
+                        } else {
+                            console.log('Modal not found - user might not be admin');
                         }
-                        
-                        console.log('Mobile menu toggle complete');
                     } else {
-                        // Desktop behavior: toggle flyout submenu
-                        if (desktopSubmenu) {
-                            const isVisible = desktopSubmenu.style.display === 'block';
-                            if (isVisible) {
-                                desktopSubmenu.style.display = 'none';
-                                if (arrow) arrow.classList.remove('rotated');
-                                console.log('Hiding desktop submenu');
-                            } else {
-                                desktopSubmenu.style.display = 'block';
-                                if (arrow) arrow.classList.add('rotated');
-                                console.log('Showing desktop submenu');
-                            }
+                        // On desktop: toggle submenu
+                        const isVisible = submenuDropdown.style.display === 'block';
+                        if (isVisible) {
+                            submenuDropdown.style.display = 'none';
+                            if (arrow) arrow.classList.remove('rotated');
+                            console.log('Hiding submenu');
+                        } else {
+                            submenuDropdown.style.display = 'block';
+                            if (arrow) arrow.classList.add('rotated');
+                            console.log('Showing submenu');
                         }
                     }
                     
                     isHoverMode = false; // Disable hover mode after click
                 });
                 
-                // Handle hover for desktop only (not mobile)
-                if (supportsHover() && desktopSubmenu) {
+                // Handle hover for desktop (only if device supports hover)
+                if (supportsHover()) {
                     submenuToggle.parentElement.addEventListener('mouseenter', function() {
-                        if (!isMobile() && !isHoverMode) {
+                        if (window.innerWidth > 768 && !isHoverMode) {
                             setTimeout(() => {
-                                if (desktopSubmenu.style.display !== 'block') {
-                                    desktopSubmenu.style.display = 'block';
+                                if (submenuDropdown.style.display !== 'block') {
+                                    submenuDropdown.style.display = 'block';
                                     if (arrow) arrow.classList.add('rotated');
                                     isHoverMode = true;
                                 }
-                            }, 100);
+                            }, 100); // Small delay to prevent accidental triggers
                         }
                     });
                     
                     submenuToggle.parentElement.addEventListener('mouseleave', function() {
-                        if (!isMobile() && isHoverMode) {
+                        if (window.innerWidth > 768 && isHoverMode) {
                             setTimeout(() => {
-                                if (!desktopSubmenu.matches(':hover')) {
-                                    desktopSubmenu.style.display = 'none';
+                                if (!submenuDropdown.matches(':hover')) {
+                                    submenuDropdown.style.display = 'none';
                                     if (arrow) arrow.classList.remove('rotated');
                                     isHoverMode = false;
                                 }
-                            }, 300);
+                            }, 300); // Delay to allow moving to submenu
                         }
                     });
                     
-                    // Keep submenu open when hovering over it (desktop only)
-                    desktopSubmenu.addEventListener('mouseleave', function() {
-                        if (!isMobile() && isHoverMode) {
+                    // Keep submenu open when hovering over it
+                    submenuDropdown.addEventListener('mouseleave', function() {
+                        if (window.innerWidth > 768 && isHoverMode) {
                             setTimeout(() => {
-                                desktopSubmenu.style.display = 'none';
+                                submenuDropdown.style.display = 'none';
                                 if (arrow) arrow.classList.remove('rotated');
                                 isHoverMode = false;
                             }, 100);
@@ -253,63 +216,16 @@
                 
                 // Close submenu when clicking outside
                 document.addEventListener('click', function(e) {
-                    const switchUserContainer = submenuToggle.parentElement;
-                    
-                    // Check if click is on any mobile user item
-                    let isClickOnMobileItem = false;
-                    mobileUserItems.forEach(item => {
-                        if (item.contains(e.target)) {
-                            isClickOnMobileItem = true;
-                        }
-                    });
-                    
-                    const isClickInside = switchUserContainer.contains(e.target) || isClickOnMobileItem;
-                    
-                    if (!isClickInside) {
-                        // Close desktop submenu
-                        if (desktopSubmenu) {
-                            desktopSubmenu.style.display = 'none';
-                            if (arrow) arrow.classList.remove('rotated');
-                        }
-                        
-                        // Close mobile user list
-                        mobileUserItems.forEach(item => {
-                            item.style.display = 'none';
-                        });
-                        if (mobileArrow) {
-                            mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
-                        }
-                        
+                    if (!submenuToggle.parentElement.contains(e.target)) {
+                        submenuDropdown.style.display = 'none';
+                        if (arrow) arrow.classList.remove('rotated');
                         isHoverMode = false;
-                        isMobileMenuOpen = false;
                     }
                 });
                 
                 // Prevent submenu from closing when clicking inside it
-                if (desktopSubmenu) {
-                    desktopSubmenu.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                    });
-                }
-                
-                // Mobile user items don't need special click handling
-                // They're regular dropdown items that should work normally
-                
-                // Handle window resize
-                window.addEventListener('resize', function() {
-                    if (isMobile()) {
-                        // Hide desktop submenu on mobile
-                        if (desktopSubmenu) desktopSubmenu.style.display = 'none';
-                        if (arrow) arrow.classList.remove('rotated');
-                        isHoverMode = false;
-                    } else {
-                        // Hide mobile list on desktop
-                        mobileUserItems.forEach(item => {
-                            item.style.display = 'none';
-                        });
-                        if (mobileArrow) mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
-                        isMobileMenuOpen = false;
-                    }
+                submenuDropdown.addEventListener('click', function(e) {
+                    e.stopPropagation();
                 });
                 
                 console.log('User switching submenu functionality loaded successfully');

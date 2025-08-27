@@ -124,15 +124,13 @@
                   </div>
                 </li>
                 
-                <!-- User switching submenu -->
+                <!-- User switching submenu - Desktop uses flyout, Mobile uses modal -->
                 <li class="position-relative">
                   <a class="dropdown-item d-flex justify-content-between align-items-center" href="#" id="switchUserToggle">
                     <span><i class="bi bi-person-gear text-primary"></i> Switch User</span>
                     <i class="bi bi-chevron-right d-none d-md-inline" id="switchUserArrow"></i>
-                    <i class="bi bi-chevron-down d-md-none" id="switchUserArrowMobile"></i>
                   </a>
-                  
-                  <!-- Desktop submenu (flyout) -->
+                  <!-- Desktop only: flyout submenu -->
                   <div class="user-switch-submenu d-none d-md-block" id="userSwitchSubmenu" style="display: none;">
                     <div class="submenu-content">
                       <% if (locals.allUsers && locals.allUsers.length > 0) { %>
@@ -158,31 +156,6 @@
                     </div>
                   </div>
                 </li>
-                
-                <!-- Mobile user list (inline) - properly structured as list items -->
-                <% if (locals.allUsers && locals.allUsers.length > 0) { %>
-                  <% locals.allUsers.forEach(targetUser => { %>
-                    <% if (targetUser.user_id !== user.id) { %>
-                      <li class="mobile-user-item d-md-none" style="display: none;">
-                        <a class="dropdown-item ps-4" href="#" 
-                           data-user-id="<%= targetUser.user_id %>" 
-                           data-user-name="<%= targetUser.first_name %> <%= targetUser.last_name %>"
-                           data-team-name="<%= targetUser.team_name || 'No Team' %>"
-                           onclick="switchToUserSafe(this)">
-                          <i class="bi bi-person-circle text-muted me-2"></i>
-                          <span class="fw-medium"><%= targetUser.first_name %> <%= targetUser.last_name %></span>
-                          <% if (targetUser.team_name) { %>
-                            <br><small class="text-muted ps-4">(<%= targetUser.team_name %>)</small>
-                          <% } %>
-                        </a>
-                      </li>
-                    <% } %>
-                  <% }); %>
-                <% } else { %>
-                  <li class="mobile-user-item d-md-none" style="display: none;">
-                    <span class="dropdown-item-text ps-4 text-muted">No other users available</span>
-                  </li>
-                <% } %>
                 <li><hr class="dropdown-divider"></li>
               <% } %>
               
@@ -206,3 +179,98 @@
     </div>
   </div>
 </header>
+
+<!-- Mobile Switch User Modal -->
+<% if (locals.user && user && user.isAdmin && locals.allUsers) { %>
+<div class="modal fade" id="switchUserModal" tabindex="-1" aria-labelledby="switchUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="switchUserModalLabel">
+          <i class="bi bi-person-gear me-2"></i>Switch User
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="list-group list-group-flush">
+          <% if (locals.allUsers && locals.allUsers.length > 0) { %>
+            <% locals.allUsers.forEach(targetUser => { %>
+              <% if (targetUser.user_id !== user.id) { %>
+                <a href="#" class="list-group-item list-group-item-action py-3" 
+                   data-user-id="<%= targetUser.user_id %>" 
+                   data-user-name="<%= targetUser.first_name %> <%= targetUser.last_name %>"
+                   data-team-name="<%= targetUser.team_name || 'No Team' %>"
+                   onclick="switchToUserFromModal(this); return false;">
+                  <div class="d-flex w-100 justify-content-between align-items-center">
+                    <div>
+                      <div class="d-flex align-items-center mb-1">
+                        <i class="bi bi-person-circle fs-4 me-3 text-primary"></i>
+                        <h6 class="mb-0"><%= targetUser.first_name %> <%= targetUser.last_name %></h6>
+                      </div>
+                      <% if (targetUser.team_name) { %>
+                        <small class="text-muted ms-5">
+                          <i class="bi bi-people-fill me-1"></i><%= targetUser.team_name %>
+                        </small>
+                      <% } else { %>
+                        <small class="text-muted ms-5">
+                          <i class="bi bi-dash-circle me-1"></i>No team assigned
+                        </small>
+                      <% } %>
+                    </div>
+                    <i class="bi bi-arrow-right-circle text-muted"></i>
+                  </div>
+                </a>
+              <% } %>
+            <% }); %>
+          <% } else { %>
+            <div class="list-group-item text-center text-muted py-4">
+              <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
+              No other users available
+            </div>
+          <% } %>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Function to switch user from modal
+  function switchToUserFromModal(element) {
+    const userId = element.getAttribute('data-user-id');
+    const userName = element.getAttribute('data-user-name');
+    const teamName = element.getAttribute('data-team-name');
+    
+    const displayName = teamName && teamName !== 'No Team' ? 
+        `${userName} (${teamName})` : userName;
+    
+    if (!confirm(`Switch to user: ${displayName}?`)) return;
+    
+    // Close the modal first
+    const modal = bootstrap.Modal.getInstance(document.getElementById('switchUserModal'));
+    if (modal) modal.hide();
+    
+    // Then perform the switch
+    fetch('/admin/switch-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: parseInt(userId) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(`Error switching user: ${data.message}`);
+        }
+    })
+    .catch(error => {
+        console.error('Switch user error:', error);
+        alert('Error switching user');
+    });
+  }
+</script>
+<% } %>
