@@ -126,14 +126,14 @@
             
             const submenuToggle = document.getElementById('switchUserToggle');
             const desktopSubmenu = document.getElementById('userSwitchSubmenu');
-            const mobileUserList = document.getElementById('mobileUserList');
+            const mobileUserItems = document.querySelectorAll('.mobile-user-item');
             const arrow = document.getElementById('switchUserArrow');
             const mobileArrow = document.getElementById('switchUserArrowMobile');
             
             console.log('Elements found:', {
                 toggle: !!submenuToggle,
                 desktop: !!desktopSubmenu,
-                mobile: !!mobileUserList,
+                mobileItems: mobileUserItems.length,
                 arrow: !!arrow,
                 mobileArrow: !!mobileArrow
             });
@@ -154,25 +154,46 @@
                 
                 // Click handler for submenu toggle
                 submenuToggle.addEventListener('click', function(e) {
-                    console.log('Switch User clicked! Mobile:', isMobile());
+                    console.log('=== SWITCH USER DEBUG ===');
+                    console.log('Mobile detected:', isMobile());
+                    console.log('Window width:', window.innerWidth);
+                    console.log('Mobile user items found:', mobileUserItems.length);
+                    console.log('desktopSubmenu exists:', !!desktopSubmenu);
+                    console.log('Event target:', e.target);
+                    console.log('Event currentTarget:', e.currentTarget);
+                    console.log('isMobileMenuOpen before:', isMobileMenuOpen);
+                    console.log('=========================');
+                    
                     e.preventDefault();
                     e.stopPropagation();
                     
                     if (isMobile()) {
-                        // Mobile behavior: toggle inline user list
+                        // Mobile behavior: toggle inline user list items
                         isMobileMenuOpen = !isMobileMenuOpen;
                         
-                        if (mobileUserList) {
+                        console.log('Toggling mobile menu to:', isMobileMenuOpen);
+                        console.log('Mobile user items to toggle:', mobileUserItems.length);
+                        
+                        mobileUserItems.forEach(item => {
                             if (isMobileMenuOpen) {
-                                mobileUserList.style.display = 'block';
-                                if (mobileArrow) mobileArrow.classList.replace('bi-chevron-down', 'bi-chevron-up');
-                                console.log('Opening mobile user list');
+                                item.style.display = 'block';
+                                console.log('Showing item:', item.textContent.trim());
                             } else {
-                                mobileUserList.style.display = 'none';
-                                if (mobileArrow) mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
-                                console.log('Closing mobile user list');
+                                item.style.display = 'none';
+                                console.log('Hiding item:', item.textContent.trim());
+                            }
+                        });
+                        
+                        // Update arrow
+                        if (mobileArrow) {
+                            if (isMobileMenuOpen) {
+                                mobileArrow.classList.replace('bi-chevron-down', 'bi-chevron-up');
+                            } else {
+                                mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
                             }
                         }
+                        
+                        console.log('Mobile menu toggle complete');
                     } else {
                         // Desktop behavior: toggle flyout submenu
                         if (desktopSubmenu) {
@@ -233,8 +254,16 @@
                 // Close submenu when clicking outside
                 document.addEventListener('click', function(e) {
                     const switchUserContainer = submenuToggle.parentElement;
-                    const isClickInside = switchUserContainer.contains(e.target) || 
-                                         (mobileUserList && mobileUserList.contains(e.target));
+                    
+                    // Check if click is on any mobile user item
+                    let isClickOnMobileItem = false;
+                    mobileUserItems.forEach(item => {
+                        if (item.contains(e.target)) {
+                            isClickOnMobileItem = true;
+                        }
+                    });
+                    
+                    const isClickInside = switchUserContainer.contains(e.target) || isClickOnMobileItem;
                     
                     if (!isClickInside) {
                         // Close desktop submenu
@@ -244,9 +273,11 @@
                         }
                         
                         // Close mobile user list
-                        if (mobileUserList) {
-                            mobileUserList.style.display = 'none';
-                            if (mobileArrow) mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
+                        mobileUserItems.forEach(item => {
+                            item.style.display = 'none';
+                        });
+                        if (mobileArrow) {
+                            mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
                         }
                         
                         isHoverMode = false;
@@ -261,15 +292,8 @@
                     });
                 }
                 
-                if (mobileUserList) {
-                    mobileUserList.addEventListener('click', function(e) {
-                        // Don't stop propagation for user items - let them work normally
-                        // Only stop propagation for container clicks
-                        if (e.target === this) {
-                            e.stopPropagation();
-                        }
-                    });
-                }
+                // Mobile user items don't need special click handling
+                // They're regular dropdown items that should work normally
                 
                 // Handle window resize
                 window.addEventListener('resize', function() {
@@ -280,7 +304,9 @@
                         isHoverMode = false;
                     } else {
                         // Hide mobile list on desktop
-                        if (mobileUserList) mobileUserList.style.display = 'none';
+                        mobileUserItems.forEach(item => {
+                            item.style.display = 'none';
+                        });
                         if (mobileArrow) mobileArrow.classList.replace('bi-chevron-up', 'bi-chevron-down');
                         isMobileMenuOpen = false;
                     }

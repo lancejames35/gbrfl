@@ -176,14 +176,13 @@ footer {
 }
 
 /* Mobile user list styling */
-#mobileUserList {
+.mobile-user-item {
     background-color: #f8f9fa;
     border-left: 3px solid #007bff;
 }
 
-#mobileUserList .dropdown-item {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid #e9ecef;
+.mobile-user-item .dropdown-item {
+    padding: 0.75rem 1rem 0.75rem 2rem;
     min-height: 50px;
     display: flex;
     align-items: center;
@@ -191,26 +190,23 @@ footer {
     touch-action: manipulation;
 }
 
-#mobileUserList .dropdown-item:last-child {
-    border-bottom: none;
-}
-
-#mobileUserList .dropdown-item:hover,
-#mobileUserList .dropdown-item:focus,
-#mobileUserList .dropdown-item:active {
+.mobile-user-item .dropdown-item:hover,
+.mobile-user-item .dropdown-item:focus,
+.mobile-user-item .dropdown-item:active {
     background-color: #007bff;
     color: #fff;
 }
 
-#mobileUserList .dropdown-item:hover small,
-#mobileUserList .dropdown-item:focus small,
-#mobileUserList .dropdown-item:active small {
+.mobile-user-item .dropdown-item:hover small,
+.mobile-user-item .dropdown-item:focus small,
+.mobile-user-item .dropdown-item:active small {
     color: rgba(255, 255, 255, 0.8) !important;
 }
 
-/* Smooth transitions for mobile user list */
-#mobileUserList {
-    transition: all 0.2s ease-in-out;
+.mobile-user-item .dropdown-item:hover i,
+.mobile-user-item .dropdown-item:focus i,
+.mobile-user-item .dropdown-item:active i {
+    color: #fff !important;
 }
 
 /* Mobile arrow animation */

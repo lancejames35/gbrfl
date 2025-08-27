@@ -159,30 +159,30 @@
                   </div>
                 </li>
                 
-                <!-- Mobile user list (inline) -->
-                <div class="d-md-none" id="mobileUserList" style="display: none;">
-                  <% if (locals.allUsers && locals.allUsers.length > 0) { %>
-                    <% locals.allUsers.forEach(targetUser => { %>
-                      <% if (targetUser.user_id !== user.id) { %>
-                        <li>
-                          <a class="dropdown-item ps-4" href="#" 
-                             data-user-id="<%= targetUser.user_id %>" 
-                             data-user-name="<%= targetUser.first_name %> <%= targetUser.last_name %>"
-                             data-team-name="<%= targetUser.team_name || 'No Team' %>"
-                             onclick="switchToUserSafe(this)">
-                            <i class="bi bi-person-circle text-muted me-2"></i>
-                            <span class="fw-medium"><%= targetUser.first_name %> <%= targetUser.last_name %></span>
-                            <% if (targetUser.team_name) { %>
-                              <br><small class="text-muted ps-4">(<%= targetUser.team_name %>)</small>
-                            <% } %>
-                          </a>
-                        </li>
-                      <% } %>
-                    <% }); %>
-                  <% } else { %>
-                    <li><span class="dropdown-item-text ps-4 text-muted">No other users available</span></li>
-                  <% } %>
-                </div>
+                <!-- Mobile user list (inline) - properly structured as list items -->
+                <% if (locals.allUsers && locals.allUsers.length > 0) { %>
+                  <% locals.allUsers.forEach(targetUser => { %>
+                    <% if (targetUser.user_id !== user.id) { %>
+                      <li class="mobile-user-item d-md-none" style="display: none;">
+                        <a class="dropdown-item ps-4" href="#" 
+                           data-user-id="<%= targetUser.user_id %>" 
+                           data-user-name="<%= targetUser.first_name %> <%= targetUser.last_name %>"
+                           data-team-name="<%= targetUser.team_name || 'No Team' %>"
+                           onclick="switchToUserSafe(this)">
+                          <i class="bi bi-person-circle text-muted me-2"></i>
+                          <span class="fw-medium"><%= targetUser.first_name %> <%= targetUser.last_name %></span>
+                          <% if (targetUser.team_name) { %>
+                            <br><small class="text-muted ps-4">(<%= targetUser.team_name %>)</small>
+                          <% } %>
+                        </a>
+                      </li>
+                    <% } %>
+                  <% }); %>
+                <% } else { %>
+                  <li class="mobile-user-item d-md-none" style="display: none;">
+                    <span class="dropdown-item-text ps-4 text-muted">No other users available</span>
+                  </li>
+                <% } %>
                 <li><hr class="dropdown-divider"></li>
               <% } %>
               
