@@ -10,6 +10,7 @@ const WeeklySchedule = require('../models/WeeklySchedule');
 const ScheduleNote = require('../models/ScheduleNote');
 const FantasyTeam = require('../models/FantasyTeam');
 const User = require('../models/user');
+const db = require('../config/database');
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
@@ -279,6 +280,10 @@ exports.addPlayer = async (req, res) => {
     
     // Add player to database
     const playerId = await Player.create(player);
+    
+    if (!playerId) {
+      throw new Error('Player creation failed - no ID returned');
+    }
     
     req.flash('success_msg', `Player ${player.displayName} added successfully`);
     res.redirect('/admin/players');
@@ -1189,3 +1194,248 @@ exports.deleteScheduleNote = async (req, res) => {
     });
   }
 };
+
+/**
+ * Display draft order management page
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getDraftOrder = async (req, res) => {
+  try {
+    // Get teams in their current draft order (based on round 1 positions)
+    const teams = await db.query(`
+      SELECT DISTINCT ft.team_id, ft.team_name, ft.user_id, u.username, u.first_name, u.last_name,
+             do.pick_number as draft_position
+      FROM draft_order do
+      JOIN fantasy_teams ft ON do.original_team_id = ft.team_id
+      JOIN users u ON ft.user_id = u.user_id 
+      WHERE do.season = 2025 AND do.round = 1
+      ORDER BY do.pick_number
+    `);
+    
+    // Get current draft order with calculated overall pick
+    const draftOrder = await db.query(`
+      SELECT do.*, 
+             ft.team_name as current_team_name,
+             orig_ft.team_name as original_team_name,
+             ((do.round - 1) * 10 + do.pick_number) as overall_pick
+      FROM draft_order do 
+      LEFT JOIN fantasy_teams ft ON do.fantasy_team_id = ft.team_id
+      LEFT JOIN fantasy_teams orig_ft ON do.original_team_id = orig_ft.team_id
+      WHERE do.season = 2025 
+      ORDER BY do.round, do.pick_number
+    `);
+    
+    // Get league settings for round count
+    const leagueSettings = await db.query(`
+      SELECT draft_rounds, teams_count FROM league_settings 
+      WHERE season_year = 2025
+    `);
+    
+    res.render('admin/draft-order', {
+      teams,
+      draftOrder,
+      rounds: leagueSettings[0]?.draft_rounds || 9,
+      teamsCount: leagueSettings[0]?.teams_count || 10,
+      title: 'Draft Order Management'
+    });
+  } catch (error) {
+    console.error('Error loading draft order page:', error);
+    req.flash('error_msg', 'Error loading draft order page');
+    res.redirect('/admin');
+  }
+};
+
+/**
+ * Get draft order data as JSON
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getDraftOrderData = async (req, res) => {
+  try {
+    // Get teams with user info
+    const teams = await db.query(`
+      SELECT ft.team_id, ft.team_name, ft.user_id, u.username, u.first_name, u.last_name
+      FROM fantasy_teams ft 
+      JOIN users u ON ft.user_id = u.user_id 
+      ORDER BY ft.team_id
+    `);
+    
+    // Get current draft order and traded picks
+    const draftOrder = await db.query(`
+      SELECT do.*,
+             ft.team_name as current_team_name,
+             orig_ft.team_name as original_team_name,
+             ((do.round - 1) * 10 + do.pick_number) as overall_pick
+      FROM draft_order do 
+      LEFT JOIN fantasy_teams ft ON do.fantasy_team_id = ft.team_id
+      LEFT JOIN fantasy_teams orig_ft ON do.original_team_id = orig_ft.team_id
+      WHERE season = 2025 
+      ORDER BY round, pick_number
+    `);
+    
+    // Get league settings for round count
+    const leagueSettings = await db.query(`
+      SELECT draft_rounds, teams_count FROM league_settings 
+      WHERE season_year = 2025
+    `);
+    
+    res.json({
+      success: true,
+      teams,
+      draftOrder,
+      rounds: leagueSettings[0]?.draft_rounds || 9,
+      teamsCount: leagueSettings[0]?.teams_count || 10
+    });
+  } catch (error) {
+    console.error('Error getting draft order data:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Update draft order with new team positions
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.updateDraftOrder = async (req, res) => {
+  try {
+    const { teamOrder } = req.body; // Array of team_ids in new draft position order
+    
+    if (!Array.isArray(teamOrder) || teamOrder.length !== 10) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid team order. Must provide exactly 10 teams.' 
+      });
+    }
+    
+    // Get league settings
+    const [settings] = await db.query(`
+      SELECT draft_rounds, teams_count FROM league_settings 
+      WHERE season_year = 2025
+    `);
+    
+    const { draft_rounds, teams_count } = settings;
+    
+    // Get a connection from the pool for transaction handling
+    const connection = await db.pool.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+      
+      // Get current draft order with all picks and their ownership
+      const [allPicks] = await connection.execute(`
+        SELECT * FROM draft_order 
+        WHERE season = 2025 
+        ORDER BY round, pick_number
+      `);
+      
+      // Create a mapping: team_id -> new position (1-10)
+      const teamToNewPosition = {};
+      teamOrder.forEach((teamId, index) => {
+        teamToNewPosition[teamId] = index + 1; // 1-indexed positions
+      });
+      
+      console.log('Team position mapping:', teamToNewPosition);
+      
+      // Build a map of all current trades (team X's round Y pick -> owner)
+      const tradeMap = {};
+      for (const pick of allPicks) {
+        if (pick.fantasy_team_id !== pick.original_team_id) {
+          const key = `${pick.original_team_id}_${pick.round}`;
+          tradeMap[key] = pick.fantasy_team_id;
+        }
+      }
+      
+      console.log('Current trades:', tradeMap);
+      
+      // Create a new draft order structure
+      const newDraftOrder = [];
+      
+      // For each round and position, determine what should be there
+      for (let round = 1; round <= draft_rounds; round++) {
+        for (let position = 1; position <= teams_count; position++) {
+          // The team now assigned to this position
+          const newTeamAtPosition = teamOrder[position - 1]; // teamOrder is 0-indexed
+          
+          // Check if this team's pick for this round was traded
+          const tradeKey = `${newTeamAtPosition}_${round}`;
+          const currentOwner = tradeMap[tradeKey] || newTeamAtPosition;
+          
+          newDraftOrder.push({
+            round,
+            pick_number: position,
+            original_team_id: newTeamAtPosition,
+            fantasy_team_id: currentOwner
+          });
+        }
+      }
+      
+      // Clear existing draft order and rebuild
+      await connection.execute('DELETE FROM draft_order WHERE season = 2025');
+      
+      // Insert new draft order
+      for (const pick of newDraftOrder) {
+        await connection.execute(`
+          INSERT INTO draft_order (round, pick_number, fantasy_team_id, original_team_id, season)
+          VALUES (?, ?, ?, ?, 2025)
+        `, [pick.round, pick.pick_number, pick.fantasy_team_id, pick.original_team_id]);
+      }
+      
+      await connection.commit();
+      
+      // Log the changes for verification
+      const tradedPicksCount = allPicks.filter(p => p.fantasy_team_id !== p.original_team_id).length;
+      console.log(`Draft order updated. ${tradedPicksCount} traded picks preserved.`);
+      
+      res.json({ 
+        success: true, 
+        message: `Draft order updated successfully. ${tradedPicksCount} traded picks moved with their original teams.` 
+      });
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error('Error updating draft order:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Display player audit interface
+ * @param {Object} req - Express request object  
+ * @param {Object} res - Express response object
+ */
+exports.getPlayerAudit = async (req, res) => {
+  try {
+    res.render('admin/player-audit', {
+      title: 'Player Team Audit',
+      activePage: 'admin',
+      user: req.session.user
+    });
+  } catch (error) {
+    console.error('Error getting player audit:', error);
+    res.status(500).render('error', { message: 'Error loading player audit' });
+  }
+};
+
+/**
+ * Fix player team assignments  
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object  
+ */
+exports.fixPlayerTeams = async (req, res) => {
+  try {
+    res.json({ success: true, message: 'Player team fixes not yet implemented' });
+  } catch (error) {
+    console.error('Error fixing player teams:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+

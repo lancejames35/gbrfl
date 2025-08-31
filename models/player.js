@@ -209,6 +209,11 @@ static async getAll(options = {}) {
  */
 static async create(playerData) {
   try {
+    // Validate required fields
+    if (!playerData.firstName || !playerData.lastName || !playerData.position) {
+      throw new Error('Missing required fields: firstName, lastName, and position are required');
+    }
+    
     // Determine display name if not provided
     const displayName = playerData.displayName || 
       `${playerData.firstName} ${playerData.lastName}`;
@@ -226,18 +231,27 @@ static async create(playerData) {
       ]
     );
     
-    // Log activity
-    if (result.insertId) {
-      await db.query(
-        'INSERT INTO activity_logs (user_id, action_type, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)',
-        [
-          playerData.userId || null,
-          'PLAYER_CREATED',
-          'NFL_PLAYER',
-          result.insertId,
-          `New player added: ${displayName}`
-        ]
-      );
+    if (!result.insertId) {
+      throw new Error('No insertId returned from database');
+    }
+    
+    // Log activity (separate try-catch to not fail player creation)
+    try {
+      if (result.insertId) {
+        await db.query(
+          'INSERT INTO activity_logs (user_id, action_type, entity_type, entity_id, details) VALUES (?, ?, ?, ?, ?)',
+          [
+            playerData.userId || null,
+            'PLAYER_CREATED',
+            'NFL_PLAYER',
+            result.insertId,
+            `New player added: ${displayName}`
+          ]
+        );
+      }
+    } catch (logError) {
+      console.error('Error logging activity (non-critical):', logError.message);
+      // Don't throw - let player creation succeed even if logging fails
     }
     
     return result.insertId;

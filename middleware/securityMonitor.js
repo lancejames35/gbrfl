@@ -44,11 +44,10 @@ async function logSecurityEvent(eventType, req, additionalDetails = {}) {
         await db.query(
           `INSERT INTO activity_logs 
            (user_id, action_type, entity_type, entity_id, details, created_at) 
-           VALUES (?, ?, 'SECURITY_MONITOR', ?, ?, NOW())`,
+           VALUES (?, ?, 'SECURITY_MONITOR', NULL, ?, NOW())`,
           [
             details.userId,
             eventType,
-            clientIP,
             JSON.stringify(details)
           ]
         );

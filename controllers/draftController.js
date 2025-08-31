@@ -110,7 +110,8 @@ exports.getAvailablePlayers = async (req, res) => {
     // NFL Team filter
     if (team) {
       if (team === 'null') {
-        sql += ` AND p.nfl_team_id IS NULL`;
+        // For Free Agents, check for team_code = 'FA' (team_id 33)
+        sql += ` AND (p.nfl_team_id = 33 OR nt.team_code = 'FA' OR p.nfl_team_id IS NULL)`;
       } else {
         sql += ` AND p.nfl_team_id = ?`;
         params.push(team);
@@ -885,7 +886,6 @@ exports.ensureDraftOrder = async function() {
       throw new Error('No active teams found for draft order');
     }
 
-    console.log(`Creating draft order for ${teams.length} teams`);
 
     // Create draft order for 15 rounds (adjust as needed)
     const rounds = 15;

@@ -1,0 +1,230 @@
+<%- include('../partials/header') %>
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-person-plus"></i> Add New NFL Player
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <% if (typeof errors !== 'undefined' && errors.length > 0) { %>
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                <% errors.forEach(error => { %>
+                                    <li><%= error.msg %></li>
+                                <% }); %>
+                            </ul>
+                        </div>
+                    <% } %>
+
+                    <form action="<%= formAction %>" method="POST" id="playerForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="firstName" class="form-label">First Name <span class="text-danger">*</span></label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="firstName" 
+                                        name="firstName" 
+                                        value="<%= player.firstName || '' %>" 
+                                        required
+                                        placeholder="e.g., Patrick"
+                                    >
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="lastName" class="form-label">Last Name <span class="text-danger">*</span></label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="lastName" 
+                                        name="lastName" 
+                                        value="<%= player.lastName || '' %>" 
+                                        required
+                                        placeholder="e.g., Mahomes"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="displayName" class="form-label">Display Name <span class="text-danger">*</span></label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="displayName" 
+                                name="displayName" 
+                                value="<%= player.displayName || '' %>" 
+                                required
+                                placeholder="e.g., Patrick Mahomes"
+                            >
+                            <small class="form-text text-muted">
+                                This is how the player's name will appear throughout the site
+                            </small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="position" class="form-label">Position <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="position" name="position" required>
+                                        <option value="">Select Position</option>
+                                        <option value="QB" <%= player.position === 'QB' ? 'selected' : '' %>>QB - Quarterback</option>
+                                        <option value="RB" <%= player.position === 'RB' ? 'selected' : '' %>>RB - Running Back</option>
+                                        <option value="RC" <%= player.position === 'RC' ? 'selected' : '' %>>RC - Receiver (WR/TE)</option>
+                                        <option value="PK" <%= player.position === 'PK' ? 'selected' : '' %>>PK - Place Kicker</option>
+                                        <option value="DU" <%= player.position === 'DU' ? 'selected' : '' %>>DU - Defense Unit</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nflTeamId" class="form-label">NFL Team <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="nflTeamId" name="nflTeamId" required>
+                                        <option value="">Select Team</option>
+                                        <% teams.forEach(team => { %>
+                                            <option value="<%= team.nfl_team_id %>" <%= player.nflTeamId == team.nfl_team_id ? 'selected' : '' %>>
+                                                <%= team.team_name %> (<%= team.team_code %>)
+                                            </option>
+                                        <% }); %>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <h6 class="alert-heading">Before Adding:</h6>
+                            <ul class="mb-0">
+                                <li>Check if the player already exists using the search feature</li>
+                                <li>Ensure the player name spelling is correct</li>
+                                <li>Verify the NFL team assignment is current</li>
+                                <li>For defenses, use team name as both first and last name (e.g., "Kansas City" for both)</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="/admin/players" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <div>
+                                <button type="button" class="btn btn-outline-primary" onclick="checkDuplicate()">
+                                    <i class="bi bi-search"></i> Check for Duplicates
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Add Player
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Add Section for Draft Day -->
+            <div class="card mt-3">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning"></i> Quick Add Tips for Draft Day
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>During the draft, if a player is missing:</strong></p>
+                    <ol>
+                        <li>Fill in the player details above</li>
+                        <li>Click "Check for Duplicates" first to avoid creating duplicates</li>
+                        <li>Click "Add Player" - the player will be immediately available in the draft room</li>
+                        <li>Refresh the draft room page to see the new player</li>
+                    </ol>
+                    <p class="text-muted mb-0">
+                        <small>Note: Added players are immediately available for drafting and all other operations.</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-populate display name from first and last name
+document.getElementById('firstName').addEventListener('input', updateDisplayName);
+document.getElementById('lastName').addEventListener('input', updateDisplayName);
+
+function updateDisplayName() {
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const displayNameField = document.getElementById('displayName');
+    
+    // Only auto-populate if display name is empty or matches the previous auto-populated value
+    const currentDisplay = displayNameField.value.trim();
+    const expectedDisplay = `${firstName} ${lastName}`.trim();
+    
+    if (!currentDisplay || currentDisplay === firstName || currentDisplay === `${firstName} `) {
+        displayNameField.value = expectedDisplay;
+    }
+}
+
+// Check for duplicate players
+async function checkDuplicate() {
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const displayName = document.getElementById('displayName').value.trim();
+    
+    if (!firstName || !lastName) {
+        alert('Please enter first and last name before checking for duplicates.');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/players/search?q=${encodeURIComponent(displayName)}`);
+        const data = await response.json();
+        
+        if (data.players && data.players.length > 0) {
+            const matches = data.players.filter(p => 
+                p.display_name.toLowerCase() === displayName.toLowerCase() ||
+                (p.first_name.toLowerCase() === firstName.toLowerCase() && 
+                 p.last_name.toLowerCase() === lastName.toLowerCase())
+            );
+            
+            if (matches.length > 0) {
+                const playerList = matches.map(p => 
+                    `• ${p.display_name} (${p.position} - ${p.team_code || 'FA'})`
+                ).join('\n');
+                
+                alert(`⚠️ Possible duplicate(s) found:\n\n${playerList}\n\nPlease verify this is a different player before adding.`);
+            } else {
+                alert('✅ No exact duplicates found. Safe to add this player.');
+            }
+        } else {
+            alert('✅ No duplicates found. Safe to add this player.');
+        }
+    } catch (error) {
+        console.error('Error checking for duplicates:', error);
+        alert('Could not check for duplicates. Please search manually before adding.');
+    }
+}
+
+// Form validation
+document.getElementById('playerForm').addEventListener('submit', function(e) {
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const displayName = document.getElementById('displayName').value.trim();
+    const position = document.getElementById('position').value;
+    const nflTeamId = document.getElementById('nflTeamId').value;
+    
+    if (!firstName || !lastName || !displayName || !position || !nflTeamId) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return false;
+    }
+    
+    // Confirm before submitting
+    if (!confirm(`Add player: ${displayName} (${position})?`)) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>

@@ -243,4 +243,40 @@ router.put('/schedules/notes/:id', ensureAuthenticated, isAdmin, adminController
  */
 router.delete('/schedules/notes/:id', ensureAuthenticated, isAdmin, adminController.deleteScheduleNote);
 
+/**
+ * @route   GET /admin/draft-order
+ * @desc    View and manage draft order
+ * @access  Private/Admin
+ */
+router.get('/draft-order', ensureAuthenticated, isAdmin, adminController.getDraftOrder);
+
+/**
+ * @route   GET /admin/draft-order/data
+ * @desc    Get draft order data as JSON
+ * @access  Private/Admin
+ */
+router.get('/draft-order/data', ensureAuthenticated, isAdmin, adminController.getDraftOrderData);
+
+/**
+ * @route   PUT /admin/draft-order
+ * @desc    Update draft order
+ * @access  Private/Admin
+ */
+router.put('/draft-order', ensureAuthenticated, isAdmin, adminController.updateDraftOrder);
+
+/**
+ * @route   GET /admin/player-audit
+ * @desc    Player team audit tool
+ * @access  Private/Admin
+ */
+router.get('/player-audit', ensureAuthenticated, isAdmin, adminController.getPlayerAudit);
+
+/**
+ * @route   POST /admin/player-audit/fix
+ * @desc    Fix player team assignments
+ * @access  Private/Admin
+ */
+router.post('/player-audit/fix', ensureAuthenticated, isAdmin, adminController.fixPlayerTeams);
+
+
 module.exports = router;

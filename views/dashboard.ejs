@@ -70,7 +70,188 @@
     .live-indicator {
         animation: pulse 2s infinite;
     }
+
+    /* Mobile optimization for My Team Stats */
+    @media (max-width: 767.98px) {
+        .stat-block h6 {
+            font-size: 0.75rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .stat-block .fs-4 {
+            font-size: 1.1rem !important;
+        }
+        
+        /* Shorter labels for mobile */
+        .stat-block h6.mobile-short {
+            font-size: 0.7rem;
+        }
+        
+        /* Ensure stat blocks don't grow too tall */
+        .stat-block {
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+    }
+    
+    /* Extra small devices */
+    @media (max-width: 575.98px) {
+        .stat-block h6 {
+            font-size: 0.65rem;
+        }
+        
+        .stat-block .fs-4 {
+            font-size: 1rem !important;
+        }
+    }
 </style>
+
+<!-- Draft Countdown Section -->
+<% 
+// Check if we should show the countdown (within 7 days of draft or on draft day)
+const draftDate = new Date('2025-08-31T17:30:00.000Z'); // 12:30 PM CT
+const now = new Date();
+const daysUntilDraft = Math.floor((draftDate - now) / (1000 * 60 * 60 * 24));
+const showCountdown = daysUntilDraft <= 7 && daysUntilDraft >= 0;
+const draftHasStarted = now >= draftDate;
+%>
+
+<% if (showCountdown && !draftHasStarted) { %>
+<div class="draft-announcement-section mb-4">
+    <div class="card border-primary shadow-lg">
+        <div class="card-body text-center py-4" style="background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(102, 16, 242, 0.05));">
+            <h2 class="mb-3">
+                <i class="bi bi-calendar-event-fill text-primary"></i> 
+                Live Draft Information
+            </h2>
+            <p class="lead mb-4">
+                <strong>Draft starts Saturday, August 31st at <span id="main-draft-time">12:30 PM CT</span></strong>
+            </p>
+            
+            <div id="draft-countdown" class="mb-4">
+                <div class="countdown-display d-flex justify-content-center gap-3">
+                    <div class="time-unit text-center">
+                        <div class="display-4 fw-bold text-primary" id="days">0</div>
+                        <small class="text-muted">Days</small>
+                    </div>
+                    <div class="time-unit text-center">
+                        <div class="display-4 fw-bold text-primary" id="hours">0</div>
+                        <small class="text-muted">Hours</small>
+                    </div>
+                    <div class="time-unit text-center">
+                        <div class="display-4 fw-bold text-primary" id="minutes">0</div>
+                        <small class="text-muted">Minutes</small>
+                    </div>
+                    <div class="time-unit text-center">
+                        <div class="display-4 fw-bold text-primary" id="seconds">0</div>
+                        <small class="text-muted">Seconds</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="draft-actions">
+                <a href="/draft" class="btn btn-primary btn-lg px-4">
+                    <i class="bi bi-door-open-fill"></i> Enter Draft Room
+                </a>
+                <p class="text-muted mt-2 mb-0">
+                    <small>You can preview the draft room anytime before the draft starts</small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Convert draft time to user's timezone
+function displayLocalDraftTime() {
+    const draftTimeUTC = new Date('2025-08-31T17:30:00.000Z'); // 12:30 PM CT
+    
+    // Format time in user's timezone
+    const userTimeString = draftTimeUTC.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short',
+        hour12: true
+    });
+    
+    // Update main draft time display
+    const mainDraftTimeEl = document.getElementById('main-draft-time');
+    if (mainDraftTimeEl) {
+        mainDraftTimeEl.textContent = userTimeString;
+    }
+    
+    // Update sidebar draft time display  
+    const userDraftTimeEl = document.getElementById('user-draft-time');
+    if (userDraftTimeEl) {
+        userDraftTimeEl.textContent = userTimeString;
+    }
+}
+
+// Draft countdown timer
+function updateDraftCountdown() {
+    const draftTime = new Date('2025-08-31T17:30:00.000Z'); // 12:30 PM CT
+    const now = new Date();
+    const difference = draftTime - now;
+    
+    if (difference <= 0) {
+        document.getElementById('draft-countdown').innerHTML = 
+            '<div class="alert alert-success mb-0"><h3 class="mb-0">🔴 DRAFT IS LIVE NOW!</h3></div>';
+        // Stop the countdown
+        clearInterval(countdownInterval);
+        return;
+    }
+    
+    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((difference / 1000 / 60) % 60);
+    const seconds = Math.floor((difference / 1000) % 60);
+    
+    document.getElementById('days').textContent = days;
+    document.getElementById('hours').textContent = hours.toString().padStart(2, '0');
+    document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
+    document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
+}
+
+// Initialize timezone display and countdown
+displayLocalDraftTime();
+
+// Update every second
+const countdownInterval = setInterval(updateDraftCountdown, 1000);
+updateDraftCountdown(); // Initial call
+</script>
+
+<style>
+.draft-announcement-section .time-unit {
+    min-width: 80px;
+}
+
+.draft-announcement-section .countdown-display {
+    margin: 0 auto;
+    max-width: 400px;
+}
+
+@media (max-width: 575px) {
+    .draft-announcement-section .display-4 {
+        font-size: 2rem;
+    }
+    
+    .draft-announcement-section .time-unit {
+        min-width: 60px;
+    }
+}
+</style>
+<% } else if (draftHasStarted) { %>
+<div class="alert alert-success text-center mb-4">
+    <h3 class="mb-2">🏈 Draft Has Started!</h3>
+    <a href="/draft" class="btn btn-success btn-lg">
+        <i class="bi bi-door-open-fill"></i> Join Draft Room Now
+    </a>
+</div>
+<% } %>
 
 <div class="row">
     <!-- League News -->
@@ -81,27 +262,6 @@
                 <span class="badge bg-primary">Latest</span>
             </div>
             <div class="card-body">
-                <!-- Draft Room Preview - Featured -->
-                <div class="d-flex align-items-center mb-4 p-3 rounded" style="border: 2px solid #ff6b35; background: linear-gradient(135deg, rgba(255, 107, 53, 0.15), rgba(255, 107, 53, 0.05)); color: #8b2500;">
-                    <div class="me-3">
-                        <i class="bi bi-eye-fill fs-2" style="color: #ff6b35;"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h5 class="alert-heading mb-1" style="color: #ff6b35;">
-                            <i class="bi bi-star-fill"></i> Preview the Draft Room
-                        </h5>
-                        <p class="mb-2">Get familiar with the new draft interface before draft day! Explore the draft room to see queue management and real-time features.</p>
-                        <div class="d-flex gap-2">
-                            <a href="/draft" class="btn btn-sm" style="background-color: #ff6b35; border-color: #ff6b35; color: white;">
-                                <i class="bi bi-eye"></i> Explore Draft Room
-                            </a>
-                            <small class="text-muted align-self-center">
-                                <i class="bi bi-info-circle"></i> Always available - explore anytime
-                            </small>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- Welcome Message - First -->
                 <div class="news-item mb-3 pb-3 border-bottom">
                     <h6>Welcome to the New GBRFL Website</h6>
@@ -145,7 +305,10 @@
                     <div class="row text-center">
                         <div class="col-4">
                             <div class="stat-block">
-                                <h6 class="text-muted">Draft Position</h6>
+                                <h6 class="text-muted">
+                                    <span class="d-none d-sm-inline">Draft Position</span>
+                                    <span class="d-sm-none">Draft Pos</span>
+                                </h6>
                                 <span class="fs-4 fw-bold">
                                     <% if (userTeam.draft_position) { %>
                                         #<%= userTeam.draft_position %>
@@ -157,7 +320,10 @@
                         </div>
                         <div class="col-4">
                             <div class="stat-block">
-                                <h6 class="text-muted">Keepers Set</h6>
+                                <h6 class="text-muted">
+                                    <span class="d-none d-sm-inline">Keepers Set</span>
+                                    <span class="d-sm-none">Keepers</span>
+                                </h6>
                                 <span class="fs-4 fw-bold">
                                     <span class="<%= userTeam.keepers_filled >= userTeam.protection_spots ? 'text-success' : 'text-warning' %>">
                                         <%= userTeam.keepers_filled || 0 %>/<%= userTeam.protection_spots || 12 %>
@@ -172,10 +338,13 @@
                         </div>
                         <div class="col-4">
                             <div class="stat-block">
-                                <h6 class="text-muted">Days to Draft</h6>
+                                <h6 class="text-muted">
+                                    <span class="d-none d-sm-inline">Days to Draft</span>
+                                    <span class="d-sm-none">Draft Days</span>
+                                </h6>
                                 <span class="fs-4 fw-bold text-info">
                                     <% if (isDraftDay) { %>
-                                        <span class="live-indicator">TODAY</span>
+                                        <span class="live-indicator">1</span>
                                     <% } else if (daysUntilDraft <= 0) { %>
                                         COMPLETE
                                     <% } else { %>
@@ -224,7 +393,7 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         Draft Date
                         <% if (isDraftDay) { %>
-                            <span class="badge bg-success live-indicator">TODAY</span>
+                            <span class="badge bg-success live-indicator">TODAY - <span id="user-draft-time">12:30 PM</span></span>
                         <% } else { %>
                             <span class="badge bg-info text-dark">Aug 31, 2025</span>
                         <% } %>

@@ -751,19 +751,14 @@
 
         function attachWaiverLinkListeners() {
             const waiverRequestLinks = document.querySelectorAll('.waiver-request-link');
-            console.log('DEBUG: Found', waiverRequestLinks.length, 'waiver request links');
             
             waiverRequestLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
-                    console.log('DEBUG: Waiver link clicked!');
-                    
                     const playerId = this.getAttribute('data-player-id');
                     const playerName = this.getAttribute('data-player-name');
                     const playerPosition = this.getAttribute('data-player-position');
                     const playerTeam = this.getAttribute('data-player-team');
-                    
-                    console.log('DEBUG: Player data:', { playerId, playerName, playerPosition, playerTeam });
                     
                     // Set pickup player info
                     if (pickupPlayerName) pickupPlayerName.textContent = playerName;
@@ -774,13 +769,9 @@
                     resetModal();
                     loadUserRoster();
                     
-                    console.log('DEBUG: Modal element:', waiverModal);
-                    console.log('DEBUG: Bootstrap available:', typeof bootstrap !== 'undefined');
-                    console.log('DEBUG: jQuery available:', typeof $ !== 'undefined');
                     
                     // Show the modal using jQuery/Bootstrap
                     if (typeof bootstrap !== 'undefined') {
-                        console.log('DEBUG: Using Bootstrap 5 modal');
                         try {
                             const modal = new bootstrap.Modal(waiverModal, {
                                 backdrop: false,  // Disable backdrop completely
@@ -788,18 +779,13 @@
                                 focus: true
                             });
                             modal.show();
-                            console.log('DEBUG: Bootstrap modal.show() called');
                             
                             // Debug check after modal is shown
                             setTimeout(() => {
                                 const backdrop = document.querySelector('.modal-backdrop');
-                                console.log('DEBUG: Modal backdrop found:', backdrop);
-                                console.log('DEBUG: Modal classes:', waiverModal.className);
-                                console.log('DEBUG: Modal style:', waiverModal.style.cssText);
                                 
                                 // Check if modal failed to show properly and fix it manually
                                 if (!waiverModal.classList.contains('show') || waiverModal.style.display !== 'block') {
-                                    console.log('DEBUG: Modal not showing properly, forcing manual show');
                                     
                                     // Manually show the modal
                                     waiverModal.classList.add('show');
@@ -809,7 +795,6 @@
                                     waiverModal.removeAttribute('aria-hidden');
                                     document.body.classList.add('modal-open');
                                     
-                                    console.log('DEBUG: Manual modal show applied');
                                 }
                                 
                                 // Force modal to be interactive
@@ -880,15 +865,9 @@
             }
         }
 
-        console.log('DEBUG: Initializing waiver functionality');
-        console.log('DEBUG: waiverModal element:', waiverModal);
-        console.log('DEBUG: pickupPlayerName element:', pickupPlayerName);
-        console.log('DEBUG: dropPlayerSelect element:', dropPlayerSelect);
-        console.log('DEBUG: submitWaiverRequest element:', submitWaiverRequest);
         
         // Initial attachment of waiver link listeners
         if (waiverModal) {
-            console.log('DEBUG: Modal found, attaching listeners');
             attachWaiverLinkListeners();
 
             // Enable submit button when player is selected
@@ -927,7 +906,6 @@
                     })
                 })
                 .then(response => {
-                    console.log('DEBUG: Response status:', response.status);
                     if (!response.ok) {
                         return response.text().then(text => {
                             console.error('DEBUG: Server error response:', text);
@@ -937,7 +915,6 @@
                     return response.json();
                 })
                 .then(data => {
-                    console.log('DEBUG: Success response:', data);
                     if (data.success) {
                         alert(data.message);
                         // Close modal

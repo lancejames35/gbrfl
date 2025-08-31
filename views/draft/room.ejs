@@ -667,6 +667,16 @@
                         </div>
                     </div>
                     <div class="col-md-6 text-md-end">
+                        <!-- Draft Countdown -->
+                        <div id="draftCountdown" class="mb-2" style="display: none;">
+                            <div class="text-white">
+                                <small class="d-block opacity-75">Draft starts in:</small>
+                                <div class="fw-bold" id="countdownDisplay">
+                                    <span id="daysLeft">0d</span> <span id="hoursLeft">0h</span> 
+                                    <span id="minutesLeft">0m</span> <span id="secondsLeft">0s</span>
+                                </div>
+                            </div>
+                        </div>
                         
                         <% if (user.isAdmin || (typeof originalAdmin !== 'undefined' && originalAdmin)) { %>
                             <div id="adminControls" class="mb-2">
@@ -2645,9 +2655,9 @@
 
         // Removed all audio prompts and notifications - system works silently
 
-        // Universal audio system initialization with aggressive mobile support
+        // Super aggressive mobile audio system for refresh scenarios
         function initializeAudioSystem() {
-            console.log('🎵 Initializing aggressive mobile audio system...');
+            console.log('🎵 Initializing SUPER aggressive mobile audio system...');
             
             // Reset audio state
             window.audioContextUnlocked = false;
@@ -2656,21 +2666,23 @@
             
             // Preload and prepare audio for mobile
             const audio = document.getElementById('draftTurnSound');
-            if (audio && isMobile()) {
-                console.log('📱 Pre-configuring audio for mobile');
+            if (audio) {
+                console.log('📱 Pre-configuring audio for all devices');
                 audio.muted = false;
                 audio.loop = false;
                 audio.preload = 'auto';
                 audio.load();
             }
             
-            // Universal interaction tracking for audio context
+            // SUPER aggressive interaction tracking for audio context
             const keepAudioAlive = (eventType) => {
                 window.lastUserInteraction = Date.now();
                 
                 // For both mobile and desktop, establish audio context on any interaction
                 if (!window.audioUnlockInProgress) {
                     window.audioUnlockInProgress = true;
+                    
+                    console.log('🔄 Attempting audio unlock via', eventType);
                     
                     // Silent audio play to establish context
                     if (audio) {
@@ -2685,10 +2697,11 @@
                                 audio.currentTime = 0;
                                 audio.volume = originalVolume;
                                 window.audioContextUnlocked = true;
-                                console.log('🔄 Audio context established silently (' + eventType + ')');
-                            }).catch(() => {
-                                // Silent failure - will try again on next interaction
-                            }).finally(() => {
+                                console.log('✅ Audio context UNLOCKED via (' + eventType + ')');
+                                // Remove listeners after success to avoid spam
+                                removeAudioUnlockListeners();
+                            }).catch((err) => {
+                                console.log('❌ Audio unlock failed:', err.message, '- will retry on next interaction');
                                 window.audioUnlockInProgress = false;
                             });
                         } else {
@@ -2698,9 +2711,10 @@
                                 audio.currentTime = 0;
                                 audio.volume = originalVolume;
                                 window.audioContextUnlocked = true;
-                                console.log('🔄 Audio context established (legacy)');
+                                console.log('✅ Audio context established (legacy)');
+                                removeAudioUnlockListeners();
                             } catch (e) {
-                                // Silent failure
+                                console.log('❌ Legacy audio unlock failed');
                             }
                             window.audioUnlockInProgress = false;
                         }
@@ -2710,19 +2724,64 @@
                 }
             };
             
-            // Listen for ALL possible user interactions
-            const events = isMobile() ? 
-                ['touchstart', 'touchend', 'touchmove', 'click', 'tap'] : 
-                ['click', 'keydown', 'mousedown'];
+            // COMPREHENSIVE event list for maximum interaction capture
+            const allEvents = [
+                // Touch events (mobile)
+                'touchstart', 'touchend', 'touchmove', 'touchcancel',
+                // Mouse events
+                'click', 'mousedown', 'mouseup', 'mousemove',
+                // Keyboard events
+                'keydown', 'keyup', 'keypress',
+                // Scroll and focus events
+                'scroll', 'wheel', 'focus', 'blur',
+                // Other interaction events
+                'contextmenu', 'pointerdown', 'pointerup', 'pointermove'
+            ];
             
-            events.forEach(eventType => {
-                document.addEventListener(eventType, () => keepAudioAlive(eventType), {
-                    passive: true,
-                    capture: false
+            // Store listeners for cleanup
+            window.audioUnlockListeners = [];
+            
+            allEvents.forEach(eventType => {
+                const handler = () => keepAudioAlive(eventType);
+                document.addEventListener(eventType, handler, { passive: true, capture: true });
+                window.addEventListener(eventType, handler, { passive: true, capture: true });
+                
+                // Store for cleanup
+                window.audioUnlockListeners.push({ 
+                    type: eventType, 
+                    handler: handler,
+                    target: 'both'
                 });
             });
             
-            console.log('🎵 Audio system initialized with', events.length, 'interaction listeners');
+            // Function to remove listeners after successful unlock
+            window.removeAudioUnlockListeners = function() {
+                if (window.audioUnlockListeners) {
+                    window.audioUnlockListeners.forEach(listener => {
+                        document.removeEventListener(listener.type, listener.handler, true);
+                        window.removeEventListener(listener.type, listener.handler, true);
+                    });
+                    window.audioUnlockListeners = [];
+                    console.log('🧹 Audio unlock listeners cleaned up');
+                }
+            };
+            
+            // Multiple proactive unlock attempts at different intervals for refresh scenarios
+            const unlockDelays = [10, 25, 50, 100, 200, 500, 1000, 2000];
+            unlockDelays.forEach((delay, index) => {
+                setTimeout(() => {
+                    if (!window.audioContextUnlocked) {
+                        console.log(`🔄 Proactive unlock attempt #${index + 1} after ${delay}ms`);
+                        // Try to trigger an artificial interaction for mobile
+                        if (audio && !window.audioUnlockInProgress) {
+                            keepAudioAlive('proactive-' + delay);
+                        }
+                    }
+                }, delay);
+            });
+            
+            console.log('🎵 SUPER aggressive audio system initialized with', allEvents.length, 'interaction listeners');
+            console.log('⏰ Set up', unlockDelays.length, 'proactive unlock attempts');
         }
 
         // Synchronous audio unlock (must be called directly in event handler)
@@ -2912,13 +2971,65 @@
             const enabled = document.getElementById('enableDraftSound').checked;
             
             console.log('🎯 playTurnNotification called - enabled:', enabled);
+            console.log('🔍 Audio context state:', {
+                unlocked: window.audioContextUnlocked,
+                inProgress: window.audioUnlockInProgress,
+                lastInteraction: window.lastUserInteraction ? (Date.now() - window.lastUserInteraction) + 'ms ago' : 'never'
+            });
             
             if (!enabled) return;
             
-            // Try direct audio play for both mobile and desktop
-            console.log('🔊 Attempting direct audio play for all devices');
-            if (window.playNFLDraftHorn) {
-                window.playNFLDraftHorn();
+            // If audio context isn't unlocked yet, try one more aggressive unlock attempt
+            if (!window.audioContextUnlocked && !window.audioUnlockInProgress) {
+                console.log('⚡ Emergency audio unlock attempt before playing notification');
+                const audio = document.getElementById('draftTurnSound');
+                if (audio) {
+                    // Try an immediate silent unlock
+                    try {
+                        const originalVolume = audio.volume;
+                        audio.volume = 0;
+                        audio.currentTime = 0;
+                        
+                        const playPromise = audio.play();
+                        if (playPromise) {
+                            playPromise.then(() => {
+                                audio.pause();
+                                audio.currentTime = 0;
+                                audio.volume = originalVolume;
+                                window.audioContextUnlocked = true;
+                                console.log('✅ Emergency audio unlock successful!');
+                                // Now play the actual sound
+                                if (window.playNFLDraftHorn) {
+                                    setTimeout(() => window.playNFLDraftHorn(), 100);
+                                }
+                            }).catch(() => {
+                                console.log('❌ Emergency audio unlock failed');
+                                // Still try to play the sound
+                                if (window.playNFLDraftHorn) {
+                                    window.playNFLDraftHorn();
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.log('❌ Emergency unlock exception:', e.message);
+                        // Still try to play the sound
+                        if (window.playNFLDraftHorn) {
+                            window.playNFLDraftHorn();
+                        }
+                    }
+                } else {
+                    console.log('❌ No audio element found for emergency unlock');
+                }
+            } else {
+                // Try direct audio play for both mobile and desktop
+                console.log('🔊 Attempting direct audio play (context should be ready)');
+                
+                // Play the draft sound directly
+                if (window.playNFLDraftHorn) {
+                    window.playNFLDraftHorn();
+                } else {
+                    console.log('❌ playNFLDraftHorn function not available');
+                }
             }
         }
 
@@ -3139,6 +3250,50 @@
                 if (startBtn) startBtn.style.display = 'inline-block';
                 if (stopBtn) stopBtn.style.display = 'none';
             }
+        });
+
+        // Draft Countdown Timer
+        function initializeDraftCountdown() {
+            const draftDate = new Date('2025-08-31T12:30:00-05:00'); // Draft date: August 31, 2025 at 12:30 PM CT
+            const countdownEl = document.getElementById('draftCountdown');
+            const daysEl = document.getElementById('daysLeft');
+            const hoursEl = document.getElementById('hoursLeft');
+            const minutesEl = document.getElementById('minutesLeft');
+            const secondsEl = document.getElementById('secondsLeft');
+
+            function updateCountdown() {
+                const now = new Date();
+                const timeDiff = draftDate - now;
+
+                if (timeDiff > 0) {
+                    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+                    daysEl.textContent = `${days}d`;
+                    hoursEl.textContent = `${hours}h`;
+                    minutesEl.textContent = `${minutes}m`;
+                    secondsEl.textContent = `${seconds}s`;
+
+                    // Show countdown if within 7 days
+                    if (days <= 7) {
+                        countdownEl.style.display = 'block';
+                    }
+                } else {
+                    // Draft has started
+                    countdownEl.style.display = 'none';
+                }
+            }
+
+            // Update immediately and then every second
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        }
+
+        // Initialize countdown on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDraftCountdown();
         });
 
     </script>
