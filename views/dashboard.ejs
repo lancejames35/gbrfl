@@ -118,6 +118,23 @@ const now = new Date();
 const daysUntilDraft = Math.floor((draftDate - now) / (1000 * 60 * 60 * 24));
 const showCountdown = daysUntilDraft <= 7 && daysUntilDraft >= 0;
 const draftHasStarted = now >= draftDate;
+
+// Common variables for dynamic messaging
+const today = new Date();
+const draftActualDate = new Date('2025-08-31');
+const isActuallyDraftDay = today.getFullYear() === draftActualDate.getFullYear() && 
+                           today.getMonth() === draftActualDate.getMonth() && 
+                           today.getDate() === draftActualDate.getDate();
+
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+const isActuallyTomorrow = tomorrow.getFullYear() === draftActualDate.getFullYear() && 
+                           tomorrow.getMonth() === draftActualDate.getMonth() && 
+                           tomorrow.getDate() === draftActualDate.getDate();
+
+// Check if draft is completely over (after August 31, 2025)
+const draftCompleteDate = new Date('2025-09-01'); // Day after draft
+const isDraftComplete = today >= draftCompleteDate;
 %>
 
 <% if (showCountdown && !draftHasStarted) { %>
@@ -241,7 +258,7 @@ async function loadDraftPosition() {
             const userTeamId = <%= user.team_id || 'null' %>;
             if (userTeamId) {
                 const round1Picks = data.draftOrder.filter(pick => pick.round === 1);
-                const userPick = round1Picks.find(pick => pick.original_team_id === userTeamId);
+                const userPick = round1Picks.find(pick => pick.fantasy_team_id === userTeamId);
                 
                 const draftPositionEl = document.getElementById('user-draft-position');
                 if (draftPositionEl && userPick) {
@@ -249,6 +266,11 @@ async function loadDraftPosition() {
                 } else if (draftPositionEl) {
                     draftPositionEl.innerHTML = '<span class="text-muted">TBD</span>';
                 }
+            }
+        } else {
+            const draftPositionEl = document.getElementById('user-draft-position');
+            if (draftPositionEl) {
+                draftPositionEl.innerHTML = '<span class="text-muted">TBD</span>';
             }
         }
     } catch (error) {
@@ -415,21 +437,7 @@ const thursdayInterval = setInterval(updateThursdayCountdown, 60000); // Update 
                 <div class="news-item">
                     <h6>Draft Day Approaching</h6>
                     <p class="text-muted mb-1"><small>Posted on August 15, 2025</small></p>
-                    <% 
-                    // Check if today is actually August 31, 2025
-                    const today = new Date();
-                    const draftActualDate = new Date('2025-08-31');
-                    const isActuallyDraftDay = today.getFullYear() === draftActualDate.getFullYear() && 
-                                               today.getMonth() === draftActualDate.getMonth() && 
-                                               today.getDate() === draftActualDate.getDate();
-                    
-                    // Check if tomorrow is August 31, 2025
-                    const tomorrow = new Date(today);
-                    tomorrow.setDate(today.getDate() + 1);
-                    const isActuallyTomorrow = tomorrow.getFullYear() === draftActualDate.getFullYear() && 
-                                               tomorrow.getMonth() === draftActualDate.getMonth() && 
-                                               tomorrow.getDate() === draftActualDate.getDate();
-                    %>
+                    <%/* Using common variables defined at top of file */%>
                     <% if (isActuallyDraftDay) { %>
                         <p>The 2025 GBRFL Draft is happening today! Access the draft room below when you're ready to participate.</p>
                         <a href="/draft" class="btn btn-success mt-2">
@@ -451,11 +459,6 @@ const thursdayInterval = setInterval(updateThursdayCountdown, 60000); // Update 
     <!-- Right Sidebar -->
     <div class="col-lg-4">
         <!-- My Team Status (Pre-Draft Only) -->
-        <% 
-        // Check if draft is completely over (after August 31, 2025)
-        const draftCompleteDate = new Date('2025-09-01'); // Day after draft
-        const isDraftComplete = today >= draftCompleteDate;
-        %>
         <% if (!isDraftComplete) { %>
         <div class="card mb-4">
             <div class="card-header">
@@ -484,10 +487,10 @@ const thursdayInterval = setInterval(updateThursdayCountdown, 60000); // Update 
                                 <span class="fs-4 fw-bold text-info">
                                     <% if (isActuallyDraftDay) { %>
                                         <span class="live-indicator">TODAY</span>
-                                    <% } else if (daysUntilDraft <= 0) { %>
+                                    <% } else if (isDraftComplete) { %>
                                         COMPLETE
                                     <% } else { %>
-                                        <%= daysUntilDraft %>
+                                        <%= Math.max(1, Math.ceil((draftActualDate - today) / (1000 * 60 * 60 * 24))) %>
                                     <% } %>
                                 </span>
                             </div>
