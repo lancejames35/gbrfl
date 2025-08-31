@@ -193,10 +193,15 @@ function displayLocalDraftTime() {
         mainDraftTimeEl.textContent = userTimeString;
     }
     
-    // Update sidebar draft time display  
+    // Update sidebar draft time displays
     const userDraftTimeEl = document.getElementById('user-draft-time');
     if (userDraftTimeEl) {
         userDraftTimeEl.textContent = userTimeString;
+    }
+    
+    const sidebarDraftTimeEl = document.getElementById('sidebar-draft-time');
+    if (sidebarDraftTimeEl) {
+        sidebarDraftTimeEl.textContent = userTimeString;
     }
 }
 
@@ -225,8 +230,39 @@ function updateDraftCountdown() {
     document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
 }
 
-// Initialize timezone display and countdown
+// Fetch user's draft position from the draft order
+async function loadDraftPosition() {
+    try {
+        const response = await fetch('/admin/draft-order/data');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Find current user's team draft position (from round 1)
+            const userTeamId = <%= user.team_id || 'null' %>;
+            if (userTeamId) {
+                const round1Picks = data.draftOrder.filter(pick => pick.round === 1);
+                const userPick = round1Picks.find(pick => pick.original_team_id === userTeamId);
+                
+                const draftPositionEl = document.getElementById('user-draft-position');
+                if (draftPositionEl && userPick) {
+                    draftPositionEl.innerHTML = `<span class="text-primary">#${userPick.pick_number}</span>`;
+                } else if (draftPositionEl) {
+                    draftPositionEl.innerHTML = '<span class="text-muted">TBD</span>';
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading draft position:', error);
+        const draftPositionEl = document.getElementById('user-draft-position');
+        if (draftPositionEl) {
+            draftPositionEl.innerHTML = '<span class="text-muted">TBD</span>';
+        }
+    }
+}
+
+// Initialize timezone display, countdown, and draft position
 displayLocalDraftTime();
+loadDraftPosition();
 
 // Update every second
 const countdownInterval = setInterval(updateDraftCountdown, 1000);
@@ -294,8 +330,13 @@ updateDraftCountdown(); // Initial call
                         <a href="/draft" class="btn btn-success mt-2">
                             <i class="bi bi-calendar-event"></i> Join Draft Room
                         </a>
+                    <% } else if (daysUntilDraft === 1) { %>
+                        <p>The 2025 GBRFL Draft is tomorrow, August 31st! The draft room is ready for preview. Make sure you're prepared!</p>
+                        <a href="/draft" class="btn btn-primary mt-2">
+                            <i class="bi bi-eye"></i> Preview Draft Room
+                        </a>
                     <% } else { %>
-                        <p>The 2025 GBRFL Draft is scheduled for August 31, 2025. Make sure your keeper selections are finalized before the August 24th deadline. Draft room access will be available here on draft day.</p>
+                        <p>The 2025 GBRFL Draft is scheduled for August 31, 2025. Keeper selections closed on August 24th. Draft room access will be available on draft day.</p>
                     <% } %>
                 </div>
             </div>
@@ -312,40 +353,18 @@ updateDraftCountdown(); // Initial call
             <div class="card-body">
                 <% if (userTeam) { %>
                     <div class="row text-center">
-                        <div class="col-4">
+                        <div class="col-6">
                             <div class="stat-block">
                                 <h6 class="text-muted">
                                     <span class="d-none d-sm-inline">Draft Position</span>
                                     <span class="d-sm-none">Draft Pos</span>
                                 </h6>
-                                <span class="fs-4 fw-bold">
-                                    <% if (userTeam.draft_position) { %>
-                                        #<%= userTeam.draft_position %>
-                                    <% } else { %>
-                                        <span class="text-muted">TBD</span>
-                                    <% } %>
+                                <span class="fs-4 fw-bold" id="user-draft-position">
+                                    <span class="text-muted">Loading...</span>
                                 </span>
                             </div>
                         </div>
-                        <div class="col-4">
-                            <div class="stat-block">
-                                <h6 class="text-muted">
-                                    <span class="d-none d-sm-inline">Keepers Set</span>
-                                    <span class="d-sm-none">Keepers</span>
-                                </h6>
-                                <span class="fs-4 fw-bold">
-                                    <span class="<%= userTeam.keepers_filled >= userTeam.protection_spots ? 'text-success' : 'text-warning' %>">
-                                        <%= userTeam.keepers_filled || 0 %>/<%= userTeam.protection_spots || 12 %>
-                                    </span>
-                                </span>
-                                <!-- Progress bar -->
-                                <div class="keeper-progress mt-2">
-                                    <div class="keeper-progress-bar bg-<%= userTeam.keepers_filled >= userTeam.protection_spots ? 'success' : 'warning' %>" 
-                                         style="width: <%= ((userTeam.keepers_filled || 0) / (userTeam.protection_spots || 12)) * 100 %>%"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-4">
+                        <div class="col-6">
                             <div class="stat-block">
                                 <h6 class="text-muted">
                                     <span class="d-none d-sm-inline">Days to Draft</span>
@@ -360,10 +379,6 @@ updateDraftCountdown(); // Initial call
                                         <%= daysUntilDraft %>
                                     <% } %>
                                 </span>
-                                <!-- Real-time countdown for draft day -->
-                                <% if (isDraftDay) { %>
-                                    <div class="small text-muted mt-1" id="draftCountdown">Loading...</div>
-                                <% } %>
                             </div>
                         </div>
                     </div>
@@ -402,9 +417,11 @@ updateDraftCountdown(); // Initial call
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         Draft Date
                         <% if (isDraftDay) { %>
-                            <span class="badge bg-success live-indicator">TODAY - <span id="user-draft-time">12:30 PM</span></span>
+                            <span class="badge bg-success live-indicator">TODAY - <span id="sidebar-draft-time">12:30 PM</span></span>
+                        <% } else if (daysUntilDraft === 1) { %>
+                            <span class="badge bg-warning text-dark">TOMORROW - <span id="sidebar-draft-time">12:30 PM</span></span>
                         <% } else { %>
-                            <span class="badge bg-info text-dark">Aug 31, 2025</span>
+                            <span class="badge bg-info text-dark">Aug 31, 2025 - <span id="sidebar-draft-time">12:30 PM</span></span>
                         <% } %>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -437,7 +454,7 @@ updateDraftCountdown(); // Initial call
                         </a>
                     <% } %>
                     
-                    <a href="/players/available" class="btn btn-outline-primary">
+                    <a href="/players" class="btn btn-outline-primary">
                         <i class="bi bi-person-plus"></i> Browse Available Players
                     </a>
                     <a href="/trades/new" class="btn btn-outline-secondary">
@@ -471,32 +488,5 @@ updateDraftCountdown(); // Initial call
             });
         }
 
-        // Real-time draft countdown
-        if (document.getElementById('draftCountdown')) {
-            function updateDraftCountdown() {
-                const draftTime = new Date('2025-08-31 12:00:00').getTime(); // Adjust time as needed
-                const now = new Date().getTime();
-                const distance = draftTime - now;
-                
-                if (distance > 0) {
-                    const hours = Math.floor(distance / (1000 * 60 * 60));
-                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                    
-                    if (hours > 0) {
-                        document.getElementById('draftCountdown').innerText = `Starts in ${hours}h ${minutes}m`;
-                    } else if (minutes > 0) {
-                        document.getElementById('draftCountdown').innerText = `Starts in ${minutes}m ${seconds}s`;
-                    } else {
-                        document.getElementById('draftCountdown').innerText = `Starts in ${seconds}s`;
-                    }
-                } else {
-                    document.getElementById('draftCountdown').innerHTML = '<span class="text-success fw-bold">Draft is LIVE!</span>';
-                }
-            }
-            
-            updateDraftCountdown();
-            setInterval(updateDraftCountdown, 1000); // Update every second
-        }
     });
 </script>
