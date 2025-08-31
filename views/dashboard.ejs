@@ -233,10 +233,10 @@ function updateDraftCountdown() {
 // Fetch user's draft position from the draft order
 async function loadDraftPosition() {
     try {
-        const response = await fetch('/admin/draft-order/data');
+        const response = await fetch('/api/draft-order');
         const data = await response.json();
         
-        if (data.success) {
+        if (data.success && data.draftOrder) {
             // Find current user's team draft position (from round 1)
             const userTeamId = <%= user.team_id || 'null' %>;
             if (userTeamId) {
@@ -314,12 +314,6 @@ updateDraftCountdown(); // Initial call
                     <p>Welcome to the new George Blanda Rotisserie Football League website! This platform will help us efficiently manage teams and rosters, conduct the draft, and more.</p>
                 </div>
                 
-                <!-- Keeper Selection - Second -->
-                <div class="news-item mb-3 pb-3 border-bottom">
-                    <h6>Keeper Selection Period Now Open</h6>
-                    <p class="text-muted mb-1"><small>Posted on April 10, 2025</small></p>
-                    <p>The keeper selection period is now open. Teams can protect players based on their available protection spots. The deadline for keeper selections is August 24, 2025.</p>
-                </div>
                 
                 <!-- Draft Information - Third -->
                 <div class="news-item">
