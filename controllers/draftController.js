@@ -405,7 +405,7 @@ exports.makePick = async (req, res) => {
     // Add player to team roster
     await FantasyTeam.addPlayerToRoster({
       teamId,
-      playerIdNum,
+      playerId: playerIdNum,
       acquisitionType: 'Draft',
       isKeeper: 0,
       userId
