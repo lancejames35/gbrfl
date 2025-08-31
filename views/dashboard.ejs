@@ -129,7 +129,7 @@ const draftHasStarted = now >= draftDate;
                 Live Draft Information
             </h2>
             <p class="lead mb-4">
-                <strong>Draft starts Saturday, August 31st at <span id="main-draft-time">12:30 PM CT</span></strong>
+                <strong>Draft starts <span id="draft-day-name">Sunday</span>, August 31st at <span id="main-draft-time">12:30 PM CT</span></strong>
             </p>
             
             <div id="draft-countdown" class="mb-4">
@@ -166,7 +166,7 @@ const draftHasStarted = now >= draftDate;
 </div>
 
 <script>
-// Convert draft time to user's timezone
+// Convert draft time to user's timezone and set day name
 function displayLocalDraftTime() {
     const draftTimeUTC = new Date('2025-08-31T17:30:00.000Z'); // 12:30 PM CT
     
@@ -177,6 +177,15 @@ function displayLocalDraftTime() {
         timeZoneName: 'short',
         hour12: true
     });
+    
+    // Get the day name dynamically
+    const dayName = draftTimeUTC.toLocaleDateString('en-US', { weekday: 'long' });
+    
+    // Update draft day name
+    const draftDayNameEl = document.getElementById('draft-day-name');
+    if (draftDayNameEl) {
+        draftDayNameEl.textContent = dayName;
+    }
     
     // Update main draft time display
     const mainDraftTimeEl = document.getElementById('main-draft-time');
