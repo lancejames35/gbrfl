@@ -260,6 +260,98 @@ async function loadDraftPosition() {
     }
 }
 
+// Calculate next Thursday at 7:20 PM CT (00:20 UTC Friday)
+function getNextThursday() {
+    const now = new Date();
+    const thursday = new Date();
+    
+    // Set to next Thursday
+    const daysUntilThursday = (4 - now.getDay() + 7) % 7;
+    if (daysUntilThursday === 0) {
+        // It's Thursday - check if it's before 7:20 PM CT (01:20 UTC Friday)
+        const thursdayDeadline = new Date();
+        thursdayDeadline.setHours(1, 20, 0, 0); // 7:20 PM CT = 1:20 AM UTC next day
+        
+        if (now < thursdayDeadline) {
+            // Before deadline, use today
+            thursday.setHours(1, 20, 0, 0);
+        } else {
+            // After deadline, use next Thursday
+            thursday.setDate(now.getDate() + 7);
+            thursday.setHours(1, 20, 0, 0);
+        }
+    } else {
+        // Not Thursday, set to next Thursday
+        thursday.setDate(now.getDate() + daysUntilThursday);
+        thursday.setHours(1, 20, 0, 0);
+    }
+    
+    return thursday;
+}
+
+// Update Thursday countdown and time display
+function updateThursdayCountdown() {
+    const nextThursday = getNextThursday();
+    const now = new Date();
+    const difference = nextThursday - now;
+    
+    if (difference <= 0) {
+        // Deadline passed, calculate next one
+        const newThursday = new Date(nextThursday);
+        newThursday.setDate(nextThursday.getDate() + 7);
+        updateThursdayDisplay(newThursday);
+        return;
+    }
+    
+    updateThursdayDisplay(nextThursday);
+}
+
+function updateThursdayDisplay(targetDate) {
+    const now = new Date();
+    const difference = targetDate - now;
+    
+    // Update countdown
+    const countdownEl = document.getElementById('next-thursday-countdown');
+    if (countdownEl && difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((difference / 1000 / 60) % 60);
+        
+        if (days > 0) {
+            countdownEl.textContent = `${days}d ${hours}h ${minutes}m`;
+        } else if (hours > 0) {
+            countdownEl.textContent = `${hours}h ${minutes}m`;
+        } else {
+            countdownEl.textContent = `${minutes} minutes`;
+        }
+    }
+    
+    // Update timezone-aware time display
+    const thursdayTimeEl = document.getElementById('thursday-time');
+    if (thursdayTimeEl) {
+        const userTimeString = targetDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZoneName: 'short',
+            hour12: true
+        });
+        thursdayTimeEl.textContent = userTimeString;
+    }
+    
+    // Update date display
+    const thursdayDateEl = document.getElementById('next-thursday-date');
+    if (thursdayDateEl) {
+        const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
+        const dateString = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        thursdayDateEl.innerHTML = `${dayName}, ${dateString} at <span id="thursday-time">${targetDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZoneName: 'short',
+            hour12: true
+        })}</span>`;
+    }
+}
+
 // Initialize timezone display, countdown, and draft position
 displayLocalDraftTime();
 loadDraftPosition();
@@ -267,6 +359,10 @@ loadDraftPosition();
 // Update every second
 const countdownInterval = setInterval(updateDraftCountdown, 1000);
 updateDraftCountdown(); // Initial call
+
+// Initialize and update Thursday countdown (post-draft)
+updateThursdayCountdown();
+const thursdayInterval = setInterval(updateThursdayCountdown, 60000); // Update every minute
 </script>
 
 <style>
@@ -319,12 +415,27 @@ updateDraftCountdown(); // Initial call
                 <div class="news-item">
                     <h6>Draft Day Approaching</h6>
                     <p class="text-muted mb-1"><small>Posted on August 15, 2025</small></p>
-                    <% if (isDraftDay) { %>
+                    <% 
+                    // Check if today is actually August 31, 2025
+                    const today = new Date();
+                    const draftActualDate = new Date('2025-08-31');
+                    const isActuallyDraftDay = today.getFullYear() === draftActualDate.getFullYear() && 
+                                               today.getMonth() === draftActualDate.getMonth() && 
+                                               today.getDate() === draftActualDate.getDate();
+                    
+                    // Check if tomorrow is August 31, 2025
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(today.getDate() + 1);
+                    const isActuallyTomorrow = tomorrow.getFullYear() === draftActualDate.getFullYear() && 
+                                               tomorrow.getMonth() === draftActualDate.getMonth() && 
+                                               tomorrow.getDate() === draftActualDate.getDate();
+                    %>
+                    <% if (isActuallyDraftDay) { %>
                         <p>The 2025 GBRFL Draft is happening today! Access the draft room below when you're ready to participate.</p>
                         <a href="/draft" class="btn btn-success mt-2">
                             <i class="bi bi-calendar-event"></i> Join Draft Room
                         </a>
-                    <% } else if (daysUntilDraft === 1) { %>
+                    <% } else if (isActuallyTomorrow) { %>
                         <p>The 2025 GBRFL Draft is tomorrow, August 31st! The draft room is ready for preview. Make sure you're prepared!</p>
                         <a href="/draft" class="btn btn-primary mt-2">
                             <i class="bi bi-eye"></i> Preview Draft Room
@@ -339,7 +450,13 @@ updateDraftCountdown(); // Initial call
     
     <!-- Right Sidebar -->
     <div class="col-lg-4">
-        <!-- My Team Status -->
+        <!-- My Team Status (Pre-Draft Only) -->
+        <% 
+        // Check if draft is completely over (after August 31, 2025)
+        const draftCompleteDate = new Date('2025-09-01'); // Day after draft
+        const isDraftComplete = today >= draftCompleteDate;
+        %>
+        <% if (!isDraftComplete) { %>
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">My Team Status</h5>
@@ -365,8 +482,8 @@ updateDraftCountdown(); // Initial call
                                     <span class="d-sm-none">Draft Days</span>
                                 </h6>
                                 <span class="fs-4 fw-bold text-info">
-                                    <% if (isDraftDay) { %>
-                                        <span class="live-indicator">1</span>
+                                    <% if (isActuallyDraftDay) { %>
+                                        <span class="live-indicator">TODAY</span>
                                     <% } else if (daysUntilDraft <= 0) { %>
                                         COMPLETE
                                     <% } else { %>
@@ -392,37 +509,69 @@ updateDraftCountdown(); // Initial call
                 <% } %>
             </div>
         </div>
+        <% } %>
         
         <!-- Important Dates -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">Important Dates</h5>
+                <h5 class="mb-0">
+                    <% if (isDraftComplete) { %>
+                        Weekly Deadlines
+                    <% } else { %>
+                        Important Dates
+                    <% } %>
+                </h5>
             </div>
             <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Keeper Deadline
-                        <% if (isKeeperPeriodActive) { %>
-                            <span class="badge bg-warning text-dark">Aug 24, 2025</span>
-                        <% } else { %>
-                            <span class="badge bg-secondary">Closed</span>
-                        <% } %>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Draft Date
-                        <% if (isDraftDay) { %>
-                            <span class="badge bg-success live-indicator">TODAY - <span id="sidebar-draft-time">12:30 PM</span></span>
-                        <% } else if (daysUntilDraft === 1) { %>
-                            <span class="badge bg-warning text-dark">TOMORROW - <span id="sidebar-draft-time">12:30 PM</span></span>
-                        <% } else { %>
-                            <span class="badge bg-info text-dark">Aug 31, 2025 - <span id="sidebar-draft-time">12:30 PM</span></span>
-                        <% } %>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        Season Start
-                        <span class="badge bg-success">Sep 4, 2025</span>
-                    </li>
-                </ul>
+                <% if (isDraftComplete) { %>
+                    <!-- Post-Draft: Weekly Thursday Deadline -->
+                    <div class="text-center mb-3">
+                        <h6 class="text-muted mb-2">Lineup & Waiver Deadline</h6>
+                        <div class="fs-5 fw-bold text-primary" id="next-thursday-countdown">
+                            <span class="text-muted">Loading...</span>
+                        </div>
+                        <small class="text-muted d-block mt-1" id="next-thursday-date">
+                            Next Thursday at <span id="thursday-time">7:20 PM</span>
+                        </small>
+                    </div>
+                    <hr>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Season End
+                            <span class="badge bg-info">Dec 29, 2025</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Trade Deadline
+                            <span class="badge bg-warning text-dark">Nov 1, 2025</span>
+                        </li>
+                    </ul>
+                <% } else { %>
+                    <!-- Pre-Draft: Original dates -->
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Keeper Deadline
+                            <% if (isKeeperPeriodActive) { %>
+                                <span class="badge bg-warning text-dark">Aug 24, 2025</span>
+                            <% } else { %>
+                                <span class="badge bg-secondary">Closed</span>
+                            <% } %>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Draft Date
+                            <% if (isActuallyDraftDay) { %>
+                                <span class="badge bg-success live-indicator">TODAY - <span id="sidebar-draft-time">12:30 PM</span></span>
+                            <% } else if (isActuallyTomorrow) { %>
+                                <span class="badge bg-warning text-dark">TOMORROW - <span id="sidebar-draft-time">12:30 PM</span></span>
+                            <% } else { %>
+                                <span class="badge bg-info text-dark">Aug 31, 2025 - <span id="sidebar-draft-time">12:30 PM</span></span>
+                            <% } %>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Season Start
+                            <span class="badge bg-success">Sep 4, 2025</span>
+                        </li>
+                    </ul>
+                <% } %>
             </div>
         </div>
         
