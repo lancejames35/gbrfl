@@ -2320,6 +2320,7 @@
                                 <th class="round-header">7th Pick</th>
                                 <th class="round-header">8th Pick</th>
                                 <th class="round-header">9th Pick</th>
+                                <th class="round-header">10th Pick</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2332,8 +2333,8 @@
                 html += `<tr class="${rowClass}">`;
                 html += `<td class="team-header"><div>${team.first_name} ${team.last_name}</div><small class="text-muted">${team.team_name}</small></td>`;
 
-                // Show up to 9 picks
-                for (let pickIndex = 0; pickIndex < 9; pickIndex++) {
+                // Show up to 10 picks
+                for (let pickIndex = 0; pickIndex < 10; pickIndex++) {
                     const pick = picks[pickIndex];
                     
                     if (pick) {
