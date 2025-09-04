@@ -563,13 +563,13 @@
                                 <div class="text-center">
                                     <div class="team-name ${game.team_1.team_id === userTeamId ? 'user-team' : ''}">${game.team_1.team_name}</div>
                                     <small class="text-muted">${game.team_1.username || ''}</small>
-                                    ${isCompleted ? `<div class="game-result ${game.team_1_score === 'W' ? 'win' : 'loss'}">${game.team_1_score}</div>` : ''}
+                                    ${isCompleted && game.team_1_score ? `<div class="game-result ${game.team_1_score === 'W' ? 'win' : 'loss'}">${game.team_1_score}</div>` : ''}
                                 </div>
                                 <div class="vs-separator">vs</div>
                                 <div class="text-center">
                                     <div class="team-name ${game.team_2.team_id === userTeamId ? 'user-team' : ''}">${game.team_2.team_name}</div>
                                     <small class="text-muted">${game.team_2.username || ''}</small>
-                                    ${isCompleted ? `<div class="game-result ${game.team_2_score === 'W' ? 'win' : 'loss'}">${game.team_2_score}</div>` : ''}
+                                    ${isCompleted && game.team_2_score ? `<div class="game-result ${game.team_2_score === 'W' ? 'win' : 'loss'}">${game.team_2_score}</div>` : ''}
                                 </div>
                             </div>
                             <div class="mt-2">${resultsContent}</div>

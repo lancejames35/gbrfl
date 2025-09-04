@@ -20,16 +20,8 @@ class LineupLock {
             WHEN NOW() >= lock_datetime THEN 'auto_locked'
             ELSE 'unlocked'
           END as current_status,
-          CASE 
-            WHEN lock_datetime IS NOT NULL AND NOW() < lock_datetime 
-            THEN TIMESTAMPDIFF(SECOND, NOW(), lock_datetime)
-            ELSE 0
-          END as seconds_until_lock,
-          CASE 
-            WHEN lock_datetime IS NOT NULL AND NOW() < lock_datetime 
-            THEN TIMESTAMPDIFF(MINUTE, NOW(), lock_datetime)
-            ELSE 0
-          END as minutes_until_lock
+          null as seconds_until_lock,
+          null as minutes_until_lock
         FROM lineup_locks 
         WHERE week_number = ? AND season_year = ?
         LIMIT 1
@@ -137,11 +129,7 @@ class LineupLock {
             WHEN NOW() >= lock_datetime THEN 'auto_locked'
             ELSE 'unlocked'
           END as current_status,
-          CASE 
-            WHEN lock_datetime IS NOT NULL AND NOW() < lock_datetime 
-            THEN TIMESTAMPDIFF(MINUTE, NOW(), lock_datetime)
-            ELSE 0
-          END as minutes_until_lock
+          null as minutes_until_lock
         FROM lineup_locks 
         WHERE season_year = ?
         ORDER BY week_number
@@ -167,8 +155,8 @@ class LineupLock {
         SELECT 
           week_number,
           lock_datetime as lock_time,
-          TIMESTAMPDIFF(MINUTE, NOW(), lock_datetime) as minutes_until_lock,
-          TIMESTAMPDIFF(HOUR, NOW(), lock_datetime) as hours_until_lock
+          null as minutes_until_lock,
+          null as hours_until_lock
         FROM lineup_locks 
         WHERE season_year = ?
         AND lock_datetime IS NOT NULL 

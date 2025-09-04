@@ -282,7 +282,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const lockTime = weekData.lock_time ? new Date(weekData.lock_time) : null;
                 const lockTimeDisplay = lockTime ? lockTime.toLocaleString() : 'Not Set';
                 const statusBadge = getStatusBadge(weekData.current_status);
-                const timeUntil = getTimeUntilDisplay(weekData.minutes_until_lock);
+                // Calculate time until lock client-side for timezone accuracy
+                let minutesUntilLock = null;
+                if (weekData.lock_time && weekData.current_status !== 'locked' && weekData.current_status !== 'auto_locked') {
+                    const lockDateTime = new Date(weekData.lock_time);
+                    const now = new Date();
+                    const timeDiff = lockDateTime - now;
+                    
+                    if (timeDiff > 0) {
+                        minutesUntilLock = Math.floor(timeDiff / (1000 * 60));
+                    }
+                }
+                const timeUntil = getTimeUntilDisplay(minutesUntilLock);
                 const isLocked = weekData.current_status === 'locked' || weekData.current_status === 'auto_locked';
                 
                 html += `
@@ -374,9 +385,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const weekData = lockData.find(w => w.week_number === weekNumber);
         if (weekData && weekData.lock_time) {
             const lockTime = new Date(weekData.lock_time);
-            // Format for datetime-local input (YYYY-MM-DDTHH:mm)
-            const isoString = lockTime.toISOString().slice(0, 16);
-            document.getElementById('lockDateTime').value = isoString;
+            // Convert to local timezone for datetime-local input
+            const year = lockTime.getFullYear();
+            const month = String(lockTime.getMonth() + 1).padStart(2, '0');
+            const day = String(lockTime.getDate()).padStart(2, '0');
+            const hours = String(lockTime.getHours()).padStart(2, '0');
+            const minutes = String(lockTime.getMinutes()).padStart(2, '0');
+            const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            document.getElementById('lockDateTime').value = localDateTime;
         } else {
             // Default to next Thursday at 8:30 PM local time
             const now = new Date();
