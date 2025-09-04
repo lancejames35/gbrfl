@@ -645,6 +645,24 @@
         border-radius: 5px;
     }
 
+    /* Head Coach styles removed - now displayed from team data */
+
+    /* Locked lineup styles - disable drag and drop visual cues */
+    .lineup-locked .player-item {
+        cursor: default !important;
+    }
+    
+    .lineup-locked .drag-handle {
+        cursor: default !important;
+        opacity: 0.3;
+        pointer-events: none;
+    }
+    
+    .lineup-locked .player-item:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
 
     .auto-save-indicator {
         position: fixed;
@@ -979,7 +997,7 @@
 </style>
 
 <!-- Lineup Container -->
-<div class="lineup-container">
+<div class="lineup-container<%= lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked' ? ' lineup-locked' : '' %>">
     <!-- Auto-save indicator -->
     <div id="autoSaveIndicator" class="auto-save-indicator">
         <i class="bi bi-check-circle"></i> Lineup saved
@@ -1068,19 +1086,23 @@
     </div>
 
 
-<!-- Head Coach (Read-only) -->
+<!-- Head Coach Display -->
 <div class="position-section">
     <div class="position-header">
         <h3 class="position-title">
             <i class="bi bi-person-badge"></i> Head Coach
         </h3>
-        <span class="position-requirement">Team Assignment</span>
+        <span class="position-requirement">Team Assigned</span>
     </div>
+    
+    <!-- Always display the team's assigned head coach -->
     <div class="player-item">
         <div class="position-number">1.</div>
         <div class="player-info">
-            <span class="player-name"><%= selectedTeam.team_name %> Head Coach</span>
-            <span class="player-team">(<%= selectedTeam.team_name %>)</span>
+            <span class="player-name">
+                <%= selectedTeam.head_coach || 'No Head Coach Assigned' %>
+            </span>
+            <span class="player-team">(Coach)</span>
             <span class="role-indicator role-starter">Head Coach</span>
         </div>
     </div>
@@ -1431,8 +1453,9 @@ const LineupManager = {
         this.initCopyButtons();
         this.initGameTypeDisplay();
         this.initCopyButtonVisibility();
+        // Head coach no longer needs initialization - displayed from team data
         
-        console.log('Lineup Manager initialized for', this.gameType, 'with bonus games:', this.hasBonusGames);
+        // Lineup Manager initialized
     },
 
     // Initialize copy button event handlers
@@ -1496,7 +1519,7 @@ const LineupManager = {
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
-                console.log('Window resized, reinitializing drag and drop');
+                // Reinitializing drag and drop for new window size
                 this.initDragAndDrop();
             }, 250);
         });
@@ -1562,7 +1585,7 @@ const LineupManager = {
             const playersEl = document.getElementById(positionMappings[position]);
             
             if (playersEl) {
-                console.log('Initializing sortable for:', position, 'element:', playersEl, 'mobile:', isMobile);
+                // Initializing sortable for position
                 
                 const sortableConfig = {
                     animation: 150,
@@ -1572,10 +1595,10 @@ const LineupManager = {
                     filter: '.missing-starter, .empty-position',
                     preventOnFilter: false,
                     onStart: (evt) => {
-                        console.log('Drag started for position:', position, 'element:', evt.item);
+                        // Drag started
                     },
                     onEnd: (evt) => {
-                        console.log('Drag ended for position:', position, 'from:', evt.oldIndex, 'to:', evt.newIndex);
+                        // Drag ended
                         if (evt.oldIndex !== evt.newIndex) {
                             self.handlePositionReorder(position, evt);
                             self.updateStarterHighlighting(position, starterRequirements[position]);
@@ -1590,12 +1613,17 @@ const LineupManager = {
                     sortableConfig.handle = '.drag-handle';
                 }
                 
+                // Disable drag and drop if lineups are locked
+                if (this.isLocked) {
+                    sortableConfig.disabled = true;
+                }
+                
                 const sortable = new Sortable(playersEl, sortableConfig);
                 this.sortableInstances.push(sortable);
                 
-                console.log('Sortable initialized:', sortable, 'with handle:', isMobile ? 'yes' : 'no');
+                // Sortable initialized
             } else {
-                console.error('Could not find element for position:', position, 'with ID:', positionMappings[position]);
+                // Could not find element for position
             }
         });
     },
@@ -1689,7 +1717,7 @@ const LineupManager = {
             // Collect all current player positions
             const positions = this.collectAllPositions();
             
-            console.log('Auto-saving lineup after movement:', positions);
+            // Auto-saving lineup
             
             const response = await fetch('/lineups/save', {
                 method: 'POST',
@@ -1708,17 +1736,17 @@ const LineupManager = {
 
             const result = await response.json();
             if (result.success) {
-                console.log('Lineup auto-saved successfully');
+                // Lineup auto-saved
                 this.showSuccess('Lineup saved');
                 
                 // If in shared mode, sync with the other lineup
                 this.syncSharedLineup(positions);
             } else {
-                console.error('Error auto-saving lineup:', result.message);
+                // Error auto-saving lineup
                 this.showError('Error saving lineup: ' + result.message);
             }
         } catch (error) {
-            console.error('Error auto-saving lineup:', error);
+            // Error auto-saving lineup
             this.showError('Network error saving lineup');
         }
     },
@@ -1800,17 +1828,17 @@ const LineupManager = {
 
     // Show saving indicator
     showSaving() {
-        console.log('Saving changes...');
+        // Saving changes
     },
 
     // Show success message  
     showSuccess(message) {
-        console.log('Success:', message);
+        // Success
     },
 
     // Show error message
     showError(message) {
-        console.error('Error:', message);
+        // Error
         alert(message);
     },
 
@@ -1847,7 +1875,7 @@ const LineupManager = {
                 }
             })
             .catch(error => {
-                console.error('Error copying from previous week:', error);
+                // Error copying from previous week
                 this.showError('Failed to copy lineup from previous week');
             });
         }
@@ -1874,18 +1902,18 @@ const LineupManager = {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    console.log('Synced lineups to shared mode');
+                    // Synced lineups
                     this.showSuccess('Lineups synchronized');
                     // If we're currently on bonus, reload to show synced lineup
                     if (this.gameType === 'bonus') {
                         setTimeout(() => window.location.reload(), 500);
                     }
                 } else {
-                    console.error('Failed to sync lineups:', data.message);
+                    // Failed to sync lineups
                 }
             })
             .catch(error => {
-                console.error('Error syncing lineups:', error);
+                // Error syncing lineups
             });
         }
     },
@@ -1925,6 +1953,8 @@ const LineupManager = {
         }
     },
 
+    // Head coach is now displayed from team data, no selector needed
+
     // Sync lineup changes to the other game type when in shared mode
     async syncSharedLineup(positions) {
         // Check if we're in separate mode for this specific week
@@ -1959,9 +1989,9 @@ const LineupManager = {
                 })
             });
 
-            console.log(`Lineup auto-synced to ${targetGameType} (shared mode)`);
+            // Lineup auto-synced
         } catch (error) {
-            console.error('Error syncing shared lineup:', error);
+            // Error syncing shared lineup
         }
     }
 };

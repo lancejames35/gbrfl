@@ -24,7 +24,15 @@
                         <span class="badge bg-secondary"><%= team.owner_username %></span>
                     </div>
                     <div class="card-body">
-                        <!-- Placeholder for team stats -->
+                        <!-- Head Coach Info -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-person-badge text-primary me-2"></i>
+                                <strong>Head Coach:</strong>
+                            </div>
+                            <span class="ms-4"><%= team.head_coach || 'Not assigned' %></span>
+                        </div>
+                        
                         <div class="mb-3">
                             <small class="text-muted">Created: <%= new Date(team.created_at).toLocaleDateString() %></small>
                         </div>

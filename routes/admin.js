@@ -278,5 +278,39 @@ router.get('/player-audit', ensureAuthenticated, isAdmin, adminController.getPla
  */
 router.post('/player-audit/fix', ensureAuthenticated, isAdmin, adminController.fixPlayerTeams);
 
+/**
+ * @route   GET /admin/lineup-locks
+ * @desc    Lineup lock management interface
+ * @access  Private/Admin
+ */
+router.get('/lineup-locks', ensureAuthenticated, isAdmin, adminController.getLineupLockManagement);
+
+/**
+ * @route   POST /admin/lineup-locks/set-lock-time
+ * @desc    Set lock time for a specific week
+ * @access  Private/Admin
+ */
+router.post('/lineup-locks/set-lock-time', ensureAuthenticated, isAdmin, [
+  check('week_number', 'Week number is required').isInt({ min: 1, max: 17 }),
+  check('lock_datetime', 'Lock date/time is required').notEmpty()
+], adminController.setLineupLockTime);
+
+/**
+ * @route   POST /admin/lineup-locks/toggle-lock
+ * @desc    Manually lock/unlock a specific week
+ * @access  Private/Admin
+ */
+router.post('/lineup-locks/toggle-lock', ensureAuthenticated, isAdmin, [
+  check('week_number', 'Week number is required').isInt({ min: 1, max: 17 }),
+  check('is_locked', 'Lock status is required').isBoolean()
+], adminController.toggleLineupLock);
+
+/**
+ * @route   GET /admin/lineup-locks/data
+ * @desc    Get lineup lock data for AJAX
+ * @access  Private/Admin
+ */
+router.get('/lineup-locks/data', ensureAuthenticated, isAdmin, adminController.getLineupLockData);
+
 
 module.exports = router;

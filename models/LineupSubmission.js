@@ -78,7 +78,7 @@ class LineupSubmission {
   static async updateLineup(lineupId, updateData) {
     try {
       // Allow updating fields that exist in the actual database schema
-      const allowedFields = ['week_number', 'game_type', 'season_year', 'submitted_at', 'is_locked'];
+      const allowedFields = ['week_number', 'game_type', 'season_year', 'submitted_at', 'is_locked', 'head_coach'];
       const fields = [];
       const values = [];
 

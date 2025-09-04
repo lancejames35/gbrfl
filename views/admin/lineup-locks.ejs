@@ -1,0 +1,534 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-0">Lineup Lock Management</h1>
+        <p class="text-muted">Set automatic lock times and manually control lineup locking for each week</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-primary" id="refreshData">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<!-- Alert Container -->
+<div id="alertContainer"></div>
+
+<!-- Current Lock Status Overview -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Current Lock Status</h5>
+    </div>
+    <div class="card-body">
+        <div class="row" id="statusOverview">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Lock Management -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-calendar-week me-2"></i>Weekly Lock Settings</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Week</th>
+                        <th>Scheduled Lock Time</th>
+                        <th>Current Status</th>
+                        <th>Time Until Lock</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="lockTableBody">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Set Lock Time Modal -->
+<div class="modal fade" id="setLockTimeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Set Lock Time</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="setLockTimeForm">
+                    <input type="hidden" id="modalWeekNumber" name="week_number">
+                    <div class="mb-3">
+                        <label class="form-label">Week Number</label>
+                        <input type="text" class="form-control" id="modalWeekDisplay" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="lockDateTime" class="form-label">Lock Date & Time</label>
+                        <input type="datetime-local" class="form-control" id="lockDateTime" name="lock_datetime" required>
+                        <div class="form-text">
+                            Enter the local date/time when lineups should lock. The system will automatically handle timezone conversion.
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Timezone Info:</strong> Times are entered in your browser's timezone and stored as UTC. 
+                            The system will automatically lock lineups when this time is reached.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveLockTime">
+                    <i class="bi bi-save"></i> Set Lock Time
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Lock/Unlock Modal -->
+<div class="modal fade" id="confirmToggleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmToggleTitle">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmToggleMessage"></p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action will immediately affect all users' ability to edit their lineups for this week.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmToggleAction">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.status-badge {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.status-unlocked {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-locked {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-auto-locked {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.time-until-lock {
+    font-weight: 500;
+}
+
+.time-until-lock.urgent {
+    color: #dc3545;
+}
+
+.overview-card {
+    border: none;
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.overview-card h3 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.overview-card.unlocked {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border-left: 4px solid #28a745;
+}
+
+.overview-card.locked {
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    border-left: 4px solid #dc3545;
+}
+
+.overview-card.auto-locked {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border-left: 4px solid #ffc107;
+}
+
+/* Modal positioning to avoid header cutoff */
+.modal-dialog {
+    margin-top: 80px !important;
+    margin-bottom: 20px !important;
+}
+
+/* Ensure modal doesn't get too close to edges on mobile */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .overview-card h3 {
+        font-size: 1.5rem;
+    }
+    
+    .modal-dialog {
+        margin: 60px 10px !important;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let lockData = [];
+    
+    // Load initial data
+    loadLockData();
+    
+    // Event listeners
+    document.getElementById('refreshData').addEventListener('click', loadLockData);
+    document.getElementById('saveLockTime').addEventListener('click', saveLockTime);
+    document.getElementById('confirmToggleAction').addEventListener('click', confirmToggleAction);
+    
+    // Auto-refresh every 30 seconds
+    setInterval(loadLockData, 30000);
+    
+    function loadLockData() {
+        showLoading();
+        
+        fetch('/admin/lineup-locks/data')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    lockData = data.data;
+                    updateStatusOverview();
+                    updateLockTable();
+                } else {
+                    showAlert('error', 'Failed to load lock data: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading lock data:', error);
+                showAlert('error', 'Error loading lock data');
+            })
+            .finally(() => {
+                hideLoading();
+            });
+    }
+    
+    function updateStatusOverview() {
+        const overview = document.getElementById('statusOverview');
+        const unlocked = lockData.filter(w => w.current_status === 'unlocked').length;
+        const locked = lockData.filter(w => w.current_status === 'locked').length;
+        const autoLocked = lockData.filter(w => w.current_status === 'auto_locked').length;
+        const totalWeeks = 17;
+        const noData = totalWeeks - lockData.length;
+        
+        overview.innerHTML = `
+            <div class="col-md-3 col-sm-6">
+                <div class="overview-card unlocked">
+                    <h3>${unlocked + noData}</h3>
+                    <p class="mb-0">Unlocked Weeks</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="overview-card locked">
+                    <h3>${locked}</h3>
+                    <p class="mb-0">Manually Locked</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="overview-card auto-locked">
+                    <h3>${autoLocked}</h3>
+                    <p class="mb-0">Auto Locked</p>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="overview-card" style="background: linear-gradient(135deg, #e2e3e5, #d6d8db); border-left: 4px solid #6c757d;">
+                    <h3>${totalWeeks}</h3>
+                    <p class="mb-0">Total Weeks</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    function updateLockTable() {
+        const tbody = document.getElementById('lockTableBody');
+        let html = '';
+        
+        // Generate all weeks (1-17)
+        for (let week = 1; week <= 17; week++) {
+            const weekData = lockData.find(w => w.week_number === week);
+            
+            if (weekData) {
+                const lockTime = weekData.lock_time ? new Date(weekData.lock_time) : null;
+                const lockTimeDisplay = lockTime ? lockTime.toLocaleString() : 'Not Set';
+                const statusBadge = getStatusBadge(weekData.current_status);
+                const timeUntil = getTimeUntilDisplay(weekData.minutes_until_lock);
+                const isLocked = weekData.current_status === 'locked' || weekData.current_status === 'auto_locked';
+                
+                html += `
+                    <tr>
+                        <td><strong>Week ${week}</strong></td>
+                        <td>${lockTimeDisplay}</td>
+                        <td>${statusBadge}</td>
+                        <td>${timeUntil}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="showSetLockTimeModal(${week})">
+                                    <i class="bi bi-clock"></i> Set Time
+                                </button>
+                                <button class="btn btn-outline-${isLocked ? 'success' : 'warning'}" 
+                                        onclick="showToggleLockModal(${week}, ${isLocked})">
+                                    <i class="bi bi-${isLocked ? 'unlock' : 'lock'}"></i> 
+                                    ${isLocked ? 'Unlock' : 'Lock'}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                html += `
+                    <tr>
+                        <td><strong>Week ${week}</strong></td>
+                        <td class="text-muted">Not Set</td>
+                        <td><span class="badge status-badge status-unlocked">Unlocked</span></td>
+                        <td class="text-muted">-</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="showSetLockTimeModal(${week})">
+                                    <i class="bi bi-clock"></i> Set Time
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="showToggleLockModal(${week}, false)">
+                                    <i class="bi bi-lock"></i> Lock
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        tbody.innerHTML = html;
+    }
+    
+    function getStatusBadge(status) {
+        switch (status) {
+            case 'locked':
+                return '<span class="badge status-badge status-locked">Manually Locked</span>';
+            case 'auto_locked':
+                return '<span class="badge status-badge status-auto-locked">Auto Locked</span>';
+            case 'unlocked':
+            default:
+                return '<span class="badge status-badge status-unlocked">Unlocked</span>';
+        }
+    }
+    
+    function getTimeUntilDisplay(minutes) {
+        if (!minutes || minutes <= 0) {
+            return '<span class="text-muted">-</span>';
+        }
+        
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+        let display = '';
+        
+        if (hours > 24) {
+            const days = Math.floor(hours / 24);
+            const remainingHours = hours % 24;
+            display = `${days}d ${remainingHours}h`;
+        } else if (hours > 0) {
+            display = `${hours}h ${mins}m`;
+        } else {
+            display = `${mins}m`;
+        }
+        
+        const urgentClass = minutes <= 60 ? 'urgent' : '';
+        return `<span class="time-until-lock ${urgentClass}">${display}</span>`;
+    }
+    
+    // Global functions for onclick handlers
+    window.showSetLockTimeModal = function(weekNumber) {
+        document.getElementById('modalWeekNumber').value = weekNumber;
+        document.getElementById('modalWeekDisplay').value = `Week ${weekNumber}`;
+        
+        // Pre-fill with existing time if available
+        const weekData = lockData.find(w => w.week_number === weekNumber);
+        if (weekData && weekData.lock_time) {
+            const lockTime = new Date(weekData.lock_time);
+            // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+            const isoString = lockTime.toISOString().slice(0, 16);
+            document.getElementById('lockDateTime').value = isoString;
+        } else {
+            // Default to next Thursday at 8:30 PM local time
+            const now = new Date();
+            const thursday = new Date();
+            const daysUntilThursday = (4 - now.getDay() + 7) % 7 || 7;
+            thursday.setDate(now.getDate() + daysUntilThursday);
+            thursday.setHours(20, 30, 0, 0); // 8:30 PM
+            document.getElementById('lockDateTime').value = thursday.toISOString().slice(0, 16);
+        }
+        
+        const modal = new bootstrap.Modal(document.getElementById('setLockTimeModal'), {
+            backdrop: false,
+            keyboard: true
+        });
+        modal.show();
+    };
+    
+    window.showToggleLockModal = function(weekNumber, isCurrentlyLocked) {
+        const action = isCurrentlyLocked ? 'unlock' : 'lock';
+        const actionCap = isCurrentlyLocked ? 'Unlock' : 'Lock';
+        
+        document.getElementById('confirmToggleTitle').textContent = `${actionCap} Week ${weekNumber}`;
+        document.getElementById('confirmToggleMessage').textContent = 
+            `Are you sure you want to ${action} lineups for Week ${weekNumber}?`;
+        
+        document.getElementById('confirmToggleAction').onclick = function() {
+            toggleWeekLock(weekNumber, !isCurrentlyLocked);
+        };
+        
+        const modal = new bootstrap.Modal(document.getElementById('confirmToggleModal'), {
+            backdrop: false,
+            keyboard: true
+        });
+        modal.show();
+    };
+    
+    function saveLockTime() {
+        const form = document.getElementById('setLockTimeForm');
+        const formData = new FormData(form);
+        
+        const data = {
+            week_number: parseInt(formData.get('week_number')),
+            lock_datetime: formData.get('lock_datetime')
+        };
+        
+        if (!data.lock_datetime) {
+            showAlert('error', 'Please select a date and time');
+            return;
+        }
+        
+        fetch('/admin/lineup-locks/set-lock-time', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert('success', result.message);
+                bootstrap.Modal.getInstance(document.getElementById('setLockTimeModal')).hide();
+                loadLockData(); // Refresh data
+            } else {
+                showAlert('error', result.error || 'Failed to set lock time');
+            }
+        })
+        .catch(error => {
+            console.error('Error setting lock time:', error);
+            showAlert('error', 'Error setting lock time');
+        });
+    }
+    
+    function toggleWeekLock(weekNumber, isLocked) {
+        const data = {
+            week_number: weekNumber,
+            is_locked: isLocked
+        };
+        
+        fetch('/admin/lineup-locks/toggle-lock', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showAlert('success', result.message);
+                bootstrap.Modal.getInstance(document.getElementById('confirmToggleModal')).hide();
+                loadLockData(); // Refresh data
+            } else {
+                showAlert('error', result.error || 'Failed to toggle lock status');
+            }
+        })
+        .catch(error => {
+            console.error('Error toggling lock:', error);
+            showAlert('error', 'Error toggling lock status');
+        });
+    }
+    
+    function confirmToggleAction() {
+        // This will be set dynamically by showToggleLockModal
+    }
+    
+    function showAlert(type, message) {
+        const alertContainer = document.getElementById('alertContainer');
+        const alertClass = type === 'error' ? 'danger' : type;
+        const iconClass = type === 'error' ? 'exclamation-triangle' : 'check-circle';
+        
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${alertClass} alert-dismissible fade show`;
+        alert.innerHTML = `
+            <i class="bi bi-${iconClass} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        alertContainer.appendChild(alert);
+        
+        // Auto-dismiss success alerts after 5 seconds
+        if (type === 'success') {
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+    }
+    
+    function showLoading() {
+        const refreshBtn = document.getElementById('refreshData');
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Loading...';
+        refreshBtn.disabled = true;
+    }
+    
+    function hideLoading() {
+        const refreshBtn = document.getElementById('refreshData');
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh';
+        refreshBtn.disabled = false;
+    }
+});
+</script>
+
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>

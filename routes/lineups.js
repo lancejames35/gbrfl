@@ -107,4 +107,14 @@ router.get('/players/:team_id/:position_type', lineupController.getPlayerPool);
  */
 router.get('/validate/:lineup_id', lineupController.validateLineup);
 
+/**
+ * @route   POST /lineups/save-head-coach
+ * @desc    Save head coach selection for lineup
+ * @access  Private
+ */
+router.post('/save-head-coach', [
+  check('lineup_id').isInt().withMessage('Invalid lineup ID'),
+  check('head_coach').optional().isLength({ max: 100 }).withMessage('Head coach name too long')
+], lineupController.saveHeadCoach);
+
 module.exports = router;

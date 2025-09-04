@@ -132,55 +132,11 @@ const isActuallyTomorrow = tomorrow.getFullYear() === draftActualDate.getFullYea
                            tomorrow.getMonth() === draftActualDate.getMonth() && 
                            tomorrow.getDate() === draftActualDate.getDate();
 
-// Check if draft is completely over (after August 31, 2025)
-const draftCompleteDate = new Date('2025-09-01'); // Day after draft
-const isDraftComplete = today >= draftCompleteDate;
+// Draft is complete - hide all draft-related messages
+const isDraftComplete = true;
 %>
 
-<% if (showCountdown && !draftHasStarted) { %>
-<div class="draft-announcement-section mb-4">
-    <div class="card border-primary shadow-lg">
-        <div class="card-body text-center py-4" style="background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(102, 16, 242, 0.05));">
-            <h2 class="mb-3">
-                <i class="bi bi-calendar-event-fill text-primary"></i> 
-                Live Draft Information
-            </h2>
-            <p class="lead mb-4">
-                <strong>Draft starts <span id="draft-day-name">Sunday</span>, August 31st at <span id="main-draft-time">12:30 PM CT</span></strong>
-            </p>
-            
-            <div id="draft-countdown" class="mb-4">
-                <div class="countdown-display d-flex justify-content-center gap-3">
-                    <div class="time-unit text-center">
-                        <div class="display-4 fw-bold text-primary" id="days">0</div>
-                        <small class="text-muted">Days</small>
-                    </div>
-                    <div class="time-unit text-center">
-                        <div class="display-4 fw-bold text-primary" id="hours">0</div>
-                        <small class="text-muted">Hours</small>
-                    </div>
-                    <div class="time-unit text-center">
-                        <div class="display-4 fw-bold text-primary" id="minutes">0</div>
-                        <small class="text-muted">Minutes</small>
-                    </div>
-                    <div class="time-unit text-center">
-                        <div class="display-4 fw-bold text-primary" id="seconds">0</div>
-                        <small class="text-muted">Seconds</small>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="draft-actions">
-                <a href="/draft" class="btn btn-primary btn-lg px-4">
-                    <i class="bi bi-door-open-fill"></i> Enter Draft Room
-                </a>
-                <p class="text-muted mt-2 mb-0">
-                    <small>You can preview the draft room anytime before the draft starts</small>
-                </p>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Draft countdown section removed - draft completed -->
 
 <script>
 // Convert draft time to user's timezone and set day name
@@ -222,169 +178,90 @@ function displayLocalDraftTime() {
     }
 }
 
-// Draft countdown timer
-function updateDraftCountdown() {
-    const draftTime = new Date('2025-08-31T17:30:00.000Z'); // 12:30 PM CT
-    const now = new Date();
-    const difference = draftTime - now;
-    
-    if (difference <= 0) {
-        document.getElementById('draft-countdown').innerHTML = 
-            '<div class="alert alert-success mb-0"><h3 class="mb-0">🔴 DRAFT IS LIVE NOW!</h3></div>';
-        // Stop the countdown
-        clearInterval(countdownInterval);
-        return;
-    }
-    
-    const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((difference / 1000 / 60) % 60);
-    const seconds = Math.floor((difference / 1000) % 60);
-    
-    document.getElementById('days').textContent = days;
-    document.getElementById('hours').textContent = hours.toString().padStart(2, '0');
-    document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
-    document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
-}
+// Draft countdown timer removed - draft complete
 
-// Fetch user's draft position from the draft order
-async function loadDraftPosition() {
+// Draft position function removed - draft is complete
+
+// Fetch and display the actual lineup lock time from database
+async function updateWeeklyDeadline() {
     try {
-        const response = await fetch('/api/draft-order');
+        // Fetch the current/next lock time from the server
+        const response = await fetch('/api/next-lineup-lock');
         const data = await response.json();
         
-        if (data.success && data.draftOrder) {
-            // Find current user's team draft position (from round 1)
-            const userTeamId = <%= user.team_id || 'null' %>;
-            if (userTeamId) {
-                const round1Picks = data.draftOrder.filter(pick => pick.round === 1);
-                const userPick = round1Picks.find(pick => pick.fantasy_team_id === userTeamId);
-                
-                const draftPositionEl = document.getElementById('user-draft-position');
-                if (draftPositionEl && userPick) {
-                    draftPositionEl.innerHTML = `<span class="text-primary">#${userPick.pick_number}</span>`;
-                } else if (draftPositionEl) {
-                    draftPositionEl.innerHTML = '<span class="text-muted">TBD</span>';
-                }
+        if (!data.success || !data.lockTime) {
+            // No lock time set, hide the countdown
+            const countdownEl = document.getElementById('next-thursday-countdown');
+            if (countdownEl) {
+                countdownEl.textContent = 'Not set';
             }
-        } else {
-            const draftPositionEl = document.getElementById('user-draft-position');
-            if (draftPositionEl) {
-                draftPositionEl.innerHTML = '<span class="text-muted">TBD</span>';
-            }
+            return;
         }
-    } catch (error) {
-        console.error('Error loading draft position:', error);
-        const draftPositionEl = document.getElementById('user-draft-position');
-        if (draftPositionEl) {
-            draftPositionEl.innerHTML = '<span class="text-muted">TBD</span>';
-        }
-    }
-}
-
-// Calculate next Thursday at 7:20 PM CT (00:20 UTC Friday)
-function getNextThursday() {
-    const now = new Date();
-    const thursday = new Date();
-    
-    // Set to next Thursday
-    const daysUntilThursday = (4 - now.getDay() + 7) % 7;
-    if (daysUntilThursday === 0) {
-        // It's Thursday - check if it's before 7:20 PM CT (01:20 UTC Friday)
-        const thursdayDeadline = new Date();
-        thursdayDeadline.setHours(1, 20, 0, 0); // 7:20 PM CT = 1:20 AM UTC next day
         
-        if (now < thursdayDeadline) {
-            // Before deadline, use today
-            thursday.setHours(1, 20, 0, 0);
-        } else {
-            // After deadline, use next Thursday
-            thursday.setDate(now.getDate() + 7);
-            thursday.setHours(1, 20, 0, 0);
+        // Parse the lock time from server (it's in UTC)
+        const lockTime = new Date(data.lockTime);
+        const now = new Date();
+        const difference = lockTime - now;
+        
+        const countdownEl = document.getElementById('next-thursday-countdown');
+        const dateEl = document.getElementById('next-thursday-date');
+        
+        if (difference <= 0) {
+            // Deadline has passed
+            if (countdownEl) {
+                countdownEl.textContent = 'Locked';
+            }
+            return;
         }
-    } else {
-        // Not Thursday, set to next Thursday
-        thursday.setDate(now.getDate() + daysUntilThursday);
-        thursday.setHours(1, 20, 0, 0);
-    }
-    
-    return thursday;
-}
-
-// Update Thursday countdown and time display
-function updateThursdayCountdown() {
-    const nextThursday = getNextThursday();
-    const now = new Date();
-    const difference = nextThursday - now;
-    
-    if (difference <= 0) {
-        // Deadline passed, calculate next one
-        const newThursday = new Date(nextThursday);
-        newThursday.setDate(nextThursday.getDate() + 7);
-        updateThursdayDisplay(newThursday);
-        return;
-    }
-    
-    updateThursdayDisplay(nextThursday);
-}
-
-function updateThursdayDisplay(targetDate) {
-    const now = new Date();
-    const difference = targetDate - now;
-    
-    // Update countdown
-    const countdownEl = document.getElementById('next-thursday-countdown');
-    if (countdownEl && difference > 0) {
+        
+        // Calculate time components
         const days = Math.floor(difference / (1000 * 60 * 60 * 24));
         const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
         const minutes = Math.floor((difference / 1000 / 60) % 60);
+        const seconds = Math.floor((difference / 1000) % 60);
         
-        if (days > 0) {
-            countdownEl.textContent = `${days}d ${hours}h ${minutes}m`;
-        } else if (hours > 0) {
-            countdownEl.textContent = `${hours}h ${minutes}m`;
-        } else {
-            countdownEl.textContent = `${minutes} minutes`;
+        // Update countdown display
+        if (countdownEl) {
+            if (days > 0) {
+                countdownEl.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+            } else if (hours > 0) {
+                countdownEl.textContent = `${hours}h ${minutes}m ${seconds}s`;
+            } else if (minutes > 0) {
+                countdownEl.textContent = `${minutes}m ${seconds}s`;
+            } else {
+                countdownEl.textContent = `${seconds} seconds`;
+            }
         }
-    }
-    
-    // Update timezone-aware time display
-    const thursdayTimeEl = document.getElementById('thursday-time');
-    if (thursdayTimeEl) {
-        const userTimeString = targetDate.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short',
-            hour12: true
-        });
-        thursdayTimeEl.textContent = userTimeString;
-    }
-    
-    // Update date display
-    const thursdayDateEl = document.getElementById('next-thursday-date');
-    if (thursdayDateEl) {
-        const dayName = targetDate.toLocaleDateString('en-US', { weekday: 'long' });
-        const dateString = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        thursdayDateEl.innerHTML = `${dayName}, ${dateString} at <span id="thursday-time">${targetDate.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short',
-            hour12: true
-        })}</span>`;
+        
+        // Update date display with user's local timezone
+        if (dateEl) {
+            const dayName = lockTime.toLocaleDateString('en-US', { weekday: 'long' });
+            const dateString = lockTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const timeString = lockTime.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                timeZoneName: 'short',
+                hour12: true
+            });
+            
+            // Update the date display
+            dateEl.innerHTML = `${dayName}, ${dateString} at ${timeString}`;
+        }
+        
+    } catch (error) {
+        // Error fetching lineup lock time
+        const countdownEl = document.getElementById('next-thursday-countdown');
+        if (countdownEl) {
+            countdownEl.textContent = 'Error loading';
+        }
     }
 }
 
-// Initialize timezone display, countdown, and draft position
-displayLocalDraftTime();
-loadDraftPosition();
+// Draft functions removed - draft is complete
 
-// Update every second
-const countdownInterval = setInterval(updateDraftCountdown, 1000);
-updateDraftCountdown(); // Initial call
-
-// Initialize and update Thursday countdown (post-draft)
-updateThursdayCountdown();
-const thursdayInterval = setInterval(updateThursdayCountdown, 60000); // Update every minute
+// Initialize and update weekly deadline countdown
+updateWeeklyDeadline(); // Initial call
+const deadlineInterval = setInterval(updateWeeklyDeadline, 1000); // Update every second
 </script>
 
 <style>
@@ -407,14 +284,7 @@ const thursdayInterval = setInterval(updateThursdayCountdown, 60000); // Update 
     }
 }
 </style>
-<% } else if (draftHasStarted) { %>
-<div class="alert alert-success text-center mb-4">
-    <h3 class="mb-2">🏈 Draft Has Started!</h3>
-    <a href="/draft" class="btn btn-success btn-lg">
-        <i class="bi bi-door-open-fill"></i> Join Draft Room Now
-    </a>
-</div>
-<% } %>
+<!-- Draft alerts removed - draft completed -->
 
 <div class="row">
     <!-- League News -->
@@ -433,24 +303,11 @@ const thursdayInterval = setInterval(updateThursdayCountdown, 60000); // Update 
                 </div>
                 
                 
-                <!-- Draft Information - Third -->
+                <!-- Season Information -->
                 <div class="news-item">
-                    <h6>Draft Day Approaching</h6>
-                    <p class="text-muted mb-1"><small>Posted on August 15, 2025</small></p>
-                    <%/* Using common variables defined at top of file */%>
-                    <% if (isActuallyDraftDay) { %>
-                        <p>The 2025 GBRFL Draft is happening today! Access the draft room below when you're ready to participate.</p>
-                        <a href="/draft" class="btn btn-success mt-2">
-                            <i class="bi bi-calendar-event"></i> Join Draft Room
-                        </a>
-                    <% } else if (isActuallyTomorrow) { %>
-                        <p>The 2025 GBRFL Draft is tomorrow, August 31st! The draft room is ready for preview. Make sure you're prepared!</p>
-                        <a href="/draft" class="btn btn-primary mt-2">
-                            <i class="bi bi-eye"></i> Preview Draft Room
-                        </a>
-                    <% } else { %>
-                        <p>The 2025 GBRFL Draft is scheduled for August 31, 2025. Keeper selections closed on August 24th. Draft room access will be available on draft day.</p>
-                    <% } %>
+                    <h6>2025 Season Underway</h6>
+                    <p class="text-muted mb-1"><small>Posted on September 4, 2025</small></p>
+                    <p>The 2025 GBRFL season is now active! Manage your lineups, check the waiver wire, and prepare for weekly matchups. Good luck to all teams!</p>
                 </div>
             </div>
         </div>
@@ -467,32 +324,10 @@ const thursdayInterval = setInterval(updateThursdayCountdown, 60000); // Update 
             <div class="card-body">
                 <% if (userTeam) { %>
                     <div class="row text-center">
-                        <div class="col-6">
+                        <div class="col-12">
                             <div class="stat-block">
-                                <h6 class="text-muted">
-                                    <span class="d-none d-sm-inline">Draft Position</span>
-                                    <span class="d-sm-none">Draft Pos</span>
-                                </h6>
-                                <span class="fs-4 fw-bold" id="user-draft-position">
-                                    <span class="text-muted">Loading...</span>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="stat-block">
-                                <h6 class="text-muted">
-                                    <span class="d-none d-sm-inline">Days to Draft</span>
-                                    <span class="d-sm-none">Draft Days</span>
-                                </h6>
-                                <span class="fs-4 fw-bold text-info">
-                                    <% if (isActuallyDraftDay) { %>
-                                        <span class="live-indicator">TODAY</span>
-                                    <% } else if (isDraftComplete) { %>
-                                        COMPLETE
-                                    <% } else { %>
-                                        <%= Math.max(1, Math.ceil((draftActualDate - today) / (1000 * 60 * 60 * 24))) %>
-                                    <% } %>
-                                </span>
+                                <h6 class="text-muted">Season Status</h6>
+                                <span class="fs-4 fw-bold text-success">ACTIVE</span>
                             </div>
                         </div>
                     </div>
@@ -534,15 +369,11 @@ const thursdayInterval = setInterval(updateThursdayCountdown, 60000); // Update 
                             <span class="text-muted">Loading...</span>
                         </div>
                         <small class="text-muted d-block mt-1" id="next-thursday-date">
-                            Next Thursday at <span id="thursday-time">7:20 PM</span>
+                            Thursday at <span id="thursday-time">7:20 PM</span>
                         </small>
                     </div>
                     <hr>
                     <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Season End
-                            <span class="badge bg-info">Dec 29, 2025</span>
-                        </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Trade Deadline
                             <span class="badge bg-warning text-dark">Nov 1, 2025</span>

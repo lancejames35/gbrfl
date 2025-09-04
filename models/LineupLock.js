@@ -57,7 +57,7 @@ class LineupLock {
         game_type: gameType // Add for compatibility
       };
     } catch (error) {
-      console.error('Error fetching lock status:', error);
+      // Error fetching lock status
       throw error;
     }
   }
@@ -82,7 +82,7 @@ class LineupLock {
       const result = await db.query(query, [weekNumber, seasonYear, lockTime]);
       return result.affectedRows > 0;
     } catch (error) {
-      console.error('Error setting lock time:', error);
+      // Error setting lock time
       throw error;
     }
   }
@@ -96,17 +96,25 @@ class LineupLock {
    */
   static async setLockStatus(weekNumber, seasonYear, isLocked) {
     try {
+      // When manually toggling, set lock_datetime to current time if locking, or a default future time if unlocking
+      const currentTime = new Date();
+      const lockDatetime = isLocked ? currentTime : new Date('2025-12-31 23:59:59'); // Default future time for unlocked state
+      
       const query = `
-        INSERT INTO lineup_locks (week_number, season_year, is_locked) 
-        VALUES (?, ?, ?)
+        INSERT INTO lineup_locks (week_number, season_year, is_locked, lock_datetime) 
+        VALUES (?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE 
-        is_locked = VALUES(is_locked)
+        is_locked = VALUES(is_locked),
+        lock_datetime = CASE 
+          WHEN VALUES(is_locked) = 1 THEN NOW() 
+          ELSE lock_datetime 
+        END
       `;
 
-      const result = await db.query(query, [weekNumber, seasonYear, isLocked ? 1 : 0]);
+      const result = await db.query(query, [weekNumber, seasonYear, isLocked ? 1 : 0, lockDatetime]);
       return result.affectedRows > 0;
     } catch (error) {
-      console.error('Error setting lock status:', error);
+      // Error setting lock status
       throw error;
     }
   }
@@ -142,7 +150,7 @@ class LineupLock {
       const results = await db.query(query, [seasonYear]);
       return results;
     } catch (error) {
-      console.error('Error fetching all weeks status:', error);
+      // Error fetching all weeks status
       throw error;
     }
   }
@@ -173,7 +181,7 @@ class LineupLock {
       const results = await db.query(query, [seasonYear, hoursAhead]);
       return results;
     } catch (error) {
-      console.error('Error fetching upcoming locks:', error);
+      // Error fetching upcoming locks
       throw error;
     }
   }
@@ -210,7 +218,7 @@ class LineupLock {
 
       return expiredWeeks;
     } catch (error) {
-      console.error('Error auto-locking expired weeks:', error);
+      // Error auto-locking expired weeks
       throw error;
     }
   }
@@ -242,7 +250,7 @@ class LineupLock {
 
       return results[0].is_locked === 1;
     } catch (error) {
-      console.error('Error checking if week is locked:', error);
+      // Error checking if week is locked
       throw error;
     }
   }

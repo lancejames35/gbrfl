@@ -7,6 +7,8 @@ const WeeklySchedule = require('../models/WeeklySchedule');
 const ScheduleAssignment = require('../models/ScheduleAssignment');
 const FantasyTeam = require('../models/FantasyTeam');
 const LineupSubmission = require('../models/LineupSubmission');
+const LineupPosition = require('../models/LineupPosition');
+const LineupLock = require('../models/LineupLock');
 
 /**
  * Get current week based on current date and season settings
@@ -103,19 +105,45 @@ exports.getScheduleData = async (req, res) => {
       });
     }
     
-    // TODO: Add results/scores for completed weeks
-    // For now, we'll check if lineups were submitted as an indicator of completion
+    // Add lineup data for locked weeks and check completion status
     if (view === 'league') {
+      // Check if lineups are locked for this week
+      const lockStatus = await LineupLock.getLockStatus(parseInt(week), 'primary', parseInt(seasonYear));
+      const isLocked = lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked';
+      
       for (let game of scheduleData) {
         if (game.team_1 && game.team_2) {
-          // Check if lineups were submitted for this week (indicates game was played)
+          // Check if lineups were submitted for this week
           const team1Lineup = await LineupSubmission.getByTeamAndWeek(game.team_1.team_id, parseInt(week), 'primary', parseInt(seasonYear));
           const team2Lineup = await LineupSubmission.getByTeamAndWeek(game.team_2.team_id, parseInt(week), 'primary', parseInt(seasonYear));
           
           game.is_completed = !!(team1Lineup && team2Lineup);
-          // TODO: Add actual scores when scoring system is implemented
-          game.team_1_score = game.is_completed ? 'W' : null;
-          game.team_2_score = game.is_completed ? 'L' : null;
+          // Scores will be added when scoring system is implemented
+          game.team_1_score = null;
+          game.team_2_score = null;
+          
+          // Add lineup data if lineups are locked
+          if (isLocked) {
+            // Get lineup data for both teams
+            if (team1Lineup) {
+              const team1LineupPositions = await LineupPosition.getTeamRosterByPosition(game.team_1.team_id, team1Lineup.lineup_id);
+              game.team_1_lineup = {
+                head_coach: team1Lineup.head_coach,
+                positions: team1LineupPositions
+              };
+            }
+            
+            if (team2Lineup) {
+              const team2LineupPositions = await LineupPosition.getTeamRosterByPosition(game.team_2.team_id, team2Lineup.lineup_id);
+              game.team_2_lineup = {
+                head_coach: team2Lineup.head_coach,
+                positions: team2LineupPositions
+              };
+            }
+          }
+          
+          // Add lock status to game data
+          game.lineups_locked = isLocked;
         }
       }
     }

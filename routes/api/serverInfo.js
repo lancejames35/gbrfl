@@ -22,13 +22,23 @@ router.get('/server-time', async (req, res) => {
     let dbTime = null;
     
     try {
-      const dbResult = await db.query('SELECT NOW() as current_time, @@session.time_zone as tz, @@global.time_zone as global_tz');
+      const dbResult = await db.query('SELECT NOW() as db_time, @@session.time_zone as tz, @@global.time_zone as global_tz');
       if (dbResult && dbResult[0]) {
-        dbTime = dbResult[0].current_time;
+        dbTime = dbResult[0].db_time;
         dbTimezone = dbResult[0].tz === 'SYSTEM' ? `SYSTEM (${dbResult[0].global_tz})` : dbResult[0].tz;
       }
     } catch (dbError) {
-      console.error('Error fetching database timezone:', dbError.message);
+      // Error fetching database timezone
+      // Fallback to basic NOW() query
+      try {
+        const fallbackResult = await db.query('SELECT NOW() as db_time');
+        if (fallbackResult && fallbackResult[0]) {
+          dbTime = fallbackResult[0].db_time;
+          dbTimezone = 'Unable to determine (using fallback)';
+        }
+      } catch (fallbackError) {
+        // Fallback query also failed
+      }
     }
 
     // Get system timezone
@@ -66,7 +76,7 @@ router.get('/server-time', async (req, res) => {
 
     res.json(timeInfo);
   } catch (error) {
-    console.error('Server time API error:', error);
+    // Server time API error
     res.status(500).json({ error: 'Failed to get server time information' });
   }
 });
@@ -135,7 +145,7 @@ router.get('/league-time-settings', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('League time settings API error:', error);
+    // League time settings API error
     res.status(500).json({ error: 'Failed to get league time settings' });
   }
 });
@@ -182,8 +192,57 @@ router.get('/timezone-debug', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Timezone debug error:', error);
+    // Timezone debug error
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Get the next lineup lock time
+ * @route GET /api/next-lineup-lock
+ * @access Public
+ */
+router.get('/next-lineup-lock', async (req, res) => {
+  try {
+    // Get current week number (you may want to calculate this dynamically)
+    const currentWeek = 1; // TODO: Calculate based on season settings
+    const seasonYear = 2025;
+    
+    // Query for the current or next lock time
+    const result = await db.query(`
+      SELECT week_number, lock_datetime, is_locked
+      FROM lineup_locks
+      WHERE season_year = ?
+      AND (
+        (is_locked = 0 AND lock_datetime IS NOT NULL AND lock_datetime > NOW())
+        OR week_number >= ?
+      )
+      ORDER BY week_number ASC
+      LIMIT 1
+    `, [seasonYear, currentWeek]);
+    
+    if (result && result[0] && result[0].lock_datetime) {
+      res.json({
+        success: true,
+        weekNumber: result[0].week_number,
+        lockTime: result[0].lock_datetime,
+        isLocked: result[0].is_locked === 1
+      });
+    } else {
+      // No lock time set yet
+      res.json({
+        success: true,
+        weekNumber: currentWeek,
+        lockTime: null,
+        isLocked: false
+      });
+    }
+  } catch (error) {
+    // Error fetching next lineup lock
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch lineup lock time' 
+    });
   }
 });
 

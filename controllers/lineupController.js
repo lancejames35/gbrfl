@@ -8,6 +8,7 @@ const LineupPosition = require('../models/LineupPosition');
 const LineupLock = require('../models/LineupLock');
 const FantasyTeam = require('../models/FantasyTeam');
 const WeeklySchedule = require('../models/WeeklySchedule');
+const NFLTeam = require('../models/nflTeam');
 const db = require('../config/database');
 const { validationResult } = require('express-validator');
 
@@ -105,6 +106,9 @@ exports.getLineupsForWeek = async (req, res) => {
       active: i + 1 === weekNumber
     }));
 
+    // Get NFL teams for head coach selection
+    const nflTeams = await NFLTeam.getAll();
+
     res.render('lineups/index', {
       title: `Lineups - Week ${weekNumber} ${gameType === 'bonus' ? 'Bonus' : 'Primary'}`,
       user: req.session.user,
@@ -120,7 +124,8 @@ exports.getLineupsForWeek = async (req, res) => {
       seasonYear,
       allWeeks,
       currentWeek: getCurrentWeek(),
-      hasBonusGames
+      hasBonusGames,
+      nflTeams
     });
   } catch (error) {
     console.error('Error displaying week lineups:', error.message);
@@ -593,6 +598,82 @@ exports.validateLineup = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error validating lineup: ' + error.message
+    });
+  }
+};
+
+/**
+ * Save head coach selection for lineup (AJAX endpoint)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.saveHeadCoach = async (req, res) => {
+  try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const userId = req.session.user.id;
+    const { lineup_id, head_coach } = req.body;
+
+    // Verify lineup belongs to user
+    const lineup = await db.query(`
+      SELECT ls.*, ft.user_id
+      FROM lineup_submissions ls
+      JOIN fantasy_teams ft ON ls.fantasy_team_id = ft.team_id
+      WHERE ls.lineup_id = ?
+    `, [lineup_id]);
+
+    if (lineup.length === 0 || lineup[0].user_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized access to this lineup'
+      });
+    }
+
+    // Check if lineup is locked
+    const lockStatus = await LineupLock.getLockStatus(
+      lineup[0].week_number,
+      lineup[0].game_type,
+      lineup[0].season_year
+    );
+
+    const isLocked = lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked';
+    if (isLocked) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot modify lineup - it is currently locked'
+      });
+    }
+
+    // Update head coach
+    const success = await LineupSubmission.updateLineup(lineup_id, {
+      head_coach: head_coach || null
+    });
+
+    if (success) {
+      res.json({
+        success: true,
+        message: 'Head coach updated successfully',
+        head_coach: head_coach
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update head coach'
+      });
+    }
+
+  } catch (error) {
+    console.error('Error saving head coach:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error saving head coach: ' + error.message
     });
   }
 };

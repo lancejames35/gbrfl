@@ -8,6 +8,78 @@
     </div>
 </div>
 
+<!-- Position Breakdown Section -->
+<div class="card mb-4">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0" style="cursor: pointer;" onclick="togglePositionBreakdown()">
+            <i class="bi bi-grid-3x3-gap-fill me-2"></i>
+            Schedule Position Breakdown
+            <i class="bi bi-chevron-down float-end" id="positionBreakdownChevron"></i>
+        </h5>
+    </div>
+    <div class="card-body collapse" id="positionBreakdownContent">
+        <div class="mb-3">
+            <span class="badge bg-secondary me-2">Gray = Primary Games</span>
+            <span class="badge bg-primary">Blue = Bonus Games</span>
+        </div>
+        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <table class="table table-sm table-bordered" style="max-width: 800px;">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th style="background-color: #f8f9fa; width: 120px;">Week</th>
+                        <th class="text-start" style="background-color: #f8f9fa;">Matchups (Position Numbers)</th>
+                    </tr>
+                </thead>
+                <tbody style="font-size: 0.95rem;">
+                    <% const scheduleBreakdown = [
+                        { week: 1, primary: ['1-10', '2-6', '3-5', '4-9', '7-8'], bonus: ['1-7', '2-3', '4-10', '5-6', '8-9'] },
+                        { week: 2, primary: ['1-4', '2-7', '3-6', '5-9', '8-10'], bonus: ['1-2', '3-4', '5-10', '6-8', '7-9'] },
+                        { week: 3, primary: ['1-5', '2-8', '3-9', '4-7', '6-10'], bonus: ['1-9', '2-10', '3-7', '4-6', '5-8'] },
+                        { week: 4, primary: ['1-6', '2-9', '3-8', '4-5', '7-10'], bonus: ['1-8', '2-4', '3-10', '5-7', '6-9'], note: 'League fees due!' },
+                        { week: 5, primary: ['1-3', '2-5', '4-8', '6-7', '9-10'], bonus: [] },
+                        { week: 6, primary: ['1-5', '2-8', '3-9', '4-7', '6-10'], bonus: [] },
+                        { week: 7, primary: ['1-7', '2-3', '4-10', '5-6', '8-9'], bonus: ['1-10', '2-6', '3-5', '4-9', '7-8'] },
+                        { week: 8, primary: ['1-8', '2-4', '3-10', '5-7', '6-9'], bonus: ['1-2', '3-4', '5-10', '6-8', '7-9'] },
+                        { week: 9, primary: ['1-9', '2-10', '3-7', '4-6', '5-8'], bonus: ['1-6', '2-9', '3-8', '4-5', '7-10'] },
+                        { week: 10, primary: ['1-4', '2-7', '3-6', '5-9', '8-10'], bonus: [] },
+                        { week: 11, primary: ['1-3', '2-5', '4-8', '6-7', '9-10'], bonus: [] },
+                        { week: 12, primary: ['1-9', '2-10', '3-7', '4-6', '5-8'], bonus: [] },
+                        { week: 13, primary: ['1-8', '2-4', '3-10', '5-7', '6-9'], bonus: ['1-10', '2-6', '3-5', '4-9', '7-8'] },
+                        { week: 14, primary: ['1-7', '2-3', '4-10', '5-6', '8-9'], bonus: [] },
+                        { week: 15, primary: ['1-2', '3-4', '5-10', '6-8', '7-9'], bonus: ['1-5', '2-8', '3-9', '4-7', '6-10'], note: 'Trading Deadline' },
+                        { week: 16, primary: ['1-6', '2-9', '3-8', '4-5', '7-10'], bonus: ['1-3', '2-5', '4-8', '6-7', '9-10'] },
+                        { week: 17, primary: ['1-4', '2-7', '3-6', '5-9', '8-10'], bonus: [] }
+                    ]; %>
+                    <% scheduleBreakdown.forEach(week => { %>
+                        <tr>
+                            <td class="fw-bold">
+                                Week <%= week.week %>
+                                <% if (week.note) { %>
+                                    <div class="text-danger small"><%= week.note %></div>
+                                <% } %>
+                            </td>
+                            <td>
+                                <% week.primary.forEach(matchup => { %>
+                                    <span class="badge bg-secondary me-1 mb-1 fs-6"><%= matchup %></span>
+                                <% }); %>
+                                <% if (week.bonus.length > 0) { %>
+                                    <br>
+                                    <% week.bonus.forEach(matchup => { %>
+                                        <span class="badge bg-primary me-1 mb-1 fs-6"><%= matchup %></span>
+                                    <% }); %>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-3 text-muted small">
+            <strong>Note:</strong> Numbers represent team positions in the league. Teams are assigned to these positions at the beginning of the season.
+        </div>
+    </div>
+</div>
+
 <!-- Controls Section -->
 <div class="card mb-4">
     <div class="card-header bg-light">
@@ -163,9 +235,130 @@
         color: #0d6efd;
         font-weight: 700;
     }
+
+    /* Lineup Display Styles */
+    .lineup-display {
+        text-align: left;
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+
+    .lineup-section {
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 10px;
+    }
+
+    .lineup-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .lineup-player {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        margin: 5px 0;
+        border-radius: 5px;
+        background: white;
+        border: 1px solid #e9ecef;
+    }
+
+    .lineup-player.starter {
+        background: #d4edda;
+        border-color: #c3e6cb;
+    }
+
+    .lineup-player.backup {
+        background: #f8f9fa;
+        border-color: #e9ecef;
+    }
+
+    .lineup-player.head-coach {
+        background: #fff3cd;
+        border-color: #ffeaa7;
+    }
+
+    .player-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .player-name {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #333;
+    }
+
+    .player-team {
+        font-size: 0.8rem;
+        color: #666;
+    }
+
+    .role-badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+
+    .starter-badge {
+        background: #28a745;
+        color: white;
+    }
+
+    .backup-badge {
+        background: #6c757d;
+        color: white;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+        .lineup-display .row {
+            margin: 0;
+        }
+        
+        .lineup-display .col-md-6 {
+            padding: 0 5px;
+        }
+        
+        .lineup-player {
+            padding: 6px 8px;
+        }
+        
+        .player-name {
+            font-size: 0.85rem;
+        }
+        
+        .player-team {
+            font-size: 0.75rem;
+        }
+        
+        .role-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+        }
+    }
 </style>
 
 <script>
+    // Toggle position breakdown visibility
+    function togglePositionBreakdown() {
+        const content = document.getElementById('positionBreakdownContent');
+        const chevron = document.getElementById('positionBreakdownChevron');
+        
+        if (content.classList.contains('show')) {
+            content.classList.remove('show');
+            chevron.className = 'bi bi-chevron-down float-end';
+        } else {
+            content.classList.add('show');
+            chevron.className = 'bi bi-chevron-up float-end';
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize page
         const currentWeek = <%= currentWeek %>;
@@ -350,9 +543,21 @@
             const highlightClass = isUserGame ? 'user-game' : '';
             const cardClass = `game-card ${isCompleted ? 'completed' : ''} ${highlightClass}`;
             
+            // Generate lineup button if lineups are locked
+            let lineupsButton = '';
+            if (game.lineups_locked && (game.team_1_lineup || game.team_2_lineup)) {
+                lineupsButton = `
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="showGameLineups(${game.schedule_id})">
+                            <i class="bi bi-list-ol"></i> View Lineups
+                        </button>
+                    </div>
+                `;
+            }
+            
             return `
                 <div class="${colClass} mb-3">
-                    <div class="${cardClass}">
+                    <div class="${cardClass}" id="game-${game.schedule_id}">
                         <div class="text-center">
                             <div class="d-flex justify-content-center align-items-center">
                                 <div class="text-center">
@@ -368,6 +573,20 @@
                                 </div>
                             </div>
                             <div class="mt-2">${resultsContent}</div>
+                            ${lineupsButton}
+                        </div>
+                        <div class="lineup-display d-none" id="lineup-${game.schedule_id}">
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-center mb-3">${game.team_1.team_name} Lineup</h6>
+                                    <div id="team1-lineup-${game.schedule_id}"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-center mb-3">${game.team_2.team_name} Lineup</h6>
+                                    <div id="team2-lineup-${game.schedule_id}"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -430,6 +649,120 @@
             document.getElementById('weekSelect').value = currentWeek;
             currentWeekSelected = currentWeek;
             loadScheduleData();
+        };
+        
+        // Global function to show/hide game lineups
+        window.showGameLineups = function(gameId) {
+            const lineupDiv = document.getElementById(`lineup-${gameId}`);
+            const button = document.querySelector(`#game-${gameId} button`);
+            
+            if (lineupDiv.classList.contains('d-none')) {
+                // Show lineups
+                lineupDiv.classList.remove('d-none');
+                button.innerHTML = '<i class="bi bi-eye-slash"></i> Hide Lineups';
+                
+                // Populate lineup data
+                populateGameLineups(gameId);
+            } else {
+                // Hide lineups
+                lineupDiv.classList.add('d-none');
+                button.innerHTML = '<i class="bi bi-list-ol"></i> View Lineups';
+            }
+        };
+        
+        // Populate lineup data for a specific game
+        function populateGameLineups(gameId) {
+            // Find the game data
+            let gameData = null;
+            for (let game of scheduleData.data) {
+                if (game.schedule_id === gameId) {
+                    gameData = game;
+                    break;
+                }
+            }
+            
+            if (!gameData) return;
+            
+            // Populate team 1 lineup
+            if (gameData.team_1_lineup) {
+                populateTeamLineup(`team1-lineup-${gameId}`, gameData.team_1_lineup);
+            } else {
+                document.getElementById(`team1-lineup-${gameId}`).innerHTML = '<p class="text-muted">No lineup submitted</p>';
+            }
+            
+            // Populate team 2 lineup
+            if (gameData.team_2_lineup) {
+                populateTeamLineup(`team2-lineup-${gameId}`, gameData.team_2_lineup);
+            } else {
+                document.getElementById(`team2-lineup-${gameId}`).innerHTML = '<p class="text-muted">No lineup submitted</p>';
+            }
+        }
+        
+        // Populate individual team lineup
+        function populateTeamLineup(containerId, lineupData) {
+            const container = document.getElementById(containerId);
+            let html = '';
+            
+            // Head Coach
+            if (lineupData.head_coach) {
+                html += `
+                    <div class="lineup-section mb-3">
+                        <h6 class="text-muted mb-2"><i class="bi bi-person-badge"></i> Head Coach</h6>
+                        <div class="lineup-player head-coach">
+                            <span class="player-name">${lineupData.head_coach}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Position groups with starter requirements
+            const positionConfig = {
+                quarterback: { name: 'Quarterbacks', starters: 2, icon: 'bi-person-circle' },
+                running_back: { name: 'Running Backs', starters: 3, icon: 'bi-person-walking' },
+                receiver: { name: 'Receivers', starters: 3, icon: 'bi-person-raised-hand' },
+                place_kicker: { name: 'Place Kickers', starters: 1, icon: 'bi-bootstrap' },
+                defense: { name: 'Defense', starters: 1, icon: 'bi-shield' }
+            };
+            
+            for (const [position, config] of Object.entries(positionConfig)) {
+                const players = lineupData.positions[position] || [];
+                if (players.length > 0) {
+                    html += `
+                        <div class="lineup-section mb-3">
+                            <h6 class="text-muted mb-2"><i class="${config.icon}"></i> ${config.name}</h6>
+                    `;
+                    
+                    players.forEach((player, index) => {
+                        const isStarter = index < config.starters;
+                        const starterClass = isStarter ? 'starter' : 'backup';
+                        const roleText = isStarter ? 'Starter' : 'Backup';
+                        
+                        html += `
+                            <div class="lineup-player ${starterClass}">
+                                <div class="player-info">
+                                    <span class="player-name">${player.display_name || player.first_name + ' ' + player.last_name}</span>
+                                    <span class="player-team">(${player.team_code || ''})</span>
+                                </div>
+                                <span class="role-badge ${starterClass}-badge">${roleText}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                }
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // Store schedule data for lineup display
+        let scheduleData = null;
+        
+        // Modify loadScheduleData to store the data
+        const originalRenderScheduleData = renderScheduleData;
+        renderScheduleData = function(data) {
+            scheduleData = data;
+            originalRenderScheduleData(data);
         };
         
         // Load initial data

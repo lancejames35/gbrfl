@@ -10,6 +10,7 @@ const WeeklySchedule = require('../models/WeeklySchedule');
 const ScheduleNote = require('../models/ScheduleNote');
 const FantasyTeam = require('../models/FantasyTeam');
 const User = require('../models/user');
+const LineupLock = require('../models/LineupLock');
 const db = require('../config/database');
 const fs = require('fs');
 const path = require('path');
@@ -1436,6 +1437,148 @@ exports.fixPlayerTeams = async (req, res) => {
   } catch (error) {
     console.error('Error fixing player teams:', error);
     res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Display lineup lock management page
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getLineupLockManagement = async (req, res) => {
+  try {
+    // Get current lock status for all weeks
+    const lockStatus = await LineupLock.getAllWeeksStatus(2025);
+    
+    res.render('admin/lineup-locks', {
+      title: 'Lineup Lock Management',
+      user: req.session.user,
+      activePage: 'admin',
+      lockStatus
+    });
+  } catch (error) {
+    console.error('Error displaying lineup lock management:', error.message);
+    req.flash('error_msg', 'Error loading lineup lock management');
+    res.redirect('/admin');
+  }
+};
+
+/**
+ * Set lock time for a specific week
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.setLineupLockTime = async (req, res) => {
+  try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        errors: errors.array() 
+      });
+    }
+
+    const { week_number, lock_datetime } = req.body;
+    const seasonYear = 2025;
+
+    // Convert the datetime to UTC for storage
+    const lockTime = new Date(lock_datetime);
+    
+    if (isNaN(lockTime.getTime())) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid date/time format'
+      });
+    }
+
+    // Set the lock time
+    const success = await LineupLock.setLockTime(week_number, seasonYear, lockTime);
+
+    if (success) {
+      res.json({ 
+        success: true, 
+        message: `Lock time set for Week ${week_number}`,
+        lockTime: lockTime.toISOString()
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to set lock time' 
+      });
+    }
+  } catch (error) {
+    console.error('Error setting lineup lock time:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Manually lock/unlock a specific week
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.toggleLineupLock = async (req, res) => {
+  try {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false, 
+        errors: errors.array() 
+      });
+    }
+
+    const { week_number, is_locked } = req.body;
+    const seasonYear = 2025;
+
+    // Toggle the lock status
+    const success = await LineupLock.setLockStatus(week_number, seasonYear, is_locked);
+
+    if (success) {
+      const status = is_locked ? 'locked' : 'unlocked';
+      res.json({ 
+        success: true, 
+        message: `Week ${week_number} ${status}`,
+        isLocked: is_locked
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to update lock status' 
+      });
+    }
+  } catch (error) {
+    console.error('Error toggling lineup lock:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+};
+
+/**
+ * Get lineup lock data for AJAX
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getLineupLockData = async (req, res) => {
+  try {
+    const lockStatus = await LineupLock.getAllWeeksStatus(2025);
+    
+    res.json({
+      success: true,
+      data: lockStatus
+    });
+  } catch (error) {
+    console.error('Error getting lineup lock data:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
   }
 };
 
