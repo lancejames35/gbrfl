@@ -460,6 +460,29 @@
                         </div>
                     </div>
                     
+                    <!-- Waiver Round Selection -->
+                    <div class="card border-warning mt-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">
+                                <i class="bi bi-layers"></i> Waiver Round
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="waiverRoundSelect" class="form-label">Select which round to process this request</label>
+                                <select class="form-select form-select-lg" id="waiverRoundSelect" name="waiver_round" required>
+                                    <option value="">-- Select waiver round --</option>
+                                    <option value="1st">1st Round</option>
+                                    <option value="2nd">2nd Round</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i> 
+                                    1st round requests are processed first, then 2nd round requests are processed based on remaining priority order.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <input type="hidden" id="pickupPlayerId" name="pickup_player_id">
                 </form>
             </div>
@@ -872,8 +895,19 @@
 
             // Enable submit button when player is selected
             dropPlayerSelect.addEventListener('change', function() {
-                submitWaiverRequest.disabled = !this.value;
+                validateWaiverForm();
             });
+            
+            const waiverRoundSelect = document.getElementById('waiverRoundSelect');
+            waiverRoundSelect.addEventListener('change', function() {
+                validateWaiverForm();
+            });
+            
+            function validateWaiverForm() {
+                const dropPlayerSelected = dropPlayerSelect.value;
+                const waiverRoundSelected = waiverRoundSelect.value;
+                submitWaiverRequest.disabled = !(dropPlayerSelected && waiverRoundSelected);
+            }
 
             // Handle modal close button
             const modalCloseButton = waiverModal.querySelector('.btn-close');
@@ -890,6 +924,11 @@
                     alert('Please select a player to drop.');
                     return;
                 }
+                
+                if (!formData.get('waiver_round')) {
+                    alert('Please select a waiver round.');
+                    return;
+                }
 
                 // Disable submit button
                 this.disabled = true;
@@ -902,7 +941,8 @@
                     },
                     body: JSON.stringify({
                         pickup_player_id: parseInt(formData.get('pickup_player_id')),
-                        drop_player_id: parseInt(formData.get('drop_player_id'))
+                        drop_player_id: parseInt(formData.get('drop_player_id')),
+                        waiver_round: formData.get('waiver_round')
                     })
                 })
                 .then(response => {

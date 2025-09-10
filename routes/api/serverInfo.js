@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../config/database');
 const { checkDeadline, getTimeDebugInfo } = require('../../utils/timezoneFix');
+const WeekStatus = require('../../models/WeekStatus');
 
 /**
  * Get server time and timezone information
@@ -204,8 +205,8 @@ router.get('/timezone-debug', async (req, res) => {
  */
 router.get('/next-lineup-lock', async (req, res) => {
   try {
-    // Get current week number (you may want to calculate this dynamically)
-    const currentWeek = 1; // TODO: Calculate based on season settings
+    // Get current week number using NFL game data
+    const currentWeek = await WeekStatus.getCurrentWeek();
     const seasonYear = 2025;
     
     // Query for the current or next lock time

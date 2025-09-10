@@ -920,3 +920,60 @@ exports.ensureDraftOrder = async function() {
     throw error;
   }
 };
+
+/**
+ * Get the draft results page
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getDraftResults = async (req, res) => {
+  try {
+    // Get all teams
+    const allTeams = await FantasyTeam.getAll();
+    
+    // Get all draft picks for current season
+    const picks = await db.query(
+      `SELECT dp.*, p.display_name, p.position, nt.team_code,
+              ft.team_name, ft.team_id, u.first_name, u.last_name
+       FROM draft_picks dp
+       JOIN nfl_players p ON dp.player_id = p.player_id
+       LEFT JOIN nfl_teams nt ON p.nfl_team_id = nt.nfl_team_id
+       JOIN fantasy_teams ft ON dp.fantasy_team_id = ft.team_id
+       JOIN users u ON ft.user_id = u.user_id
+       WHERE dp.season = ?
+       ORDER BY dp.overall_pick`,
+      [CURRENT_SEASON]
+    );
+
+    // Get draft order for reference
+    const draftOrder = await db.query(
+      `SELECT do.*, ft.team_name, u.first_name, u.last_name,
+              ((do.round - 1) * 10 + do.pick_number) as overall_pick
+      FROM draft_order do
+      JOIN fantasy_teams ft ON do.fantasy_team_id = ft.team_id
+      JOIN users u ON ft.user_id = u.user_id
+      WHERE do.season = ?
+      ORDER BY do.round, do.pick_number`,
+      [CURRENT_SEASON]
+    );
+
+    // Get draft status
+    const draftStatus = await this.getDraftStatus();
+
+    res.render('draft/results', {
+      title: 'Draft Results',
+      allTeams,
+      picks,
+      draftOrder,
+      draftStatus,
+      user: req.session.user,
+      originalAdmin: req.session.originalAdmin,
+      activePage: 'draft'
+    });
+    
+  } catch (error) {
+    console.error('Error loading draft results:', error.message);
+    req.flash('error_msg', 'Error loading draft results');
+    res.redirect('/dashboard');
+  }
+};

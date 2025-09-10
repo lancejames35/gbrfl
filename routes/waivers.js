@@ -22,7 +22,10 @@ router.post('/request',
       .withMessage('Valid pickup player ID is required'),
     body('drop_player_id')
       .isInt({ min: 1 })
-      .withMessage('Valid drop player ID is required')
+      .withMessage('Valid drop player ID is required'),
+    body('waiver_round')
+      .isIn(['1st', '2nd'])
+      .withMessage('Valid waiver round is required')
   ],
   waiverController.submitWaiverRequest
 );

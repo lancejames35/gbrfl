@@ -1,0 +1,380 @@
+
+<div class="draft-results-container">
+    <div class="container-fluid">
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h2 mb-1">
+                            <i class="bi bi-clipboard-data me-2"></i>
+                            Draft Results
+                        </h1>
+                        <p class="text-muted mb-0">Review all draft picks from the <%= new Date().getFullYear() %> season</p>
+                    </div>
+                    <div class="draft-status">
+                        <% if (draftStatus.is_active) { %>
+                            <span class="badge bg-success fs-6">
+                                <i class="bi bi-play-fill me-1"></i>Draft Active
+                            </span>
+                        <% } else { %>
+                            <span class="badge bg-secondary fs-6">
+                                <i class="bi bi-stop-fill me-1"></i>Draft Complete
+                            </span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Draft Summary Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <h3 class="mb-1"><%= picks.length %></h3>
+                        <p class="mb-0">Total Picks Made</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h3 class="mb-1"><%= draftOrder.length %></h3>
+                        <p class="mb-0">Total Draft Slots</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h3 class="mb-1"><%= Math.max(...(picks.map(p => p.round) || [0])) %></h3>
+                        <p class="mb-0">Rounds Completed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body text-center">
+                        <h3 class="mb-1"><%= allTeams.length %></h3>
+                        <p class="mb-0">Teams</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-tabs mb-4" id="draftTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="board-tab" data-bs-toggle="tab" data-bs-target="#board" type="button" role="tab">
+                    <i class="bi bi-grid-3x3-gap me-2"></i>Draft Board
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="chronological-tab" data-bs-toggle="tab" data-bs-target="#chronological" type="button" role="tab">
+                    <i class="bi bi-clock-history me-2"></i>Pick Order
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="by-team-tab" data-bs-toggle="tab" data-bs-target="#by-team" type="button" role="tab">
+                    <i class="bi bi-people-fill me-2"></i>By Team
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="draftTabsContent">
+            <!-- Draft Board Tab -->
+            <div class="tab-pane fade show active" id="board" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-grid-3x3-gap me-2"></i>Draft Board
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-0 draft-board-table">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="text-center" style="width: 80px;">Round</th>
+                                        <% allTeams.forEach(team => { %>
+                                            <th class="text-center team-header" style="width: 200px;">
+                                                <div class="fw-bold"><%= team.team_name %></div>
+                                                <small class="text-muted"><%= team.first_name %> <%= team.last_name %></small>
+                                            </th>
+                                        <% }); %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% 
+                                    const maxRounds = Math.max(...(draftOrder.map(d => d.round) || [1]));
+                                    for (let round = 1; round <= maxRounds; round++) { 
+                                    %>
+                                        <tr>
+                                            <td class="text-center align-middle fw-bold bg-light">
+                                                <%= round %>
+                                            </td>
+                                            <% allTeams.forEach(team => {
+                                                // Find the draft order entry for this round and team
+                                                const orderEntry = draftOrder.find(d => d.round === round && d.fantasy_team_id === team.team_id);
+                                                // Find the actual pick for this slot
+                                                const pick = orderEntry ? picks.find(p => p.overall_pick === orderEntry.overall_pick) : null;
+                                            %>
+                                                <td class="text-center align-middle draft-slot">
+                                                    <% if (pick) { %>
+                                                        <div class="draft-pick-cell">
+                                                            <div class="pick-number-badge">
+                                                                <%= pick.overall_pick %>
+                                                            </div>
+                                                            <div class="player-info">
+                                                                <div class="player-name fw-bold">
+                                                                    <%= pick.display_name %>
+                                                                </div>
+                                                                <div class="player-details">
+                                                                    <span class="position-badge position-<%= pick.position.toLowerCase() %>">
+                                                                        <%= pick.position %>
+                                                                    </span>
+                                                                    <span class="team-code text-muted">
+                                                                        <%= pick.team_code || 'FA' %>
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    <% } else if (orderEntry) { %>
+                                                        <div class="empty-slot">
+                                                            <small class="text-muted">Pick #<%= orderEntry.overall_pick %></small>
+                                                        </div>
+                                                    <% } %>
+                                                </td>
+                                            <% }); %>
+                                        </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chronological Order Tab -->
+            <div class="tab-pane fade" id="chronological" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock-history me-2"></i>Picks in Chronological Order
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Overall</th>
+                                        <th>Round</th>
+                                        <th>Pick</th>
+                                        <th>Team</th>
+                                        <th>Player</th>
+                                        <th>Position</th>
+                                        <th>NFL Team</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% picks.forEach(pick => { %>
+                                        <tr>
+                                            <td class="fw-bold text-primary"><%= pick.overall_pick %></td>
+                                            <td><%= pick.round %></td>
+                                            <td><%= pick.pick_number %></td>
+                                            <td>
+                                                <div class="fw-bold"><%= pick.team_name %></div>
+                                                <small class="text-muted"><%= pick.first_name %> <%= pick.last_name %></small>
+                                            </td>
+                                            <td class="fw-bold"><%= pick.display_name %></td>
+                                            <td>
+                                                <span class="position-badge position-<%= pick.position.toLowerCase() %>">
+                                                    <%= pick.position %>
+                                                </span>
+                                            </td>
+                                            <td><%= pick.team_code || 'FA' %></td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    <%= new Date(pick.pick_time).toLocaleString() %>
+                                                </small>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- By Team Tab -->
+            <div class="tab-pane fade" id="by-team" role="tabpanel">
+                <div class="row">
+                    <% allTeams.forEach(team => {
+                        const teamPicks = picks.filter(p => p.team_id === team.team_id);
+                    %>
+                        <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0">
+                                        <%= team.team_name %>
+                                        <br><small><%= team.first_name %> <%= team.last_name %></small>
+                                    </h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        <% if (teamPicks.length > 0) { %>
+                                            <% teamPicks.forEach(pick => { %>
+                                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <div class="fw-bold"><%= pick.display_name %></div>
+                                                        <small class="text-muted">
+                                                            <span class="position-badge position-<%= pick.position.toLowerCase() %>">
+                                                                <%= pick.position %>
+                                                            </span>
+                                                            <%= pick.team_code || 'FA' %>
+                                                        </small>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <span class="badge bg-secondary">
+                                                            R<%= pick.round %> P<%= pick.pick_number %>
+                                                        </span>
+                                                        <br><small class="text-muted">#<%= pick.overall_pick %></small>
+                                                    </div>
+                                                </div>
+                                            <% }); %>
+                                        <% } else { %>
+                                            <div class="list-group-item text-center text-muted py-4">
+                                                <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                                                No picks yet
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Position badges styling */
+.position-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+}
+
+.position-qb { background-color: #e74c3c; }
+.position-rb { background-color: #2ecc71; }
+.position-rc { background-color: #3498db; }
+.position-pk { background-color: #f39c12; }
+.position-du { background-color: #9b59b6; }
+
+/* Draft board specific styles */
+.draft-board-table {
+    font-size: 0.875rem;
+}
+
+.draft-slot {
+    height: 80px;
+    vertical-align: middle;
+    position: relative;
+}
+
+.draft-pick-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: center;
+    padding: 4px;
+}
+
+.pick-number-badge {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.player-info {
+    text-align: center;
+    margin-top: 10px;
+}
+
+.player-name {
+    font-size: 0.8rem;
+    line-height: 1.1;
+    margin-bottom: 2px;
+}
+
+.player-details {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.team-header {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+}
+
+.empty-slot {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .draft-board-table {
+        font-size: 0.75rem;
+    }
+    
+    .team-header {
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        width: 60px !important;
+    }
+    
+    .draft-slot {
+        height: 60px;
+    }
+    
+    .pick-number-badge {
+        width: 16px;
+        height: 16px;
+        font-size: 0.6rem;
+    }
+    
+    .player-name {
+        font-size: 0.7rem;
+    }
+}
+</style>

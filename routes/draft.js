@@ -8,6 +8,9 @@ const draftController = require('../controllers/draftController');
 // Draft room route
 router.get('/', ensureAuthenticated, draftController.getDraftRoom);
 
+// Draft results route
+router.get('/results', ensureAuthenticated, draftController.getDraftResults);
+
 // API routes for real-time functionality
 router.get('/api/players', ensureAuthenticated, draftController.getAvailablePlayers);
 router.get('/api/queue', ensureAuthenticated, draftController.getQueue);

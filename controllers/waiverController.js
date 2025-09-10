@@ -36,7 +36,7 @@ exports.submitWaiverRequest = async (req, res) => {
       });
     }
 
-    const { pickup_player_id, drop_player_id } = req.body;
+    const { pickup_player_id, drop_player_id, waiver_round } = req.body;
     const user_id = req.session.user.id;
 
     // Get user's team
@@ -98,28 +98,15 @@ exports.submitWaiverRequest = async (req, res) => {
       });
     }
 
-    // Check for existing pending request for the same pickup player
-    const existingRequestQuery = `
-      SELECT request_id 
-      FROM waiver_requests 
-      WHERE fantasy_team_id = ? AND pickup_player_id = ? AND status = 'pending'
-    `;
-    const existingRequests = await db.query(existingRequestQuery, [fantasy_team_id, pickup_player_id]);
-    
-    if (existingRequests.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'You already have a pending request for this player'
-      });
-    }
+    // Allow multiple requests for the same player - conflicts will be resolved when approved
 
-    // Get the next request order for this team
+    // Get the next request order for this team and round
     const orderQuery = `
       SELECT COALESCE(MAX(request_order), 0) + 1 as next_order
       FROM waiver_requests 
-      WHERE fantasy_team_id = ? AND status = 'pending'
+      WHERE fantasy_team_id = ? AND status = 'pending' AND waiver_round = ?
     `;
-    const orderResult = await db.query(orderQuery, [fantasy_team_id]);
+    const orderResult = await db.query(orderQuery, [fantasy_team_id, waiver_round]);
     const request_order = orderResult[0].next_order;
 
     // Insert waiver request
@@ -128,16 +115,18 @@ exports.submitWaiverRequest = async (req, res) => {
         fantasy_team_id, 
         pickup_player_id, 
         drop_player_id, 
-        request_order, 
+        request_order,
+        waiver_round,
         status
-      ) VALUES (?, ?, ?, ?, 'pending')
+      ) VALUES (?, ?, ?, ?, ?, 'pending')
     `;
     
     const result = await db.query(insertQuery, [
       fantasy_team_id,
       pickup_player_id,
       drop_player_id,
-      request_order
+      request_order,
+      waiver_round
     ]);
 
     // Auto-add pending player to current week's lineup (at bottom of their position)
@@ -147,6 +136,7 @@ exports.submitWaiverRequest = async (req, res) => {
       
       // Get player's position type for lineup
       const playerPosition = pickupPlayers[0].position;
+      const dropPlayerPosition = dropPlayers[0].position;
       let positionType = 'other';
       switch(playerPosition) {
         case 'QB': positionType = 'quarterback'; break;
@@ -155,6 +145,8 @@ exports.submitWaiverRequest = async (req, res) => {
         case 'PK': positionType = 'place_kicker'; break;
         case 'DU': positionType = 'defense'; break;
       }
+      
+      console.log(`Waiver request: Pickup ${pickupPlayers[0].display_name} (${playerPosition} -> ${positionType}), Drop ${dropPlayers[0].display_name} (${dropPlayerPosition})`);
       
       // Get or create lineup submission for current week
       const lineupQuery = `
@@ -176,21 +168,40 @@ exports.submitWaiverRequest = async (req, res) => {
         lineupId = lineupResults[0].lineup_id;
       }
       
-      // Get next sort order for this position (add to bottom)
-      const sortOrderQuery = `
-        SELECT COALESCE(MAX(sort_order), 0) + 1 as next_sort_order
-        FROM lineup_positions 
-        WHERE lineup_id = ? AND position_type = ?
+      // Check if player is already pending in this lineup
+      const existingPendingQuery = `
+        SELECT position_id, waiver_request_id FROM lineup_positions 
+        WHERE lineup_id = ? AND player_id = ? AND player_status = 'pending_waiver'
       `;
-      const sortResults = await db.query(sortOrderQuery, [lineupId, positionType]);
-      const nextSortOrder = sortResults[0].next_sort_order;
+      const existingPending = await db.query(existingPendingQuery, [lineupId, pickup_player_id]);
       
-      // Add pending player to lineup at bottom of their position
-      const addToLineupQuery = `
-        INSERT INTO lineup_positions (lineup_id, position_type, player_id, sort_order, player_status, waiver_request_id)
-        VALUES (?, ?, ?, ?, 'pending_waiver', ?)
-      `;
-      await db.query(addToLineupQuery, [lineupId, positionType, pickup_player_id, nextSortOrder, result.insertId]);
+      console.log(`Checking for existing pending player ${pickup_player_id} in lineup ${lineupId}: found ${existingPending.length} entries`);
+      if (existingPending.length > 0) {
+        console.log(`Player ${pickup_player_id} already pending with waiver_request_ids:`, existingPending.map(p => p.waiver_request_id));
+      }
+      
+      // Only add if not already pending
+      if (existingPending.length === 0) {
+        console.log(`Adding player ${pickup_player_id} to lineup ${lineupId} with waiver_request_id ${result.insertId}`);
+        // Get next sort order for this position (add to bottom)
+        const sortOrderQuery = `
+          SELECT COALESCE(MAX(sort_order), 0) + 1 as next_sort_order
+          FROM lineup_positions 
+          WHERE lineup_id = ? AND position_type = ?
+        `;
+        const sortResults = await db.query(sortOrderQuery, [lineupId, positionType]);
+        const nextSortOrder = sortResults[0].next_sort_order;
+        
+        // Add pending player to lineup at bottom of their position
+        const addToLineupQuery = `
+          INSERT INTO lineup_positions (lineup_id, position_type, player_id, sort_order, player_status, waiver_request_id)
+          VALUES (?, ?, ?, ?, 'pending_waiver', ?)
+        `;
+        await db.query(addToLineupQuery, [lineupId, positionType, pickup_player_id, nextSortOrder, result.insertId]);
+        console.log(`Successfully added player ${pickup_player_id} to lineup ${lineupId} at position ${positionType} with sort_order ${nextSortOrder}`);
+      } else {
+        console.log(`Skipped adding player ${pickup_player_id} - already pending in lineup ${lineupId}`);
+      }
       
     } catch (lineupError) {
       console.warn('Warning: Could not add pending player to lineup:', lineupError.message);
@@ -261,6 +272,7 @@ exports.getPendingRequests = async (req, res) => {
       SELECT 
         wr.request_id,
         wr.request_order,
+        wr.waiver_round,
         wr.submitted_at,
         pickup.display_name as pickup_name,
         pickup.position as pickup_position,
@@ -274,7 +286,7 @@ exports.getPendingRequests = async (req, res) => {
       JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
       LEFT JOIN nfl_teams drop_team ON drop_player.nfl_team_id = drop_team.nfl_team_id
       WHERE wr.fantasy_team_id = ? AND wr.status = 'pending'
-      ORDER BY wr.request_order ASC
+      ORDER BY wr.waiver_round ASC, wr.request_order ASC
     `;
     
     const requests = await db.query(requestsQuery, [fantasy_team_id]);
@@ -376,6 +388,7 @@ exports.getAdminPendingRequests = async (req, res) => {
       SELECT 
         wr.request_id,
         wr.request_order,
+        wr.waiver_round,
         wr.submitted_at,
         ft.team_name,
         ft.team_id as fantasy_team_id,
@@ -395,7 +408,7 @@ exports.getAdminPendingRequests = async (req, res) => {
       JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
       LEFT JOIN nfl_teams drop_team ON drop_player.nfl_team_id = drop_team.nfl_team_id
       WHERE wr.status = 'pending'
-      ORDER BY ft.team_name ASC, wr.request_order ASC
+      ORDER BY wr.waiver_round ASC, ft.team_name ASC, wr.request_order ASC
     `;
     
     const requests = await db.query(requestsQuery);
@@ -465,13 +478,35 @@ exports.approveRequest = async (req, res) => {
       });
     }
 
-    // Auto-reject conflicting requests for the same pickup player
-    const conflictingRequestsQuery = `
+    // Auto-reject ALL conflicting requests for the same pickup player (from ALL teams)
+    const conflictingPickupRequestsQuery = `
       UPDATE waiver_requests 
       SET status = 'rejected', processed_at = NOW(), processed_by = ?, notes = 'Auto-rejected: Player acquired by another team'
       WHERE pickup_player_id = ? AND status = 'pending' AND request_id != ?
     `;
-    await db.query(conflictingRequestsQuery, [admin_user_id, request.pickup_player_id, request_id]);
+    const pickupRejectResult = await db.query(conflictingPickupRequestsQuery, [admin_user_id, request.pickup_player_id, request_id]);
+
+    // Auto-reject ALL conflicting requests involving the dropped player (pickup or drop, from ALL teams)
+    const conflictingDropRequestsQuery = `
+      UPDATE waiver_requests 
+      SET status = 'rejected', processed_at = NOW(), processed_by = ?, notes = 'Auto-rejected: Player no longer available for trade'
+      WHERE (pickup_player_id = ? OR drop_player_id = ?) AND status = 'pending' AND request_id != ?
+    `;
+    const dropRejectResult = await db.query(conflictingDropRequestsQuery, [admin_user_id, request.drop_player_id, request.drop_player_id, request_id]);
+
+    // Remove lineup positions for rejected conflicting requests
+    try {
+      const removeConflictingLineupsQuery = `
+        DELETE FROM lineup_positions 
+        WHERE waiver_request_id IN (
+          SELECT request_id FROM waiver_requests 
+          WHERE status = 'rejected' AND processed_by = ? AND processed_at >= NOW() - INTERVAL 1 MINUTE
+        )
+      `;
+      await db.query(removeConflictingLineupsQuery, [admin_user_id]);
+    } catch (lineupCleanupError) {
+      console.warn('Warning: Could not clean up conflicting lineup positions:', lineupCleanupError.message);
+    }
 
     // Execute the waiver: remove drop player, add pickup player
     // Remove drop player from team
@@ -496,8 +531,24 @@ exports.approveRequest = async (req, res) => {
     `;
     await db.query(updateRequestQuery, [admin_user_id, request_id]);
 
-    // Note: Pending players appear in lineup UI via UNION query but don't have 
-    // actual lineup_positions records until approved, so no lineup update needed
+    // Update lineup positions: convert pending waiver player to rostered player
+    try {
+      const updateLineupQuery = `
+        UPDATE lineup_positions 
+        SET player_status = 'rostered', waiver_request_id = NULL
+        WHERE waiver_request_id = ? AND player_status = 'pending_waiver'
+      `;
+      await db.query(updateLineupQuery, [request_id]);
+
+      // Remove any lineup positions for the dropped player
+      const removeDroppedQuery = `
+        DELETE FROM lineup_positions 
+        WHERE player_id = ?
+      `;
+      await db.query(removeDroppedQuery, [request.drop_player_id]);
+    } catch (lineupError) {
+      console.warn('Warning: Could not update lineup positions:', lineupError.message);
+    }
 
     // Log the activity
     try {
@@ -541,7 +592,13 @@ exports.approveRequest = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Waiver request approved successfully'
+      message: 'Waiver request approved successfully',
+      rejectedRequests: {
+        pickup: pickupRejectResult.affectedRows,
+        drop: dropRejectResult.affectedRows,
+        pickupPlayerId: request.pickup_player_id,
+        dropPlayerId: request.drop_player_id
+      }
     });
 
   } catch (error) {

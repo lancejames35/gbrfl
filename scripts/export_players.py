@@ -10,12 +10,13 @@ import csv
 import os
 from datetime import datetime
 
-# Database configuration
+# Database configuration - PRODUCTION
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',  # Update with your MySQL username
-    'password': 'Iceman3500!',  # Update with your MySQL password
-    'database': 'gbrfl'
+    'host': 'caboose.proxy.rlwy.net',
+    'user': 'root',
+    'password': 'JZjKXAUlauvUwThojErTNcsjYOIhOMDa',
+    'database': 'railway',
+    'port': 59613
 }
 
 # Output directory
@@ -26,7 +27,7 @@ def connect_to_database():
     """Connect to the MySQL database"""
     try:
         connection = mysql.connector.connect(**DB_CONFIG)
-        print(f"✅ Connected to database: {DB_CONFIG['database']}")
+        print(f"✅ Connected to production database: {DB_CONFIG['host']}")
         return connection
     except mysql.connector.Error as err:
         print(f"❌ Database connection failed: {err}")
@@ -42,6 +43,7 @@ def export_players(connection):
         p.first_name,
         p.last_name,
         p.position,
+        p.espn_id,
         COALESCE(t.team_name, 'Free Agent') as nfl_team_name,
         COALESCE(t.team_code, 'FA') as nfl_team_code,
         p.nfl_team_id
@@ -69,6 +71,7 @@ def export_players(connection):
                 'first_name',
                 'last_name',
                 'position',
+                'espn_id',
                 'nfl_team_name',
                 'nfl_team_code',
                 'nfl_team_id'

@@ -1582,3 +1582,87 @@ exports.getLineupLockData = async (req, res) => {
   }
 };
 
+/**
+ * Display standings management interface
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getStandingsManagement = async (req, res) => {
+  try {
+    const seasonYear = 2025;
+    
+    // Get current standings with team and user information
+    const standings = await db.query(`
+      SELECT 
+        ls.*,
+        ft.team_name,
+        u.first_name,
+        u.last_name
+      FROM league_standings ls
+      JOIN fantasy_teams ft ON ls.fantasy_team_id = ft.team_id
+      JOIN users u ON ft.user_id = u.user_id
+      WHERE ls.season_year = ?
+      ORDER BY 
+        ls.position ASC
+    `, [seasonYear]);
+    
+    res.render('admin/standings', {
+      title: 'Manage Standings | Admin | GBRFL',
+      activePage: 'admin',
+      standings: standings,
+      user: req.session.user
+    });
+  } catch (error) {
+    console.error('Error loading standings management:', error);
+    req.flash('error_msg', 'Error loading standings management');
+    res.redirect('/admin');
+  }
+};
+
+/**
+ * Update league standings
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.updateStandings = async (req, res) => {
+  try {
+    const { teams } = req.body;
+    const seasonYear = 2025;
+    
+    if (!teams || !Array.isArray(teams)) {
+      req.flash('error_msg', 'Invalid team data provided');
+      return res.redirect('/admin/standings');
+    }
+    
+    // Update each team's standings
+    for (const team of teams) {
+      await db.query(`
+        UPDATE league_standings 
+        SET 
+          wins = ?,
+          losses = ?,
+          points_differential = ?,
+          games_behind = ?,
+          position = ?,
+          updated_at = NOW()
+        WHERE fantasy_team_id = ? AND season_year = ?
+      `, [
+        team.wins,
+        team.losses,
+        team.points_differential,
+        team.games_behind,
+        team.position,
+        team.fantasy_team_id,
+        seasonYear
+      ]);
+    }
+    
+    req.flash('success_msg', 'Standings updated successfully');
+    res.redirect('/admin/standings');
+  } catch (error) {
+    console.error('Error updating standings:', error);
+    req.flash('error_msg', 'Error updating standings');
+    res.redirect('/admin/standings');
+  }
+};
+

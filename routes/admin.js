@@ -139,6 +139,20 @@ router.get('/trades', ensureAuthenticated, isAdmin, adminController.getTradeAppr
 router.get('/waivers', ensureAuthenticated, isAdmin, adminController.getWaiverApprovals);
 
 /**
+ * @route   GET /admin/standings
+ * @desc    Manage league standings
+ * @access  Private/Admin
+ */
+router.get('/standings', ensureAuthenticated, isAdmin, adminController.getStandingsManagement);
+
+/**
+ * @route   POST /admin/standings/update
+ * @desc    Update league standings
+ * @access  Private/Admin
+ */
+router.post('/standings/update', ensureAuthenticated, isAdmin, adminController.updateStandings);
+
+/**
  * @route   GET /admin/users
  * @desc    User management panel
  * @access  Private/Admin

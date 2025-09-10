@@ -20,7 +20,7 @@ const { validationResult } = require('express-validator');
 exports.getLineups = async (req, res) => {
   try {
     const userId = req.session.user.id;
-    const currentWeek = getCurrentWeek();
+    const nextUnlockedWeek = await getNextUnlockedWeek();
     
     // Get user's fantasy teams
     const userTeams = await FantasyTeam.findByUserId(userId);
@@ -33,8 +33,8 @@ exports.getLineups = async (req, res) => {
     const teamId = req.query.team || userTeams[0].team_id;
     const selectedTeam = userTeams.find(t => t.team_id == teamId) || userTeams[0];
 
-    // Redirect to current week with default game type
-    res.redirect(`/lineups/week/${currentWeek}/primary?team=${selectedTeam.team_id}`);
+    // Redirect to next unlocked week with default game type
+    res.redirect(`/lineups/week/${nextUnlockedWeek}/primary?team=${selectedTeam.team_id}`);
   } catch (error) {
     console.error('Error displaying lineups:', error.message);
     req.flash('error_msg', 'Error loading lineups');
@@ -690,6 +690,33 @@ function getCurrentWeek() {
   const weeksDiff = Math.floor((now - seasonStart) / (7 * 24 * 60 * 60 * 1000));
   
   return Math.max(1, Math.min(17, weeksDiff + 1));
+}
+
+/**
+ * Helper function to get the next unlocked week for lineup editing
+ * @param {number} seasonYear - The season year (default: 2025)
+ * @returns {Promise<number>} Next unlocked week number
+ */
+async function getNextUnlockedWeek(seasonYear = 2025) {
+  try {
+    // Start with current week
+    const currentWeek = getCurrentWeek();
+    
+    // Check weeks starting from current week
+    for (let week = currentWeek; week <= 17; week++) {
+      const isLocked = await LineupLock.isWeekLocked(week, seasonYear);
+      if (!isLocked) {
+        return week;
+      }
+    }
+    
+    // If all weeks are locked, return week 17 (or could return an error)
+    return 17;
+  } catch (error) {
+    console.error('Error getting next unlocked week:', error);
+    // Fallback to current week
+    return getCurrentWeek();
+  }
 }
 
 module.exports = exports;

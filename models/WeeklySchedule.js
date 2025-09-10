@@ -193,13 +193,21 @@ class WeeklySchedule {
       
       const games = await db.query(query, [position, position, seasonYear]);
       
-      // Add opponent information
+      // Add opponent information and live status
       const gamesWithOpponents = games.map(game => {
         const opponentPosition = game.team_1_position === position ? game.team_2_position : game.team_1_position;
+        
+        // Calculate live status
+        const now = new Date();
+        const gameStart = new Date(game.game_start_time);
+        const gameEnd = new Date(game.game_end_time);
+        const is_live = now >= gameStart && now <= gameEnd && !game.is_completed;
+        
         return {
           ...game,
           opponent_position: opponentPosition,
-          is_home: game.team_1_position === position
+          is_home: game.team_1_position === position,
+          is_live
         };
       });
       

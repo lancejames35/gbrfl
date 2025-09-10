@@ -1033,7 +1033,7 @@
                     <% if (hasBonusGames) { %>
                         <label class="toggle-label" id="separateLineupsLabel">
                             <div class="toggle-switch">
-                                <input type="checkbox" id="separateLineupsToggle">
+                                <input type="checkbox" id="separateLineupsToggle" <% if (lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked') { %>disabled<% } %>>
                                 <span class="toggle-slider"></span>
                             </div>
                             <span>Separate Lineups</span>
@@ -1046,12 +1046,23 @@
                 <!-- Always present game selector space -->
                 <div class="game-selector-container">
                     <% if (hasBonusGames) { %>
-                        <div class="game-type-selector" id="gameTypeSelector" style="visibility: hidden;">
-                            <button class="game-select-btn <%= gameType === 'primary' ? 'active' : '' %>" 
-                                    id="primaryGameBtn">Primary</button>
-                            <button class="game-select-btn <%= gameType === 'bonus' ? 'active' : '' %>" 
-                                    id="bonusGameBtn">Bonus</button>
-                        </div>
+                        <% if (lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked') { %>
+                            <!-- For locked weeks, always show game selector to view both lineups -->
+                            <div class="game-type-selector" id="gameTypeSelector" style="visibility: visible;">
+                                <button class="game-select-btn <%= gameType === 'primary' ? 'active' : '' %>" 
+                                        id="primaryGameBtn">Primary</button>
+                                <button class="game-select-btn <%= gameType === 'bonus' ? 'active' : '' %>" 
+                                        id="bonusGameBtn">Bonus</button>
+                            </div>
+                        <% } else { %>
+                            <!-- For unlocked weeks, use JavaScript to control visibility -->
+                            <div class="game-type-selector" id="gameTypeSelector" style="visibility: hidden;">
+                                <button class="game-select-btn <%= gameType === 'primary' ? 'active' : '' %>" 
+                                        id="primaryGameBtn">Primary</button>
+                                <button class="game-select-btn <%= gameType === 'bonus' ? 'active' : '' %>" 
+                                        id="bonusGameBtn">Bonus</button>
+                            </div>
+                        <% } %>
                     <% } %>
                 </div>
             </div>
@@ -1468,14 +1479,21 @@ const LineupManager = {
             const isSeparateMode = localStorage.getItem(weekKey) === 'true';
             separateToggle.checked = isSeparateMode;
             
-            // Show/hide game type selector based on mode
-            this.updateGameTypeSelector(isSeparateMode);
+            // Check if this week is locked
+            const isLocked = separateToggle.disabled;
+            
+            if (!isLocked) {
+                // For unlocked weeks, follow the normal separate mode logic
+                const shouldShowSelector = isSeparateMode;
+                this.updateGameTypeSelector(shouldShowSelector, isLocked);
+            }
+            // For locked weeks, don't call updateGameTypeSelector - let template visibility stand
             
             separateToggle.addEventListener('change', (e) => {
                 const isSeparate = e.target.checked;
                 // Save preference for this specific week
                 localStorage.setItem(weekKey, isSeparate.toString());
-                this.updateGameTypeSelector(isSeparate);
+                this.updateGameTypeSelector(isSeparate, false);
                 
                 if (!isSeparate) {
                     // Switching to shared mode - sync lineups
@@ -1924,8 +1942,14 @@ const LineupManager = {
         const weekKey = `lineupSeparateMode_week_${this.weekNumber}`;
         const isSeparateMode = localStorage.getItem(weekKey) === 'true';
         
-        // Update UI based on mode
-        this.updateGameTypeSelector(isSeparateMode);
+        // Check if this week is locked
+        const separateToggle = document.getElementById('separateLineupsToggle');
+        const isLocked = separateToggle && separateToggle.disabled;
+        
+        // Only update UI for unlocked weeks - locked weeks are handled by template
+        if (!isLocked) {
+            this.updateGameTypeSelector(isSeparateMode, false);
+        }
     },
 
     // Initialize copy button visibility on page load
@@ -1938,17 +1962,34 @@ const LineupManager = {
     },
     
     // Update game type selector visibility
-    updateGameTypeSelector(isSeparateMode) {
+    updateGameTypeSelector(isSeparateMode, isLocked = false) {
         const gameTypeSelector = document.getElementById('gameTypeSelector');
         const copyBtn = document.getElementById('copyFromPreviousBtn');
         
         if (gameTypeSelector) {
-            gameTypeSelector.style.visibility = isSeparateMode ? 'visible' : 'hidden';
+            // Only modify visibility for unlocked weeks - locked weeks are handled by template
+            if (!isLocked) {
+                gameTypeSelector.style.visibility = isSeparateMode ? 'visible' : 'hidden';
+            }
+            
+            // For locked weeks, make buttons read-only but functional for viewing
+            if (isLocked) {
+                const primaryBtn = document.getElementById('primaryGameBtn');
+                const bonusBtn = document.getElementById('bonusGameBtn');
+                
+                if (primaryBtn && bonusBtn) {
+                    // Keep buttons functional for viewing but add visual indication they're locked
+                    primaryBtn.style.opacity = '0.8';
+                    bonusBtn.style.opacity = '0.8';
+                    primaryBtn.title = 'View primary lineup (locked)';
+                    bonusBtn.title = 'View bonus lineup (locked)';
+                }
+            }
         }
         
         // Update copy button visibility based on game type and separate mode
         if (copyBtn) {
-            const shouldShowCopy = this.gameType === 'primary';
+            const shouldShowCopy = this.gameType === 'primary' && !isLocked;
             copyBtn.style.visibility = shouldShowCopy ? 'visible' : 'hidden';
         }
     },

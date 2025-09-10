@@ -85,7 +85,7 @@ class LineupPosition {
           COALESCE(lp.sort_order, 1000) as sort_order,
           CASE WHEN lp.position_id IS NOT NULL THEN 1 ELSE 0 END as in_lineup,
           'pending_waiver' as player_status,
-          wr.request_id as waiver_request_id
+          MIN(wr.request_id) as waiver_request_id
         FROM waiver_requests wr
         JOIN nfl_players p ON wr.pickup_player_id = p.player_id
         LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
@@ -104,6 +104,8 @@ class LineupPosition {
         WHERE wr.fantasy_team_id = ?
         AND wr.status = 'pending'
         AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
+        GROUP BY p.player_id, p.display_name, p.position, p.first_name, p.last_name, 
+                 pt.team_name, pt.team_code, lp.sort_order, lp.position_id
         
         ORDER BY position_type,
                  CASE 
@@ -191,10 +193,21 @@ class LineupPosition {
     try {
       await connection.beginTransaction();
 
-      // Delete existing positions for this lineup
-      await connection.query('DELETE FROM lineup_positions WHERE lineup_id = ?', [lineupId]);
+      // First, get all pending waiver players to preserve them
+      const pendingWaiverQuery = `
+        SELECT position_id, player_id, position_type, waiver_request_id, player_status
+        FROM lineup_positions 
+        WHERE lineup_id = ? AND player_status = 'pending_waiver'
+      `;
+      const pendingWaivers = await connection.query(pendingWaiverQuery, [lineupId]);
 
-      // Insert new positions
+      // Delete existing positions for this lineup EXCEPT pending waivers
+      await connection.query(
+        'DELETE FROM lineup_positions WHERE lineup_id = ? AND (player_status != "pending_waiver" OR player_status IS NULL)', 
+        [lineupId]
+      );
+
+      // Insert new positions (excluding any that are pending waivers)
       for (const position of positions) {
         const {
           position_type,
@@ -203,10 +216,22 @@ class LineupPosition {
           sort_order
         } = position;
 
-        await connection.query(`
-          INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
-          VALUES (?, ?, ?, ?, ?, NOW())
-        `, [lineupId, position_type, player_id, nfl_team_id, sort_order]);
+        // Skip if this player_id is already in lineup as pending waiver
+        const isPendingWaiver = pendingWaivers.some(pw => pw.player_id === player_id);
+        if (isPendingWaiver) {
+          // Update the sort_order for the pending waiver player instead
+          await connection.query(`
+            UPDATE lineup_positions 
+            SET sort_order = ?, nfl_team_id = ?
+            WHERE lineup_id = ? AND player_id = ? AND player_status = 'pending_waiver'
+          `, [sort_order, nfl_team_id, lineupId, player_id]);
+        } else {
+          // Insert new regular position
+          await connection.query(`
+            INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
+            VALUES (?, ?, ?, ?, ?, NOW())
+          `, [lineupId, position_type, player_id, nfl_team_id, sort_order]);
+        }
       }
 
       await connection.commit();

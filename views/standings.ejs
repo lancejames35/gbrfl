@@ -1,0 +1,114 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-0">League Standings</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <span class="badge bg-info fs-6">Season 2025</span>
+    </div>
+</div>
+
+<!-- Standings Table -->
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Current Standings</h5>
+            <small class="text-muted">Last updated: <%= lastUpdated ? lastUpdated.toLocaleDateString() : 'Never' %></small>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 35%;">Team</th>
+                        <th style="width: 10%;" class="text-center">Wins</th>
+                        <th style="width: 10%;" class="text-center">Losses</th>
+                        <th style="width: 10%;" class="text-center">Win %</th>
+                        <th style="width: 15%;" class="text-center">Points Diff</th>
+                        <th style="width: 15%;" class="text-center">Games Behind</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% standings.forEach((team, index) => { %>
+                        <tr class="<%= team.user_team ? 'table-primary' : '' %>">
+                            <td class="text-center fw-bold">
+                                <%= index + 1 %>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div>
+                                        <div class="fw-bold">
+                                            <%= team.team_name %>
+                                            <% if (team.user_team) { %>
+                                                <span class="badge bg-primary ms-1">You</span>
+                                            <% } %>
+                                        </div>
+                                        <small class="text-muted">
+                                            <%= team.first_name %> <%= team.last_name %>
+                                        </small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center fw-bold text-success">
+                                <%= team.wins %>
+                            </td>
+                            <td class="text-center fw-bold text-danger">
+                                <%= team.losses %>
+                            </td>
+                            <td class="text-center">
+                                <% 
+                                const totalGames = team.wins + team.losses;
+                                const winPct = totalGames > 0 ? (team.wins / totalGames * 100).toFixed(1) : '0.0';
+                                %>
+                                <%= winPct %>%
+                            </td>
+                            <td class="text-center">
+                                <span class="<%= team.points_differential >= 0 ? 'text-success' : 'text-danger' %>">
+                                    <%= team.points_differential >= 0 ? '+' : '' %><%= team.points_differential %>
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <% if (team.games_behind === 0) { %>
+                                    <span class="text-muted">-</span>
+                                <% } else { %>
+                                    <%= Math.round(team.games_behind) %>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<style>
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.table tbody tr.table-primary {
+    --bs-table-accent-bg: rgba(13, 110, 253, 0.1);
+    border-color: rgba(13, 110, 253, 0.2);
+}
+
+.user-team {
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+@media (max-width: 768px) {
+    .table th, .table td {
+        font-size: 0.875rem;
+        padding: 0.5rem;
+    }
+    
+    .table th:nth-child(5),
+    .table td:nth-child(5) {
+        display: none; /* Hide Win% on mobile */
+    }
+}
+</style>

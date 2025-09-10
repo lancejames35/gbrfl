@@ -361,7 +361,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize page
-        const currentWeek = <%= currentWeek %>;
+        let currentWeek = <%= currentWeek %>;
         let currentView = 'league';
         let currentWeekSelected = currentWeek;
         let currentTeamSelected = <%= userTeam ? userTeam.team_id : 'null' %>;
@@ -449,6 +449,7 @@
         function renderScheduleData(data) {
             const scheduleContent = document.getElementById('scheduleContent');
             const scheduleTitle = document.getElementById('scheduleTitle');
+            const currentWeekBadge = document.getElementById('currentWeekBadge');
             
             if (!data.data || data.data.length === 0) {
                 showNoData();
@@ -456,6 +457,12 @@
             }
             
             hideLoading();
+            
+            // Update current week badge with server's current week
+            if (data.currentWeek) {
+                currentWeekBadge.textContent = `Current Week: ${data.currentWeek}`;
+                currentWeek = data.currentWeek; // Update the global variable
+            }
             
             if (currentView === 'league') {
                 renderLeagueSchedule(data.data, data.week);
@@ -511,12 +518,12 @@
             html += '<div class="d-lg-none">';
             html += '<h6 class="fw-bold text-primary mb-3">Primary Games</h6>';
             primaryGames.forEach(game => {
-                html += renderGameCard(game, 'col-12', week, userTeamId);
+                html += renderGameCard(game, 'col-12', week, userTeamId, '-mobile');
             });
             if (bonusGames.length > 0) {
                 html += '<h6 class="fw-bold text-success mb-3 mt-4">Bonus Games</h6>';
                 bonusGames.forEach(game => {
-                    html += renderGameCard(game, 'col-12', week, userTeamId);
+                    html += renderGameCard(game, 'col-12', week, userTeamId, '-mobile');
                 });
             }
             html += '</div>';
@@ -525,15 +532,15 @@
             scheduleContent.innerHTML = html;
         }
         
-        function renderGameCard(game, colClass, weekNumber, userTeamId) {
+        function renderGameCard(game, colClass, weekNumber, userTeamId, idSuffix = '') {
             const isCompleted = game.is_completed;
             const isUserGame = userTeamId && (game.team_1.team_id === userTeamId || game.team_2.team_id === userTeamId);
             let resultsContent = '';
             
-            // Use the same logic as team schedule for results
-            if (weekNumber < currentWeek) {
-                resultsContent = '<span class="fw-bold text-success">Completed</span>';
-            } else if (weekNumber === currentWeek) {
+            // Use automated completion status from database
+            if (game.is_completed) {
+                resultsContent = '<span class="fw-bold text-success">Final</span>';
+            } else if (game.is_live) {
                 resultsContent = '<span class="fw-bold text-warning">Live</span>';
             } else {
                 resultsContent = '<span class="fw-bold text-secondary">Upcoming</span>';
@@ -548,7 +555,7 @@
             if (game.lineups_locked && (game.team_1_lineup || game.team_2_lineup)) {
                 lineupsButton = `
                     <div class="mt-2">
-                        <button class="btn btn-sm btn-outline-primary" onclick="showGameLineups(${game.schedule_id})">
+                        <button class="btn btn-sm btn-outline-primary" onclick="showGameLineups(${game.schedule_id}, '${idSuffix}')">
                             <i class="bi bi-list-ol"></i> View Lineups
                         </button>
                     </div>
@@ -557,7 +564,7 @@
             
             return `
                 <div class="${colClass} mb-3">
-                    <div class="${cardClass}" id="game-${game.schedule_id}">
+                    <div class="${cardClass}" id="game-${game.schedule_id}${idSuffix}">
                         <div class="text-center">
                             <div class="d-flex justify-content-center align-items-center">
                                 <div class="text-center">
@@ -575,16 +582,16 @@
                             <div class="mt-2">${resultsContent}</div>
                             ${lineupsButton}
                         </div>
-                        <div class="lineup-display d-none" id="lineup-${game.schedule_id}">
+                        <div class="lineup-display d-none" id="lineup-${game.schedule_id}${idSuffix}">
                             <hr>
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6 mb-3 mb-md-0">
                                     <h6 class="text-center mb-3">${game.team_1.team_name} Lineup</h6>
-                                    <div id="team1-lineup-${game.schedule_id}"></div>
+                                    <div id="team1-lineup-${game.schedule_id}${idSuffix}"></div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <h6 class="text-center mb-3">${game.team_2.team_name} Lineup</h6>
-                                    <div id="team2-lineup-${game.schedule_id}"></div>
+                                    <div id="team2-lineup-${game.schedule_id}${idSuffix}"></div>
                                 </div>
                             </div>
                         </div>
@@ -620,11 +627,10 @@
                     gameTypeContent = '<span class="fw-bold text-success">BONUS</span>';
                 }
                 
-                // Better readable results styling
-                if (game.week_number < currentWeek) {
-                    // TODO: Replace with actual game results when scoring system is implemented
-                    resultsContent = '<span class="fw-bold text-success">Completed</span>';
-                } else if (game.week_number === currentWeek) {
+                // Use automated completion status from database
+                if (game.is_completed) {
+                    resultsContent = '<span class="fw-bold text-success">Final</span>';
+                } else if (game.is_live) {
                     resultsContent = '<span class="fw-bold text-warning">Live</span>';
                 } else {
                     resultsContent = '<span class="fw-bold text-secondary">Upcoming</span>';
@@ -652,9 +658,9 @@
         };
         
         // Global function to show/hide game lineups
-        window.showGameLineups = function(gameId) {
-            const lineupDiv = document.getElementById(`lineup-${gameId}`);
-            const button = document.querySelector(`#game-${gameId} button`);
+        window.showGameLineups = function(gameId, idSuffix = '') {
+            const lineupDiv = document.getElementById(`lineup-${gameId}${idSuffix}`);
+            const button = document.querySelector(`#game-${gameId}${idSuffix} button`);
             
             if (lineupDiv.classList.contains('d-none')) {
                 // Show lineups
@@ -662,7 +668,7 @@
                 button.innerHTML = '<i class="bi bi-eye-slash"></i> Hide Lineups';
                 
                 // Populate lineup data
-                populateGameLineups(gameId);
+                populateGameLineups(gameId, idSuffix);
             } else {
                 // Hide lineups
                 lineupDiv.classList.add('d-none');
@@ -671,7 +677,7 @@
         };
         
         // Populate lineup data for a specific game
-        function populateGameLineups(gameId) {
+        function populateGameLineups(gameId, idSuffix = '') {
             // Find the game data
             let gameData = null;
             for (let game of scheduleData.data) {
@@ -685,16 +691,16 @@
             
             // Populate team 1 lineup
             if (gameData.team_1_lineup) {
-                populateTeamLineup(`team1-lineup-${gameId}`, gameData.team_1_lineup);
+                populateTeamLineup(`team1-lineup-${gameId}${idSuffix}`, gameData.team_1_lineup);
             } else {
-                document.getElementById(`team1-lineup-${gameId}`).innerHTML = '<p class="text-muted">No lineup submitted</p>';
+                document.getElementById(`team1-lineup-${gameId}${idSuffix}`).innerHTML = '<p class="text-muted">No lineup submitted</p>';
             }
             
             // Populate team 2 lineup
             if (gameData.team_2_lineup) {
-                populateTeamLineup(`team2-lineup-${gameId}`, gameData.team_2_lineup);
+                populateTeamLineup(`team2-lineup-${gameId}${idSuffix}`, gameData.team_2_lineup);
             } else {
-                document.getElementById(`team2-lineup-${gameId}`).innerHTML = '<p class="text-muted">No lineup submitted</p>';
+                document.getElementById(`team2-lineup-${gameId}${idSuffix}`).innerHTML = '<p class="text-muted">No lineup submitted</p>';
             }
         }
         

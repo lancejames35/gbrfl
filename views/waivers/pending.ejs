@@ -29,84 +29,195 @@
     <!-- Instructions -->
     <div class="alert alert-info mb-4">
         <i class="bi bi-info-circle-fill"></i>
-        <strong>Prioritize Your Requests:</strong> Drag and drop to reorder your waiver requests by priority. 
-        Higher priority requests will be processed first during waivers.
+        <strong>Prioritize Your Requests:</strong> Drag and drop to reorder your waiver requests by priority within each round. 
+        1st round requests are processed first, then 2nd round requests are processed.
     </div>
 
-    <!-- Waiver Requests List -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Your Waiver Requests (<%= requests.length %>)</h5>
+    <% 
+    // Separate requests by waiver round
+    const firstRoundRequests = requests.filter(r => r.waiver_round === '1st');
+    const secondRoundRequests = requests.filter(r => r.waiver_round === '2nd');
+    %>
+
+    <!-- First Round Waiver Requests -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-1-circle me-2"></i>1st Round Waivers (<%= firstRoundRequests.length %>)
+            </h5>
             <div>
-                <span class="text-muted small" id="saveStatus" style="display: none;">
-                    <i class="bi bi-check-circle text-success"></i> Auto-saved
+                <span class="text-white-50 small" id="saveStatus1st" style="display: none;">
+                    <i class="bi bi-check-circle"></i> Auto-saved
                 </span>
             </div>
         </div>
         <div class="card-body p-0">
-            <div class="waiver-requests-container" id="waiverRequestsList">
-                <% requests.forEach((request, index) => { %>
-                    <div class="waiver-request-item" data-request-id="<%= request.request_id %>" data-original-order="<%= request.request_order %>">
-                        <div class="d-flex align-items-center p-3">
-                            <!-- Drag Handle -->
-                            <div class="drag-handle me-3">
-                                <i class="bi bi-grip-vertical text-muted"></i>
-                            </div>
-                            
-                            <!-- Priority Number -->
-                            <div class="priority-number me-3">
-                                <span class="badge bg-primary priority-badge"><%= request.request_order %></span>
-                            </div>
-                            
-                            <!-- Request Details -->
-                            <div class="flex-grow-1">
-                                <div class="row">
-                                    <div class="col-md-5">
-                                        <div class="pickup-info">
-                                            <strong class="text-success">
-                                                <i class="bi bi-plus-circle"></i> Add: <%= request.pickup_name %>
-                                            </strong>
-                                            <br>
-                                            <small class="text-muted">
-                                                <%= request.pickup_position %> - <%= request.pickup_team || 'FA' %>
-                                            </small>
+            <% if (firstRoundRequests.length === 0) { %>
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox display-6"></i>
+                    <p class="mt-2 mb-0">No 1st round waiver requests</p>
+                </div>
+            <% } else { %>
+                <div class="waiver-requests-container" id="waiverRequestsList1st" data-round="1st">
+                    <% firstRoundRequests.forEach((request, index) => { %>
+                        <div class="waiver-request-item" data-request-id="<%= request.request_id %>" data-original-order="<%= request.request_order %>" data-round="1st">
+                            <div class="d-flex align-items-center p-3">
+                                <!-- Drag Handle -->
+                                <div class="drag-handle me-3">
+                                    <i class="bi bi-grip-vertical text-muted"></i>
+                                </div>
+                                
+                                <!-- Priority Number -->
+                                <div class="priority-number me-3">
+                                    <span class="badge bg-primary priority-badge"><%= request.request_order %></span>
+                                </div>
+                                
+                                <!-- Round Badge -->
+                                <div class="round-badge me-3">
+                                    <span class="badge bg-secondary">1st</span>
+                                </div>
+                                
+                                <!-- Request Details -->
+                                <div class="flex-grow-1">
+                                    <div class="row">
+                                        <div class="col-md-5">
+                                            <div class="pickup-info">
+                                                <strong class="text-success">
+                                                    <i class="bi bi-plus-circle"></i> Add: <%= request.pickup_name %>
+                                                </strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <%= request.pickup_position %> - <%= request.pickup_team || 'FA' %>
+                                                </small>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-5">
-                                        <div class="drop-info">
-                                            <strong class="text-danger">
-                                                <i class="bi bi-dash-circle"></i> Drop: <%= request.drop_name %>
-                                            </strong>
-                                            <br>
-                                            <small class="text-muted">
-                                                <%= request.drop_position %> - <%= request.drop_team || 'FA' %>
-                                            </small>
+                                        <div class="col-md-5">
+                                            <div class="drop-info">
+                                                <strong class="text-danger">
+                                                    <i class="bi bi-dash-circle"></i> Drop: <%= request.drop_name %>
+                                                </strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <%= request.drop_position %> - <%= request.drop_team || 'FA' %>
+                                                </small>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <div class="submitted-info text-md-end">
-                                            <small class="text-muted">
-                                                Submitted:<br>
-                                                <%= new Date(request.submitted_at).toLocaleDateString() %>
-                                            </small>
+                                        <div class="col-md-2">
+                                            <div class="submitted-info text-md-end">
+                                                <small class="text-muted">
+                                                    Submitted:<br>
+                                                    <%= new Date(request.submitted_at).toLocaleDateString() %>
+                                                </small>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <!-- Cancel Button -->
-                            <div class="ms-3">
-                                <button class="btn btn-sm btn-outline-danger cancel-request-btn" 
-                                        data-request-id="<%= request.request_id %>"
-                                        data-pickup-name="<%= request.pickup_name %>"
-                                        title="Cancel this request">
-                                    <i class="bi bi-x-lg"></i>
-                                </button>
+                                
+                                <!-- Cancel Button -->
+                                <div class="ms-3">
+                                    <button class="btn btn-sm btn-outline-danger cancel-request-btn" 
+                                            data-request-id="<%= request.request_id %>"
+                                            data-pickup-name="<%= request.pickup_name %>"
+                                            title="Cancel this request">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                <% }); %>
+                    <% }); %>
+                </div>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Second Round Waiver Requests -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="bi bi-2-circle me-2"></i>2nd Round Waivers (<%= secondRoundRequests.length %>)
+            </h5>
+            <div>
+                <span class="text-dark-50 small" id="saveStatus2nd" style="display: none;">
+                    <i class="bi bi-check-circle"></i> Auto-saved
+                </span>
             </div>
+        </div>
+        <div class="card-body p-0">
+            <% if (secondRoundRequests.length === 0) { %>
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox display-6"></i>
+                    <p class="mt-2 mb-0">No 2nd round waiver requests</p>
+                </div>
+            <% } else { %>
+                <div class="waiver-requests-container" id="waiverRequestsList2nd" data-round="2nd">
+                    <% secondRoundRequests.forEach((request, index) => { %>
+                        <div class="waiver-request-item" data-request-id="<%= request.request_id %>" data-original-order="<%= request.request_order %>" data-round="2nd">
+                            <div class="d-flex align-items-center p-3">
+                                <!-- Drag Handle -->
+                                <div class="drag-handle me-3">
+                                    <i class="bi bi-grip-vertical text-muted"></i>
+                                </div>
+                                
+                                <!-- Priority Number -->
+                                <div class="priority-number me-3">
+                                    <span class="badge bg-warning text-dark priority-badge"><%= request.request_order %></span>
+                                </div>
+                                
+                                <!-- Round Badge -->
+                                <div class="round-badge me-3">
+                                    <span class="badge bg-secondary">2nd</span>
+                                </div>
+                                
+                                <!-- Request Details -->
+                                <div class="flex-grow-1">
+                                    <div class="row">
+                                        <div class="col-md-5">
+                                            <div class="pickup-info">
+                                                <strong class="text-success">
+                                                    <i class="bi bi-plus-circle"></i> Add: <%= request.pickup_name %>
+                                                </strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <%= request.pickup_position %> - <%= request.pickup_team || 'FA' %>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <div class="drop-info">
+                                                <strong class="text-danger">
+                                                    <i class="bi bi-dash-circle"></i> Drop: <%= request.drop_name %>
+                                                </strong>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <%= request.drop_position %> - <%= request.drop_team || 'FA' %>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="submitted-info text-md-end">
+                                                <small class="text-muted">
+                                                    Submitted:<br>
+                                                    <%= new Date(request.submitted_at).toLocaleDateString() %>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Cancel Button -->
+                                <div class="ms-3">
+                                    <button class="btn btn-sm btn-outline-danger cancel-request-btn" 
+                                            data-request-id="<%= request.request_id %>"
+                                            data-pickup-name="<%= request.pickup_name %>"
+                                            title="Cancel this request">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } %>
         </div>
     </div>
 
@@ -114,12 +225,14 @@
     <div class="card mt-4">
         <div class="card-header">
             <h6 class="mb-0">
-                <i class="bi bi-info-circle"></i> How Waiver Processing Works
+                <i class="bi bi-info-circle"></i> How Two-Round Waiver Processing Works
             </h6>
         </div>
         <div class="card-body">
             <ul class="mb-0">
-                <li><strong>Priority Order:</strong> Your requests are processed in the order shown above (1 = highest priority)</li>
+                <li><strong>1st Round:</strong> All 1st round requests are processed first, in priority order within your team and by waiver priority between teams</li>
+                <li><strong>2nd Round:</strong> After all 1st round requests are complete, 2nd round requests are processed using the remaining waiver priority order</li>
+                <li><strong>Priority Order:</strong> Within each round, your requests are processed in the order shown (1 = highest priority)</li>
                 <li><strong>Availability:</strong> If a player you want is claimed by another team, that request will be skipped</li>
                 <li><strong>Roster Space:</strong> You must drop a player to add a new one - both actions happen together</li>
             </ul>
@@ -219,25 +332,30 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const requestsList = document.getElementById('waiverRequestsList');
-    const saveStatusSpan = document.getElementById('saveStatus');
+    const requestsList1st = document.getElementById('waiverRequestsList1st');
+    const requestsList2nd = document.getElementById('waiverRequestsList2nd');
+    const saveStatusSpan1st = document.getElementById('saveStatus1st');
+    const saveStatusSpan2nd = document.getElementById('saveStatus2nd');
     const cancelRequestBtns = document.querySelectorAll('.cancel-request-btn');
     
-    let originalOrder = [];
-    let saveTimeout;
+    let originalOrder1st = [];
+    let originalOrder2nd = [];
+    let saveTimeout1st;
+    let saveTimeout2nd;
 
-    if (requestsList) {
-        // Store original order
-        const items = requestsList.querySelectorAll('.waiver-request-item');
-        items.forEach(item => {
-            originalOrder.push({
+    // Initialize sorting for 1st round requests
+    if (requestsList1st) {
+        // Store original order for 1st round
+        const items1st = requestsList1st.querySelectorAll('.waiver-request-item');
+        items1st.forEach(item => {
+            originalOrder1st.push({
                 request_id: parseInt(item.dataset.requestId),
                 order: parseInt(item.dataset.originalOrder)
             });
         });
 
-        // Initialize SortableJS
-        const sortable = new Sortable(requestsList, {
+        // Initialize SortableJS for 1st round
+        const sortable1st = new Sortable(requestsList1st, {
             animation: 150,
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
@@ -248,82 +366,123 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             onEnd: function(evt) {
                 evt.item.classList.remove('dragging');
-                updatePriorityNumbers();
-                autoSaveOrder();
+                updatePriorityNumbers(requestsList1st);
+                autoSaveOrder(requestsList1st, saveStatusSpan1st, 'saveTimeout1st');
             }
         });
+    }
 
-        // Update priority numbers after reordering
-        function updatePriorityNumbers() {
-            const items = requestsList.querySelectorAll('.waiver-request-item');
-            items.forEach((item, index) => {
-                const priorityBadge = item.querySelector('.priority-badge');
-                priorityBadge.textContent = index + 1;
+    // Initialize sorting for 2nd round requests
+    if (requestsList2nd) {
+        // Store original order for 2nd round
+        const items2nd = requestsList2nd.querySelectorAll('.waiver-request-item');
+        items2nd.forEach(item => {
+            originalOrder2nd.push({
+                request_id: parseInt(item.dataset.requestId),
+                order: parseInt(item.dataset.originalOrder)
             });
-        }
+        });
 
-        // Auto-save order with debouncing
-        function autoSaveOrder() {
-            // Clear any existing timeout
-            if (saveTimeout) {
-                clearTimeout(saveTimeout);
+        // Initialize SortableJS for 2nd round
+        const sortable2nd = new Sortable(requestsList2nd, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            handle: '.drag-handle',
+            onStart: function(evt) {
+                evt.item.classList.add('dragging');
+            },
+            onEnd: function(evt) {
+                evt.item.classList.remove('dragging');
+                updatePriorityNumbers(requestsList2nd);
+                autoSaveOrder(requestsList2nd, saveStatusSpan2nd, 'saveTimeout2nd');
             }
-            
-            // Show saving status
-            saveStatusSpan.style.display = 'inline-block';
-            saveStatusSpan.innerHTML = '<i class="bi bi-hourglass-split text-warning"></i> Saving...';
-            
-            // Debounce the save by 500ms
-            saveTimeout = setTimeout(() => {
-                const items = requestsList.querySelectorAll('.waiver-request-item');
-                const newOrder = [];
-                
-                items.forEach((item, index) => {
-                    newOrder.push({
-                        request_id: parseInt(item.dataset.requestId),
-                        order: index + 1
-                    });
-                });
+        });
+    }
 
-                fetch('/waivers/order', {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ request_orders: newOrder })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Update original order
-                        originalOrder = [...newOrder];
-                        
-                        // Show success status
-                        saveStatusSpan.innerHTML = '<i class="bi bi-check-circle text-success"></i> Auto-saved';
-                        
-                        // Hide status after 2 seconds
-                        setTimeout(() => {
-                            saveStatusSpan.style.display = 'none';
-                        }, 2000);
-                    } else {
-                        saveStatusSpan.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i> Save failed';
-                        showToast('Error saving order: ' + data.message, 'danger');
-                        setTimeout(() => {
-                            saveStatusSpan.style.display = 'none';
-                        }, 3000);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    saveStatusSpan.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i> Save failed';
-                    showToast('Error saving request order. Please try again.', 'danger');
-                    setTimeout(() => {
-                        saveStatusSpan.style.display = 'none';
-                    }, 3000);
-                });
-            }, 500);
+    // Update priority numbers after reordering
+    function updatePriorityNumbers(container) {
+        const items = container.querySelectorAll('.waiver-request-item');
+        items.forEach((item, index) => {
+            const priorityBadge = item.querySelector('.priority-badge');
+            priorityBadge.textContent = index + 1;
+        });
+    }
+
+    // Auto-save order with debouncing
+    function autoSaveOrder(container, statusSpan, timeoutVar) {
+        // Clear any existing timeout
+        if (timeoutVar === 'saveTimeout1st' && saveTimeout1st) {
+            clearTimeout(saveTimeout1st);
+        } else if (timeoutVar === 'saveTimeout2nd' && saveTimeout2nd) {
+            clearTimeout(saveTimeout2nd);
         }
+        
+        // Show saving status
+        statusSpan.style.display = 'inline-block';
+        statusSpan.innerHTML = '<i class="bi bi-hourglass-split text-warning"></i> Saving...';
+        
+        // Debounce the save by 500ms
+        const timeout = setTimeout(() => {
+            const items = container.querySelectorAll('.waiver-request-item');
+            const newOrder = [];
+            
+            items.forEach((item, index) => {
+                newOrder.push({
+                    request_id: parseInt(item.dataset.requestId),
+                    order: index + 1
+                });
+            });
 
+            fetch('/waivers/order', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ request_orders: newOrder })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update original order
+                    if (timeoutVar === 'saveTimeout1st') {
+                        originalOrder1st = [...newOrder];
+                    } else {
+                        originalOrder2nd = [...newOrder];
+                    }
+                    
+                    // Show success status
+                    statusSpan.innerHTML = '<i class="bi bi-check-circle"></i> Auto-saved';
+                    
+                    // Hide status after 2 seconds
+                    setTimeout(() => {
+                        statusSpan.style.display = 'none';
+                    }, 2000);
+                } else {
+                    statusSpan.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i> Save failed';
+                    showToast('Error saving order: ' + data.message, 'danger');
+                    setTimeout(() => {
+                        statusSpan.style.display = 'none';
+                    }, 3000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusSpan.innerHTML = '<i class="bi bi-exclamation-triangle text-danger"></i> Save failed';
+                showToast('Error saving request order. Please try again.', 'danger');
+                setTimeout(() => {
+                    statusSpan.style.display = 'none';
+                }, 3000);
+            });
+        }, 500);
+        
+        // Store timeout reference
+        if (timeoutVar === 'saveTimeout1st') {
+            saveTimeout1st = timeout;
+        } else {
+            saveTimeout2nd = timeout;
+        }
     }
 
     // Cancel request functionality

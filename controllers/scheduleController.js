@@ -9,16 +9,19 @@ const FantasyTeam = require('../models/FantasyTeam');
 const LineupSubmission = require('../models/LineupSubmission');
 const LineupPosition = require('../models/LineupPosition');
 const LineupLock = require('../models/LineupLock');
+const WeekStatus = require('../models/WeekStatus');
 
 /**
- * Get current week based on current date and season settings
- * For now, we'll use a simple calculation - this can be enhanced later
+ * Get current week based on NFL game completion status
  * @returns {number} Current week number
  */
-function getCurrentWeek() {
-  // For now, return week 1 as default
-  // TODO: Implement proper current week logic based on league_settings and current date
-  return 1;
+async function getCurrentWeek() {
+  try {
+    return await WeekStatus.getCurrentWeek();
+  } catch (error) {
+    console.error('Error getting current week:', error);
+    return 1; // Default fallback
+  }
 }
 
 /**
@@ -28,7 +31,7 @@ function getCurrentWeek() {
  */
 exports.getSchedulePage = async (req, res) => {
   try {
-    const currentWeek = getCurrentWeek();
+    const currentWeek = await getCurrentWeek();
     const seasonYear = 2025; // TODO: Get from league settings
     
     // Get all teams for dropdown
@@ -63,9 +66,10 @@ exports.getSchedulePage = async (req, res) => {
  */
 exports.getScheduleData = async (req, res) => {
   try {
+    const currentWeek = await getCurrentWeek();
     const { 
       view = 'league', 
-      week = getCurrentWeek(), 
+      week = currentWeek, 
       team = null,
       seasonYear = 2025 
     } = req.query;
@@ -111,13 +115,19 @@ exports.getScheduleData = async (req, res) => {
       const lockStatus = await LineupLock.getLockStatus(parseInt(week), 'primary', parseInt(seasonYear));
       const isLocked = lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked';
       
+      // Get week status once for all games in this week
+      const weekStatus = await WeekStatus.getWeekStatus(parseInt(week), parseInt(seasonYear));
+      
       for (let game of scheduleData) {
         if (game.team_1 && game.team_2) {
           // Check if lineups were submitted for this week
-          const team1Lineup = await LineupSubmission.getByTeamAndWeek(game.team_1.team_id, parseInt(week), 'primary', parseInt(seasonYear));
-          const team2Lineup = await LineupSubmission.getByTeamAndWeek(game.team_2.team_id, parseInt(week), 'primary', parseInt(seasonYear));
+          const team1Lineup = await LineupSubmission.getByTeamAndWeek(game.team_1.team_id, parseInt(week), game.game_type, parseInt(seasonYear));
+          const team2Lineup = await LineupSubmission.getByTeamAndWeek(game.team_2.team_id, parseInt(week), game.game_type, parseInt(seasonYear));
           
-          game.is_completed = !!(team1Lineup && team2Lineup);
+          // Apply week status to this game
+          game.is_completed = weekStatus.status === 'completed';
+          game.is_live = weekStatus.status === 'live';
+          
           // Scores will be added when scoring system is implemented
           game.team_1_score = null;
           game.team_2_score = null;
@@ -151,7 +161,7 @@ exports.getScheduleData = async (req, res) => {
     res.json({
       success: true,
       data: scheduleData,
-      currentWeek: getCurrentWeek(),
+      currentWeek: currentWeek,
       view,
       week: parseInt(week),
       team: team ? parseInt(team) : null
