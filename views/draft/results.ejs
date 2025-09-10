@@ -116,12 +116,26 @@
                                 </thead>
                                 <tbody>
                                     <% 
-                                    // Determine max number of picks per team (some teams have 10 picks)
-                                    const teamPickCounts = {};
+                                    // Pre-process: organize picks by team, in chronological order
+                                    const teamPicksMap = {};
                                     teamsInDraftOrder.forEach(team => {
-                                        teamPickCounts[team.team_id] = draftOrder.filter(d => d.fantasy_team_id === team.team_id).length;
+                                        // Get all draft order entries for this team, sorted by overall pick
+                                        const teamOrderEntries = draftOrder
+                                            .filter(d => d.fantasy_team_id === team.team_id)
+                                            .sort((a, b) => a.overall_pick - b.overall_pick);
+                                        
+                                        // Map each entry to its actual pick (if made)
+                                        teamPicksMap[team.team_id] = teamOrderEntries.map(orderEntry => {
+                                            const actualPick = picks.find(p => p.overall_pick === orderEntry.overall_pick);
+                                            return {
+                                                orderEntry,
+                                                actualPick
+                                            };
+                                        });
                                     });
-                                    const maxPicksPerTeam = Math.max(...Object.values(teamPickCounts));
+                                    
+                                    // Find max picks any team has
+                                    const maxPicksPerTeam = Math.max(...Object.values(teamPicksMap).map(picks => picks.length));
                                     
                                     for (let pickNum = 1; pickNum <= maxPicksPerTeam; pickNum++) { 
                                     %>
@@ -130,40 +144,38 @@
                                                 <%= pickNum %>
                                             </td>
                                             <% teamsInDraftOrder.forEach(team => {
-                                                // Find this team's nth pick (sorted by overall pick number)
-                                                const teamPicks = draftOrder
-                                                    .filter(d => d.fantasy_team_id === team.team_id)
-                                                    .sort((a, b) => a.overall_pick - b.overall_pick);
-                                                const orderEntry = teamPicks[pickNum - 1]; // 0-indexed
-                                                // Find the actual pick for this slot
-                                                const pick = orderEntry ? picks.find(p => p.overall_pick === orderEntry.overall_pick) : null;
+                                                // Get this team's nth pick (0-indexed)
+                                                const teamPicks = teamPicksMap[team.team_id] || [];
+                                                const pickData = teamPicks[pickNum - 1]; // Convert to 0-indexed
                                             %>
                                                 <td class="text-center align-middle draft-slot">
-                                                    <% if (pick) { %>
+                                                    <% if (pickData && pickData.actualPick) { %>
+                                                        <!-- Team made this pick -->
                                                         <div class="draft-pick-cell">
                                                             <div class="pick-number-badge">
-                                                                <%= pick.overall_pick %>
+                                                                <%= pickData.actualPick.overall_pick %>
                                                             </div>
                                                             <div class="player-info">
                                                                 <div class="player-name fw-bold">
-                                                                    <%= pick.display_name %>
+                                                                    <%= pickData.actualPick.display_name %>
                                                                 </div>
                                                                 <div class="player-details">
-                                                                    <span class="position-badge position-<%= pick.position.toLowerCase() %>">
-                                                                        <%= pick.position %>
+                                                                    <span class="position-badge position-<%= pickData.actualPick.position.toLowerCase() %>">
+                                                                        <%= pickData.actualPick.position %>
                                                                     </span>
                                                                     <span class="team-code text-muted">
-                                                                        <%= pick.team_code || 'FA' %>
+                                                                        <%= pickData.actualPick.team_code || 'FA' %>
                                                                     </span>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    <% } else if (orderEntry) { %>
+                                                    <% } else if (pickData && pickData.orderEntry) { %>
+                                                        <!-- Team has this pick but hasn't made it yet -->
                                                         <div class="empty-slot">
-                                                            <small class="text-muted">Pick #<%= orderEntry.overall_pick %></small>
+                                                            <small class="text-muted">Pick #<%= pickData.orderEntry.overall_pick %></small>
                                                         </div>
                                                     <% } else { %>
-                                                        <!-- Empty cell for teams with fewer picks -->
+                                                        <!-- Team doesn't have this many picks -->
                                                         <div class="empty-cell">
                                                         </div>
                                                     <% } %>
