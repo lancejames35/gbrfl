@@ -1646,14 +1646,25 @@ exports.getStandingsManagement = async (req, res) => {
  */
 exports.updateStandings = async (req, res) => {
   try {
+    console.log('Full request body:', req.body);
+    console.log('Request body keys:', Object.keys(req.body));
+    
     const { teams } = req.body;
     const seasonYear = 2025;
     
-    console.log('Received standings update request:', { teams, seasonYear });
+    console.log('Extracted teams data:', teams);
+    console.log('Teams type:', typeof teams);
+    console.log('Teams is array:', Array.isArray(teams));
     
-    if (!teams || !Array.isArray(teams)) {
-      console.error('Invalid team data:', teams);
-      req.flash('error_msg', 'Invalid team data provided');
+    if (!teams) {
+      console.error('No teams data found in request body');
+      req.flash('error_msg', 'No team data received - please try again');
+      return res.redirect('/admin/standings');
+    }
+    
+    if (!Array.isArray(teams)) {
+      console.error('Teams data is not an array:', typeof teams, teams);
+      req.flash('error_msg', 'Invalid team data format - please refresh and try again');
       return res.redirect('/admin/standings');
     }
     

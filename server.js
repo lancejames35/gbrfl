@@ -166,7 +166,7 @@ app.use('/api/auth', authLimiter);
 
 // Parse request bodies
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 
 // Set up session management
 const MySQLStore = require('express-mysql-session')(session);
