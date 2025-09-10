@@ -215,28 +215,65 @@ router.get('/next-lineup-lock', async (req, res) => {
     }
     const seasonYear = 2025;
     
-    // Query for the current or next lock time
-    const result = await db.query(`
+    // First check if we have a manual override in lineup_locks table
+    const manualLock = await db.query(`
       SELECT week_number, lock_datetime, is_locked
       FROM lineup_locks
       WHERE season_year = ?
-      AND (
-        (is_locked = 0 AND lock_datetime IS NOT NULL AND lock_datetime > NOW())
-        OR week_number >= ?
-      )
+      AND week_number >= ?
+      AND lock_datetime IS NOT NULL
       ORDER BY week_number ASC
       LIMIT 1
     `, [seasonYear, currentWeek]);
     
-    if (result && result[0] && result[0].lock_datetime) {
+    if (manualLock && manualLock[0]) {
+      // Use manual lock time if available
       res.json({
         success: true,
-        weekNumber: result[0].week_number,
-        lockTime: result[0].lock_datetime,
-        isLocked: result[0].is_locked === 1
+        weekNumber: manualLock[0].week_number,
+        lockTime: manualLock[0].lock_datetime,
+        isLocked: manualLock[0].is_locked === 1
+      });
+      return;
+    }
+    
+    // Calculate deadline dynamically from NFL games
+    const nextWeekGames = await db.query(`
+      SELECT 
+        week,
+        MIN(kickoff_timestamp) as first_kickoff
+      FROM nfl_games 
+      WHERE season_year = ? 
+      AND game_type = 'regular'
+      AND week >= ?
+      GROUP BY week
+      ORDER BY week ASC
+      LIMIT 1
+    `, [seasonYear, currentWeek]);
+    
+    if (nextWeekGames && nextWeekGames[0]) {
+      const week = nextWeekGames[0].week;
+      const firstKickoff = new Date(nextWeekGames[0].first_kickoff);
+      
+      // Calculate Thursday deadline before the first game at 7:20 PM ET
+      const lockDatetime = new Date(firstKickoff);
+      const dayOfWeek = firstKickoff.getDay(); // 0 = Sunday, 4 = Thursday
+      const daysToSubtract = dayOfWeek === 0 ? 3 : (dayOfWeek + 3) % 7; // Days to go back to Thursday
+      lockDatetime.setDate(firstKickoff.getDate() - daysToSubtract);
+      lockDatetime.setHours(23, 20, 0, 0); // 7:20 PM ET (23:20 UTC)
+      
+      // Check if this deadline has already passed
+      const now = new Date();
+      const isLocked = now > lockDatetime;
+      
+      res.json({
+        success: true,
+        weekNumber: week,
+        lockTime: lockDatetime.toISOString(),
+        isLocked: isLocked
       });
     } else {
-      // No lock time set yet
+      // No future games found
       res.json({
         success: true,
         weekNumber: currentWeek,
@@ -245,7 +282,7 @@ router.get('/next-lineup-lock', async (req, res) => {
       });
     }
   } catch (error) {
-    // Error fetching next lineup lock
+    console.error('Error fetching next lineup lock:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch lineup lock time' 
