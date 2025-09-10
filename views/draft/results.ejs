@@ -97,8 +97,16 @@
                             <table class="table table-bordered table-hover mb-0 draft-board-table">
                                 <thead class="table-dark">
                                     <tr>
-                                        <th class="text-center" style="width: 80px;">Round</th>
-                                        <% allTeams.forEach(team => { %>
+                                        <th class="text-center" style="width: 80px;">Pick</th>
+                                        <% 
+                                        // Get teams ordered by first round draft position
+                                        const teamsInDraftOrder = draftOrder
+                                            .filter(d => d.round === 1)
+                                            .sort((a, b) => a.pick_number - b.pick_number)
+                                            .map(d => allTeams.find(t => t.team_id === d.fantasy_team_id))
+                                            .filter(t => t); // Remove any null values
+                                        %>
+                                        <% teamsInDraftOrder.forEach(team => { %>
                                             <th class="text-center team-header" style="width: 200px;">
                                                 <div class="fw-bold"><%= team.team_name %></div>
                                                 <small class="text-muted"><%= team.first_name %> <%= team.last_name %></small>
@@ -108,16 +116,25 @@
                                 </thead>
                                 <tbody>
                                     <% 
-                                    const maxRounds = Math.max(...(draftOrder.map(d => d.round) || [1]));
-                                    for (let round = 1; round <= maxRounds; round++) { 
+                                    // Determine max number of picks per team (some teams have 10 picks)
+                                    const teamPickCounts = {};
+                                    teamsInDraftOrder.forEach(team => {
+                                        teamPickCounts[team.team_id] = draftOrder.filter(d => d.fantasy_team_id === team.team_id).length;
+                                    });
+                                    const maxPicksPerTeam = Math.max(...Object.values(teamPickCounts));
+                                    
+                                    for (let pickNum = 1; pickNum <= maxPicksPerTeam; pickNum++) { 
                                     %>
                                         <tr>
                                             <td class="text-center align-middle fw-bold bg-light">
-                                                <%= round %>
+                                                <%= pickNum %>
                                             </td>
-                                            <% allTeams.forEach(team => {
-                                                // Find the draft order entry for this round and team
-                                                const orderEntry = draftOrder.find(d => d.round === round && d.fantasy_team_id === team.team_id);
+                                            <% teamsInDraftOrder.forEach(team => {
+                                                // Find this team's nth pick (sorted by overall pick number)
+                                                const teamPicks = draftOrder
+                                                    .filter(d => d.fantasy_team_id === team.team_id)
+                                                    .sort((a, b) => a.overall_pick - b.overall_pick);
+                                                const orderEntry = teamPicks[pickNum - 1]; // 0-indexed
                                                 // Find the actual pick for this slot
                                                 const pick = orderEntry ? picks.find(p => p.overall_pick === orderEntry.overall_pick) : null;
                                             %>
@@ -144,6 +161,10 @@
                                                     <% } else if (orderEntry) { %>
                                                         <div class="empty-slot">
                                                             <small class="text-muted">Pick #<%= orderEntry.overall_pick %></small>
+                                                        </div>
+                                                    <% } else { %>
+                                                        <!-- Empty cell for teams with fewer picks -->
+                                                        <div class="empty-cell">
                                                         </div>
                                                     <% } %>
                                                 </td>
@@ -349,6 +370,12 @@
     background: #f8f9fa;
     border: 2px dashed #dee2e6;
     border-radius: 4px;
+}
+
+.empty-cell {
+    height: 100%;
+    background: #fafafa;
+    border: none;
 }
 
 /* Responsive adjustments */
