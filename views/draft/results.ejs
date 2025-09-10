@@ -136,8 +136,9 @@
                                         });
                                     });
                                     
-                                    // Find max picks any team has
-                                    const maxPicksPerTeam = Math.max(...Object.values(teamPicksMap).map(picks => picks.length));
+                                    // Most teams have 9 picks, but 2 teams have 10 picks
+                                    // Always show 10 rows, but 10th row will be empty for most teams
+                                    const maxPicksPerTeam = 10;
                                     
                                     for (let pickNum = 1; pickNum <= maxPicksPerTeam; pickNum++) { 
                                     %>
