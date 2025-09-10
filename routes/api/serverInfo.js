@@ -206,7 +206,13 @@ router.get('/timezone-debug', async (req, res) => {
 router.get('/next-lineup-lock', async (req, res) => {
   try {
     // Get current week number using NFL game data
-    const currentWeek = await WeekStatus.getCurrentWeek();
+    let currentWeek;
+    try {
+      currentWeek = await WeekStatus.getCurrentWeek();
+    } catch (weekError) {
+      console.error('Error getting current week, falling back to week 1:', weekError);
+      currentWeek = 1;
+    }
     const seasonYear = 2025;
     
     // Query for the current or next lock time

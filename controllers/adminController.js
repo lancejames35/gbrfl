@@ -1591,20 +1591,40 @@ exports.getStandingsManagement = async (req, res) => {
   try {
     const seasonYear = 2025;
     
-    // Get current standings with team and user information
-    const standings = await db.query(`
-      SELECT 
-        ls.*,
-        ft.team_name,
-        u.first_name,
-        u.last_name
-      FROM league_standings ls
-      JOIN fantasy_teams ft ON ls.fantasy_team_id = ft.team_id
-      JOIN users u ON ft.user_id = u.user_id
-      WHERE ls.season_year = ?
-      ORDER BY 
-        ls.position ASC
-    `, [seasonYear]);
+    // Check if league_standings table exists and has data
+    let standings = [];
+    try {
+      const tableCheck = await db.query('SHOW TABLES LIKE "league_standings"');
+      if (tableCheck.length === 0) {
+        console.error('league_standings table does not exist');
+        req.flash('error_msg', 'Standings table not found - please contact administrator to set up standings');
+        return res.redirect('/admin');
+      }
+      
+      // Get current standings with team and user information
+      standings = await db.query(`
+        SELECT 
+          ls.*,
+          ft.team_name,
+          u.first_name,
+          u.last_name
+        FROM league_standings ls
+        JOIN fantasy_teams ft ON ls.fantasy_team_id = ft.team_id
+        JOIN users u ON ft.user_id = u.user_id
+        WHERE ls.season_year = ?
+        ORDER BY 
+          ls.position ASC
+      `, [seasonYear]);
+      
+      if (standings.length === 0) {
+        console.warn('No standings data found for season', seasonYear);
+        req.flash('warning_msg', 'No standings data found for current season - please contact administrator');
+      }
+    } catch (dbError) {
+      console.error('Database error loading standings:', dbError);
+      req.flash('error_msg', `Database error: ${dbError.message}`);
+      return res.redirect('/admin');
+    }
     
     res.render('admin/standings', {
       title: 'Manage Standings | Admin | GBRFL',
@@ -1614,7 +1634,7 @@ exports.getStandingsManagement = async (req, res) => {
     });
   } catch (error) {
     console.error('Error loading standings management:', error);
-    req.flash('error_msg', 'Error loading standings management');
+    req.flash('error_msg', `Error loading standings management: ${error.message}`);
     res.redirect('/admin');
   }
 };
@@ -1629,13 +1649,31 @@ exports.updateStandings = async (req, res) => {
     const { teams } = req.body;
     const seasonYear = 2025;
     
+    console.log('Received standings update request:', { teams, seasonYear });
+    
     if (!teams || !Array.isArray(teams)) {
+      console.error('Invalid team data:', teams);
       req.flash('error_msg', 'Invalid team data provided');
+      return res.redirect('/admin/standings');
+    }
+    
+    // Check if league_standings table exists
+    try {
+      const tableCheck = await db.query('SHOW TABLES LIKE "league_standings"');
+      if (tableCheck.length === 0) {
+        console.error('league_standings table does not exist');
+        req.flash('error_msg', 'Database table missing - please contact administrator');
+        return res.redirect('/admin/standings');
+      }
+    } catch (tableError) {
+      console.error('Error checking table existence:', tableError);
+      req.flash('error_msg', 'Database error - please contact administrator');
       return res.redirect('/admin/standings');
     }
     
     // Update each team's standings
     for (const team of teams) {
+      console.log('Updating team:', team);
       await db.query(`
         UPDATE league_standings 
         SET 
@@ -1657,11 +1695,12 @@ exports.updateStandings = async (req, res) => {
       ]);
     }
     
+    console.log('Standings updated successfully');
     req.flash('success_msg', 'Standings updated successfully');
     res.redirect('/admin/standings');
   } catch (error) {
     console.error('Error updating standings:', error);
-    req.flash('error_msg', 'Error updating standings');
+    req.flash('error_msg', `Error updating standings: ${error.message}`);
     res.redirect('/admin/standings');
   }
 };
