@@ -99,12 +99,14 @@
                                     <tr>
                                         <th class="text-center" style="width: 80px;">Pick</th>
                                         <% 
-                                        // Get teams ordered by first round draft position
-                                        const teamsInDraftOrder = draftOrder
+                                        // Get teams ordered by their original draft position (round 1, by original_team_id)
+                                        const firstRoundOrder = draftOrder
                                             .filter(d => d.round === 1)
-                                            .sort((a, b) => a.pick_number - b.pick_number)
-                                            .map(d => allTeams.find(t => t.team_id === d.fantasy_team_id))
-                                            .filter(t => t); // Remove any null values
+                                            .sort((a, b) => a.pick_number - b.pick_number);
+                                        
+                                        const teamsInDraftOrder = firstRoundOrder.map(d => 
+                                            allTeams.find(t => t.team_id === d.original_team_id)
+                                        ).filter(t => t); // Remove any null values
                                         %>
                                         <% teamsInDraftOrder.forEach(team => { %>
                                             <th class="text-center team-header" style="width: 200px;">
