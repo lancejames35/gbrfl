@@ -319,8 +319,8 @@ document.addEventListener('DOMContentLoaded', function() {
         story = `Lost by <span class="text-danger">${positionDiff} waiver positions</span> to ${winningTransaction.team_name} (${winnerPosition} vs ${loserPosition})`;
       }
     } else {
-      // This shouldn't happen since we're only showing rejected requests
-      story = `Had higher priority but still lost to ${winningTransaction.team_name} (${winnerPosition} vs ${loserPosition})`;
+      // This happens when team had higher priority but already used their pick this round
+      story = `Had higher priority but already used their pick this round. Lost to ${winningTransaction.team_name} (${winnerPosition} vs ${loserPosition})`;
     }
 
     storyEl.innerHTML = story;

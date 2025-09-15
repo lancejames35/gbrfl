@@ -1072,9 +1072,9 @@
                 <!-- Always present copy button space -->
                 <div class="copy-container">
                     <% if (weekNumber > 1) { %>
-                        <button class="copy-btn" id="copyFromPreviousBtn" 
+                        <button class="copy-btn" id="copyFromPreviousBtn"
                                 title="Copy from Week <%= weekNumber - 1 %>"
-                                style="<%= gameType === 'bonus' ? 'visibility: hidden;' : '' %>">
+                                style="<%= gameType === 'bonus' || (lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked') ? 'visibility: hidden;' : '' %>">
                             <i class="bi bi-files"></i> Week <%= weekNumber - 1 %>
                         </button>
                     <% } %>
@@ -1956,7 +1956,7 @@ const LineupManager = {
     initCopyButtonVisibility() {
         const copyBtn = document.getElementById('copyFromPreviousBtn');
         if (copyBtn) {
-            const shouldShowCopy = this.gameType === 'primary';
+            const shouldShowCopy = this.gameType === 'primary' && !this.isLocked;
             copyBtn.style.visibility = shouldShowCopy ? 'visible' : 'hidden';
         }
     },
