@@ -290,6 +290,26 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   /**
+   * Converts a number to ordinal format (1st, 2nd, 3rd, etc.)
+   * @param {number} num - The number to convert
+   * @returns {string} - The ordinal representation
+   */
+  function toOrdinal(num) {
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) {
+      return num + "st";
+    }
+    if (j === 2 && k !== 12) {
+      return num + "nd";
+    }
+    if (j === 3 && k !== 13) {
+      return num + "rd";
+    }
+    return num + "th";
+  }
+
+  /**
    * Renders a competitor row
    * @param {Object} competitor - Competitor object
    * @param {Element} container - Container to append to
@@ -312,15 +332,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (winnerPosition < loserPosition) {
       // Winner had higher priority (lower number)
       if (positionDiff === 1) {
-        story = `Lost by <span class="text-danger">1 waiver position</span> to ${winningTransaction.team_name} (${winnerPosition} vs ${loserPosition})`;
+        story = `Lost by <span class="text-danger">1 waiver position</span> to ${winningTransaction.team_name} (${toOrdinal(winnerPosition)} vs ${toOrdinal(loserPosition)})`;
       } else if (positionDiff <= 3) {
-        story = `Lost by <span class="text-warning">${positionDiff} waiver positions</span> to ${winningTransaction.team_name} (${winnerPosition} vs ${loserPosition})`;
+        story = `Lost by <span class="text-warning">${positionDiff} waiver positions</span> to ${winningTransaction.team_name} (${toOrdinal(winnerPosition)} vs ${toOrdinal(loserPosition)})`;
       } else {
-        story = `Lost by <span class="text-danger">${positionDiff} waiver positions</span> to ${winningTransaction.team_name} (${winnerPosition} vs ${loserPosition})`;
+        story = `Lost by <span class="text-danger">${positionDiff} waiver positions</span> to ${winningTransaction.team_name} (${toOrdinal(winnerPosition)} vs ${toOrdinal(loserPosition)})`;
       }
     } else {
       // This happens when team had higher priority but already used their pick this round
-      story = `Had higher priority but already used their pick this round. Lost to ${winningTransaction.team_name} (${winnerPosition} vs ${loserPosition})`;
+      story = `Had higher priority but already used their pick this round. Lost to ${winningTransaction.team_name} (${toOrdinal(winnerPosition)} vs ${toOrdinal(loserPosition)})`;
     }
 
     storyEl.innerHTML = story;
