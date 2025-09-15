@@ -24,11 +24,6 @@
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link <%= activePage === 'draft' ? 'active' : '' %>" href="/draft/results">
-          <i class="bi bi-clipboard-data me-2"></i> <span class="nav-text">Draft</span>
-        </a>
-      </li>
-      <li class="nav-item">
         <a class="nav-link <%= activePage === 'lineups' ? 'active' : '' %>" href="/lineups">
           <i class="bi bi-clipboard-check me-2"></i> <span class="nav-text">Lineups</span>
         </a>
@@ -41,6 +36,16 @@
       <li class="nav-item">
         <a class="nav-link <%= activePage === 'standings' ? 'active' : '' %>" href="/standings">
           <i class="bi bi-trophy me-2"></i> <span class="nav-text">Standings</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'transactions' ? 'active' : '' %>" href="/transactions">
+          <i class="bi bi-arrow-left-right me-2"></i> <span class="nav-text">Transactions</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= activePage === 'draft' ? 'active' : '' %>" href="/draft/results">
+          <i class="bi bi-clipboard-data me-2"></i> <span class="nav-text">Draft</span>
         </a>
       </li>
       <li class="nav-item">
@@ -62,15 +67,6 @@
         <a class="nav-link <%= activePage === 'history' ? 'active' : '' %>" href="/history">
           <i class="bi bi-clock-history me-2"></i> <span class="nav-text">History</span>
         </a>
-      </li>
-      <li class="nav-item">
-        <span class="nav-link disabled text-muted">
-          <i class="bi bi-arrow-left-right me-2"></i> 
-          <span class="nav-text">
-            Transactions
-            <br><small style="font-size: 0.7em; opacity: 0.7;">(coming soon)</small>
-          </span>
-        </span>
       </li>
       <li class="nav-item">
         <span class="nav-link disabled text-muted">

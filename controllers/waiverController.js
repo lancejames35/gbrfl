@@ -550,6 +550,41 @@ exports.approveRequest = async (req, res) => {
       console.warn('Warning: Could not update lineup positions:', lineupError.message);
     }
 
+    // Ensure transaction record is properly set up for approved waiver
+    try {
+      // Get current season and week information
+      const currentSeason = new Date().getFullYear();
+
+      // Get waiver request details with updated week and waiver order
+      const updatedRequestQuery = `
+        SELECT wr.week, wr.waiver_order_position, wr.fantasy_team_id
+        FROM waiver_requests wr
+        WHERE wr.request_id = ?
+      `;
+      const [updatedRequest] = await db.query(updatedRequestQuery, [request_id]);
+
+      if (updatedRequest.length > 0) {
+        // Calculate current week if not set
+        const weekString = updatedRequest[0].week || `Week ${Math.ceil((Date.now() - new Date(currentSeason, 8, 1)) / (7 * 24 * 60 * 60 * 1000))}`;
+
+        console.log(`Ensuring transaction record for approved waiver request ${request_id} in ${weekString}`);
+
+        // Update the request with current week and waiver order if not set
+        if (!updatedRequest[0].week || !updatedRequest[0].waiver_order_position) {
+          const updateWeekQuery = `
+            UPDATE waiver_requests wr
+            JOIN league_standings ls ON wr.fantasy_team_id = ls.fantasy_team_id
+            SET wr.week = ?, wr.waiver_order_position = (11 - ls.position)
+            WHERE wr.request_id = ? AND ls.season_year = ?
+          `;
+          await db.query(updateWeekQuery, [weekString, request_id, currentSeason]);
+          console.log(`Updated request ${request_id} with week ${weekString} and waiver order`);
+        }
+      }
+    } catch (transactionError) {
+      console.warn('Warning: Could not ensure transaction record:', transactionError.message);
+    }
+
     // Log the activity
     try {
       const activityQuery = `
@@ -561,7 +596,7 @@ exports.approveRequest = async (req, res) => {
         team_name: request.team_name,
         approved_by: admin_user_id
       });
-      
+
       await db.query(activityQuery, [admin_user_id, request_id, activityDetails]);
     } catch (logError) {
       console.warn('Warning: Could not log waiver approval activity:', logError.message);

@@ -11,8 +11,8 @@
         <div class="col-md-3">
           <label for="seasonFilter" class="form-label">Season</label>
           <select class="form-select" id="seasonFilter">
-            <option value="all" selected>All Seasons</option>
-            <option value="2024">2024</option>
+            <option value="all">All Seasons</option>
+            <option value="2025" selected>2025</option>
           </select>
         </div>
         <div class="col-md-3">
@@ -56,19 +56,14 @@
           <label for="typeFilter" class="form-label">Transaction Type</label>
           <select class="form-select" id="typeFilter">
             <option value="all" selected>All Types</option>
-            <option value="Free Agent">Free Agent</option>
-            <option value="Trade">Trade</option>
-            <option value="Draft Pick Trade">Draft Pick Trade</option>
-            <option value="Protection Spot Trade">Protection Spot Trade</option>
-            <option value="Drop">Drop</option>
-            <option value="Waiver">Waiver</option>
+            <option value="waiver">Waiver Wire</option>
+            <option value="trade">Trade</option>
           </select>
         </div>
       </div>
       <div class="row mt-3">
         <div class="col-12 text-end">
-          <button id="applyFilters" class="btn btn-primary">Apply Filters</button>
-          <button id="resetFilters" class="btn btn-outline-secondary">Reset</button>
+          <button id="resetFilters" class="btn btn-outline-secondary">Reset Filters</button>
         </div>
       </div>
     </div>
@@ -109,19 +104,56 @@
   
   <!-- Transaction template (hidden, used by JavaScript) -->
   <template id="transactionTemplate">
-    <div class="transaction-row">
+    <div class="transaction-row" data-request-id="">
       <div class="row align-items-center">
         <div class="col-md-3">
           <strong class="owner-name"></strong>
         </div>
-        <div class="col-md-4">
-          <span class="acquired"></span>
+        <div class="col-md-2">
+          <span class="transaction-type badge bg-primary"></span>
         </div>
-        <div class="col-md-4">
-          <span class="lost"></span>
+        <div class="col-md-3">
+          <span class="acquired text-success"></span>
+        </div>
+        <div class="col-md-3">
+          <span class="lost text-danger"></span>
         </div>
         <div class="col-md-1 text-end">
-          <small class="text-muted transaction-date"></small>
+          <button class="btn btn-sm btn-outline-secondary expand-btn d-none" type="button">
+            <i class="bi bi-chevron-down"></i>
+          </button>
+        </div>
+      </div>
+      <!-- Expandable competitors section -->
+      <div class="competitors-section d-none">
+        <div class="row">
+          <div class="col-12">
+            <div class="card border-light bg-light mt-2">
+              <div class="card-header py-2">
+                <small class="text-muted">
+                  <i class="bi bi-info-circle"></i>
+                  Other teams that also requested this player:
+                </small>
+              </div>
+              <div class="card-body py-2">
+                <div class="competitors-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Competitor template (hidden, used by JavaScript) -->
+  <template id="competitorTemplate">
+    <div class="competitor-row">
+      <div class="row align-items-center py-2">
+        <div class="col-md-2">
+          <small class="text-muted competitor-name"></small>
+        </div>
+        <div class="col-md-10">
+          <small class="text-muted competitor-story"></small>
         </div>
       </div>
     </div>
