@@ -1,0 +1,11 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "npm start"
+
+[[services]]
+name = "espn-import-cron"
+source = "."
+build.startCommand = "npm run espn-import"
+cron = "0 3 * * *"  # Run at 3:00 AM every day

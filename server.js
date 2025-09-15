@@ -23,6 +23,10 @@ const expressLayouts = require('express-ejs-layouts');
 // Initialize database connection
 const db = require('./config/database');
 
+// ESPN Import Scheduler
+const cron = require('cron');
+const { main: runEspnImport } = require('./scripts/espnImportRunner');
+
 // Security monitoring (non-disruptive)
 const { monitorRequestPatterns } = require('./middleware/securityMonitor');
 
@@ -39,6 +43,25 @@ db.testConnection()
   .catch(err => {
     console.error('Failed to test database connection:', err);
   });
+
+// Schedule ESPN import to run daily at 3 AM
+const espnImportJob = new cron.CronJob(
+  '0 3 * * *', // 3:00 AM every day
+  async () => {
+    console.log(`Starting scheduled ESPN import at ${new Date().toISOString()}`);
+    try {
+      await runEspnImport();
+      console.log(`ESPN import completed successfully at ${new Date().toISOString()}`);
+    } catch (error) {
+      console.error(`ESPN import failed at ${new Date().toISOString()}:`, error);
+    }
+  },
+  null, // onComplete
+  true, // start immediately
+  'America/Chicago' // timezone
+);
+
+console.log('ESPN import scheduled for 3:00 AM daily (Chicago time)');
 
 // Security middleware
 app.use(helmet({
