@@ -6,8 +6,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../config/database');
-const { checkDeadline, getTimeDebugInfo } = require('../../utils/timezoneFix');
+const { checkDeadline, getTimeDebugInfo, parseDateInTimezone } = require('../../utils/timezoneFix');
 const WeekStatus = require('../../models/WeekStatus');
+const LineupLock = require('../../models/LineupLock');
 
 /**
  * Get server time and timezone information
@@ -215,29 +216,7 @@ router.get('/next-lineup-lock', async (req, res) => {
     }
     const seasonYear = 2025;
     
-    // First check if we have a manual override in lineup_locks table
-    const manualLock = await db.query(`
-      SELECT week_number, lock_datetime, is_locked
-      FROM lineup_locks
-      WHERE season_year = ?
-      AND week_number >= ?
-      AND lock_datetime IS NOT NULL
-      ORDER BY week_number ASC
-      LIMIT 1
-    `, [seasonYear, currentWeek]);
-    
-    if (manualLock && manualLock[0]) {
-      // Use manual lock time if available
-      res.json({
-        success: true,
-        weekNumber: manualLock[0].week_number,
-        lockTime: manualLock[0].lock_datetime,
-        isLocked: manualLock[0].is_locked === 1
-      });
-      return;
-    }
-    
-    // Calculate deadline dynamically from NFL games
+    // Always calculate deadline dynamically from NFL games first
     const nextWeekGames = await db.query(`
       SELECT 
         week,
@@ -253,24 +232,53 @@ router.get('/next-lineup-lock', async (req, res) => {
     
     if (nextWeekGames && nextWeekGames[0]) {
       const week = nextWeekGames[0].week;
-      const firstKickoff = new Date(nextWeekGames[0].first_kickoff);
-      
-      // Calculate Thursday deadline before the first game at 7:20 PM ET
+
+      // Parse the stored Eastern Time timestamp properly
+      const firstKickoff = new Date(nextWeekGames[0].first_kickoff + ' EDT');
+
+      // Use the first game's kickoff time as the deadline
       const lockDatetime = new Date(firstKickoff);
-      const dayOfWeek = firstKickoff.getDay(); // 0 = Sunday, 4 = Thursday
-      const daysToSubtract = dayOfWeek === 0 ? 3 : (dayOfWeek + 3) % 7; // Days to go back to Thursday
-      lockDatetime.setDate(firstKickoff.getDate() - daysToSubtract);
-      lockDatetime.setHours(23, 20, 0, 0); // 7:20 PM ET (23:20 UTC)
       
       // Check if this deadline has already passed
       const now = new Date();
       const isLocked = now > lockDatetime;
-      
+
+      // Check if it's actually locked in the database (for manual locks or auto-locks)
+      const lockStatus = await db.query(`
+        SELECT is_locked,
+        CASE
+          WHEN is_locked = 1 THEN 'locked'
+          WHEN is_locked = 0 THEN 'unlocked'
+          WHEN NOW() >= lock_datetime THEN 'auto_locked'
+          ELSE 'unlocked'
+        END as current_status
+        FROM lineup_locks
+        WHERE week_number = ? AND season_year = ?
+      `, [week, seasonYear]);
+
+      // If admin manually set is_locked (0 or 1), respect that. Otherwise auto-lock if deadline passed.
+      let actuallyLocked;
+      if (lockStatus[0] && lockStatus[0].is_locked !== null) {
+        // Manual admin action - respect it
+        actuallyLocked = lockStatus[0].is_locked === 1;
+      } else {
+        // No manual action - use auto-lock logic
+        actuallyLocked = isLocked;
+        // Only auto-set lock time if deadline passed and no manual override exists
+        if (isLocked && !lockStatus[0]) {
+          try {
+            await LineupLock.setLockTime(week, seasonYear, lockDatetime);
+          } catch (lockError) {
+            console.error('Error setting lock time:', lockError);
+          }
+        }
+      }
+
       res.json({
         success: true,
         weekNumber: week,
-        lockTime: lockDatetime.toISOString(),
-        isLocked: isLocked
+        lockTime: lockDatetime.toISOString(), // Always show the NFL game time
+        isLocked: actuallyLocked || isLocked
       });
     } else {
       // No future games found
@@ -289,5 +297,6 @@ router.get('/next-lineup-lock', async (req, res) => {
     });
   }
 });
+
 
 module.exports = router;
