@@ -81,14 +81,23 @@ def get_locked_lineups(connection, season_year=2025, week_number=None):
         return []
 
 def get_lineup_positions(connection, lineup_id):
-    """Get all player positions for a specific lineup with ESPN IDs"""
-    
+    """Get all rostered players with their lineup positions - matches website logic"""
+
     query = """
-    SELECT 
-        lp.position_type,
-        lp.sort_order,
-        lp.player_id,
-        lp.nfl_team_id,
+    SELECT
+        COALESCE(lp.position_type,
+            CASE
+                WHEN p.position = 'QB' THEN 'quarterback'
+                WHEN p.position = 'RB' THEN 'running_back'
+                WHEN p.position = 'RC' THEN 'receiver'
+                WHEN p.position = 'PK' THEN 'place_kicker'
+                WHEN p.position = 'DU' THEN 'defense'
+                ELSE 'receiver'
+            END
+        ) as position_type,
+        COALESCE(lp.sort_order, 999) as sort_order,
+        ftp.player_id,
+        p.nfl_team_id,
         p.display_name as player_name,
         p.first_name,
         p.last_name,
@@ -96,25 +105,40 @@ def get_lineup_positions(connection, lineup_id):
         p.espn_id,
         COALESCE(pt.team_code, nt.team_code) as team_code,
         COALESCE(pt.team_name, nt.team_name) as team_name
-    FROM lineup_positions lp
-    LEFT JOIN nfl_players p ON lp.player_id = p.player_id
+    FROM fantasy_team_players ftp
+    JOIN nfl_players p ON ftp.player_id = p.player_id
     LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
-    LEFT JOIN nfl_teams nt ON lp.nfl_team_id = nt.nfl_team_id
-    WHERE lp.lineup_id = %s
-    ORDER BY 
-        CASE lp.position_type
+    LEFT JOIN nfl_teams nt ON p.nfl_team_id = nt.nfl_team_id
+    -- Get the fantasy team for this lineup
+    INNER JOIN lineup_submissions ls ON ls.lineup_id = %s
+    -- LEFT JOIN lineup positions (so all roster players appear, positioned or not)
+    LEFT JOIN lineup_positions lp ON (
+        ftp.player_id = lp.player_id
+        AND lp.lineup_id = %s
+    )
+    WHERE ftp.fantasy_team_id = ls.fantasy_team_id
+    ORDER BY
+        CASE COALESCE(lp.position_type,
+            CASE
+                WHEN p.position = 'QB' THEN 'quarterback'
+                WHEN p.position = 'RB' THEN 'running_back'
+                WHEN p.position = 'RC' THEN 'receiver'
+                WHEN p.position = 'PK' THEN 'place_kicker'
+                WHEN p.position = 'DU' THEN 'defense'
+                ELSE 'receiver'
+            END)
             WHEN 'quarterback' THEN 1
             WHEN 'running_back' THEN 2
             WHEN 'receiver' THEN 3
             WHEN 'place_kicker' THEN 4
             WHEN 'defense' THEN 5
         END,
-        lp.sort_order
+        COALESCE(lp.sort_order, 999)
     """
     
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute(query, (lineup_id,))
+        cursor.execute(query, (lineup_id, lineup_id))
         results = cursor.fetchall()
         cursor.close()
         return results
@@ -123,7 +147,7 @@ def get_lineup_positions(connection, lineup_id):
         return []
 
 def format_position_label(position_type, sort_order):
-    """Format position label based on type and order"""
+    """Format position label based on type only"""
     position_map = {
         'quarterback': 'QB',
         'running_back': 'RB',
@@ -131,7 +155,7 @@ def format_position_label(position_type, sort_order):
         'place_kicker': 'PK',
         'defense': 'DEF'
     }
-    return f"{position_map.get(position_type, position_type.upper())}{sort_order}"
+    return position_map.get(position_type, position_type.upper())
 
 def export_lineups_structured(connection, season_year=2025, week_number=None):
     """Export lineup submissions in structured format with one row per player"""

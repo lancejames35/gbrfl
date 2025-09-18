@@ -9,8 +9,25 @@ class LineupPosition {
    */
   static async getTeamRosterByPosition(teamId, lineupId = null) {
     try {
+      // Check if this lineup is for a locked week
+      if (lineupId) {
+        const lockCheckQuery = `
+          SELECT ls.week_number, ls.season_year, ll.is_locked as week_is_locked
+          FROM lineup_submissions ls
+          LEFT JOIN lineup_locks ll ON (ll.week_number = ls.week_number AND ll.season_year = ls.season_year)
+          WHERE ls.lineup_id = ?
+        `;
+        const lockResult = await db.query(lockCheckQuery, [lineupId]);
+
+        if (lockResult.length > 0 && lockResult[0].week_is_locked === 1) {
+          // Week is locked, use historical method
+          return await this.getHistoricalLineupByPosition(lineupId);
+        }
+      }
+
+      // Week is unlocked or no lineupId provided, use dynamic method
       const query = `
-        SELECT 
+        SELECT
           rostered_players.player_id,
           rostered_players.player_name,
           rostered_players.player_position,
@@ -22,10 +39,10 @@ class LineupPosition {
           rostered_players.position_type,
           rostered_players.sort_order,
           rostered_players.in_lineup,
-          'rostered' as player_status,
+          rostered_players.player_status,
           NULL as waiver_request_id
         FROM (
-          SELECT 
+          SELECT
             ftp.player_id,
             p.display_name as player_name,
             p.position as player_position,
@@ -34,7 +51,7 @@ class LineupPosition {
             pt.team_name as player_team_name,
             pt.team_code as player_team_code,
             pt.team_code as team_abbrev,
-            CASE 
+            CASE
               WHEN p.position IN ('QB') THEN 'quarterback'
               WHEN p.position IN ('RB') THEN 'running_back'
               WHEN p.position IN ('RC') THEN 'receiver'
@@ -43,14 +60,15 @@ class LineupPosition {
               ELSE 'other'
             END as position_type,
             COALESCE(lp.sort_order, 999) as sort_order,
-            CASE WHEN lp.position_id IS NOT NULL THEN 1 ELSE 0 END as in_lineup
+            CASE WHEN lp.position_id IS NOT NULL THEN 1 ELSE 0 END as in_lineup,
+            'rostered' as player_status
           FROM fantasy_team_players ftp
           JOIN nfl_players p ON ftp.player_id = p.player_id
           LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
           LEFT JOIN lineup_positions lp ON (
-            ftp.player_id = lp.player_id 
+            ftp.player_id = lp.player_id
             AND lp.lineup_id = ?
-            AND lp.position_type = CASE 
+            AND lp.position_type = CASE
               WHEN p.position IN ('QB') THEN 'quarterback'
               WHEN p.position IN ('RB') THEN 'running_back'
               WHEN p.position IN ('RC') THEN 'receiver'
@@ -61,11 +79,36 @@ class LineupPosition {
           )
           WHERE ftp.fantasy_team_id = ?
           AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
+
+          UNION
+
+          -- Include players who are in this lineup but may no longer be on the roster
+          SELECT
+            lp.player_id,
+            p.display_name as player_name,
+            p.position as player_position,
+            p.first_name,
+            p.last_name,
+            pt.team_name as player_team_name,
+            pt.team_code as player_team_code,
+            pt.team_code as team_abbrev,
+            lp.position_type,
+            lp.sort_order,
+            1 as in_lineup,
+            COALESCE(lp.player_status, 'historical') as player_status
+          FROM lineup_positions lp
+          JOIN nfl_players p ON lp.player_id = p.player_id
+          LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
+          LEFT JOIN fantasy_team_players ftp ON (lp.player_id = ftp.player_id AND ftp.fantasy_team_id = ?)
+          WHERE lp.lineup_id = ?
+          AND ftp.player_id IS NULL  -- Only include players not currently on roster
+          AND (lp.player_status IS NULL OR lp.player_status != 'pending_waiver')  -- Exclude pending waivers
+          AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
         ) as rostered_players
         
         UNION ALL
-        
-        SELECT 
+
+        SELECT
           p.player_id,
           p.display_name as player_name,
           p.position as player_position,
@@ -74,7 +117,7 @@ class LineupPosition {
           pt.team_name as player_team_name,
           pt.team_code as player_team_code,
           pt.team_code as team_abbrev,
-          CASE 
+          CASE
             WHEN p.position IN ('QB') THEN 'quarterback'
             WHEN p.position IN ('RB') THEN 'running_back'
             WHEN p.position IN ('RC') THEN 'receiver'
@@ -90,9 +133,9 @@ class LineupPosition {
         JOIN nfl_players p ON wr.pickup_player_id = p.player_id
         LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
         LEFT JOIN lineup_positions lp ON (
-          p.player_id = lp.player_id 
+          p.player_id = lp.player_id
           AND lp.lineup_id = ?
-          AND lp.position_type = CASE 
+          AND lp.position_type = CASE
             WHEN p.position IN ('QB') THEN 'quarterback'
             WHEN p.position IN ('RB') THEN 'running_back'
             WHEN p.position IN ('RC') THEN 'receiver'
@@ -104,7 +147,7 @@ class LineupPosition {
         WHERE wr.fantasy_team_id = ?
         AND wr.status = 'pending'
         AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
-        GROUP BY p.player_id, p.display_name, p.position, p.first_name, p.last_name, 
+        GROUP BY p.player_id, p.display_name, p.position, p.first_name, p.last_name,
                  pt.team_name, pt.team_code, lp.sort_order, lp.position_id
         
         ORDER BY position_type,
@@ -117,7 +160,7 @@ class LineupPosition {
                  first_name
       `;
 
-      const results = await db.query(query, [lineupId, teamId, lineupId, teamId]);
+      const results = await db.query(query, [lineupId, teamId, teamId, lineupId, lineupId, teamId]);
       
       
       // Group by position
@@ -140,6 +183,63 @@ class LineupPosition {
       return roster;
     } catch (error) {
       console.error('Error fetching team roster by position:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get historical lineup by position (for locked weeks)
+   * This method only reads stored lineup_positions data to preserve historical accuracy
+   * @param {number} lineupId - The lineup submission ID
+   * @returns {Promise<Object>} Object with arrays of players by position
+   */
+  static async getHistoricalLineupByPosition(lineupId) {
+    try {
+      const query = `
+        SELECT
+          lp.*,
+          COALESCE(p.display_name, CONCAT('Player ID: ', lp.player_id)) as player_name,
+          COALESCE(p.position, 'UNK') as player_position,
+          COALESCE(p.first_name, 'Unknown') as first_name,
+          COALESCE(p.last_name, 'Player') as last_name,
+          COALESCE(nt.team_name, pt.team_name, 'Unknown Team') as nfl_team_name,
+          COALESCE(nt.team_code, pt.team_code, 'UNK') as nfl_team_code,
+          COALESCE(pt.team_name, nt.team_name, 'Unknown Team') as player_team_name,
+          COALESCE(pt.team_code, nt.team_code, 'UNK') as player_team_code,
+          COALESCE(nt.team_code, pt.team_code, 'UNK') as team_abbrev,
+          lp.position_type,
+          1 as in_lineup,
+          COALESCE(lp.player_status, 'historical') as player_status,
+          NULL as waiver_request_id
+        FROM lineup_positions lp
+        LEFT JOIN nfl_players p ON lp.player_id = p.player_id
+        LEFT JOIN nfl_teams nt ON lp.nfl_team_id = nt.nfl_team_id
+        LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
+        WHERE lp.lineup_id = ?
+        AND (lp.player_status IS NULL OR lp.player_status != 'pending_waiver')
+        ORDER BY lp.position_type, lp.sort_order
+      `;
+
+      const results = await db.query(query, [lineupId]);
+
+      // Group by position
+      const roster = {
+        quarterback: [],
+        running_back: [],
+        receiver: [],
+        place_kicker: [],
+        defense: []
+      };
+
+      results.forEach(player => {
+        if (roster[player.position_type]) {
+          roster[player.position_type].push(player);
+        }
+      });
+
+      return roster;
+    } catch (error) {
+      console.error('Error fetching historical lineup by position:', error);
       throw error;
     }
   }

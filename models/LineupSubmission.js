@@ -12,20 +12,25 @@ class LineupSubmission {
   static async getByTeamAndWeek(fantasyTeamId, weekNumber, gameType = 'primary', seasonYear = 2025) {
     try {
       const query = `
-        SELECT 
+        SELECT
           ls.*,
           ft.team_name,
           ft.user_id,
           u.username,
           u.first_name,
-          u.last_name
+          u.last_name,
+          ll.is_locked as week_is_locked
         FROM lineup_submissions ls
         LEFT JOIN fantasy_teams ft ON ls.fantasy_team_id = ft.team_id
         LEFT JOIN users u ON ft.user_id = u.user_id
-        WHERE ls.fantasy_team_id = ? 
-        AND ls.week_number = ? 
-        AND ls.game_type = ? 
+        LEFT JOIN lineup_locks ll ON (ll.week_number = ls.week_number AND ll.season_year = ls.season_year)
+        WHERE ls.fantasy_team_id = ?
+        AND ls.week_number = ?
+        AND ls.game_type = ?
         AND ls.season_year = ?
+        ORDER BY
+          -- For locked weeks, prioritize lineups without pending waiver players
+          CASE WHEN ll.is_locked = 1 THEN ls.lineup_id ELSE ls.created_at END ASC
         LIMIT 1
       `;
       
