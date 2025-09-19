@@ -79,31 +79,6 @@ class LineupPosition {
           )
           WHERE ftp.fantasy_team_id = ?
           AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
-
-          UNION
-
-          -- Include players who are in this lineup but may no longer be on the roster
-          SELECT
-            lp.player_id,
-            p.display_name as player_name,
-            p.position as player_position,
-            p.first_name,
-            p.last_name,
-            pt.team_name as player_team_name,
-            pt.team_code as player_team_code,
-            pt.team_code as team_abbrev,
-            lp.position_type,
-            lp.sort_order,
-            1 as in_lineup,
-            COALESCE(lp.player_status, 'historical') as player_status
-          FROM lineup_positions lp
-          JOIN nfl_players p ON lp.player_id = p.player_id
-          LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
-          LEFT JOIN fantasy_team_players ftp ON (lp.player_id = ftp.player_id AND ftp.fantasy_team_id = ?)
-          WHERE lp.lineup_id = ?
-          AND ftp.player_id IS NULL  -- Only include players not currently on roster
-          AND (lp.player_status IS NULL OR lp.player_status != 'pending_waiver')  -- Exclude pending waivers
-          AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
         ) as rostered_players
         
         UNION ALL
@@ -144,12 +119,9 @@ class LineupPosition {
             ELSE 'other'
           END
         )
-        -- Exclude players already on current roster to prevent duplicates
-        LEFT JOIN fantasy_team_players ftp_check ON (p.player_id = ftp_check.player_id AND ftp_check.fantasy_team_id = ?)
         WHERE wr.fantasy_team_id = ?
         AND wr.status = 'pending'
         AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
-        AND ftp_check.player_id IS NULL  -- Only include if not already on roster
         GROUP BY p.player_id, p.display_name, p.position, p.first_name, p.last_name,
                  pt.team_name, pt.team_code, lp.sort_order, lp.position_id
         
@@ -163,7 +135,7 @@ class LineupPosition {
                  first_name
       `;
 
-      const results = await db.query(query, [lineupId, teamId, teamId, lineupId, lineupId, teamId, teamId]);
+      const results = await db.query(query, [lineupId, teamId, lineupId, teamId]);
       
       
       // Group by position
