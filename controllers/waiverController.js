@@ -463,6 +463,27 @@ exports.approveRequest = async (req, res) => {
 
     const request = requestResults[0];
 
+    // Calculate current week if not set - BEFORE processing rejections
+    let weekString = request.week;
+    if (!weekString) {
+      const WeekStatus = require('../models/WeekStatus');
+      const currentSeason = new Date().getFullYear();
+
+      // Use the same week logic as lineup submissions for consistency
+      const currentWeekNumber = await WeekStatus.getCurrentWeek(currentSeason);
+      weekString = `Week ${currentWeekNumber}`;
+
+      // Update ALL pending requests for this pickup player with the week BEFORE rejecting them
+      const updateAllWeeksQuery = `
+        UPDATE waiver_requests
+        SET week = ?
+        WHERE pickup_player_id = ? AND status = 'pending' AND week IS NULL
+      `;
+      await db.query(updateAllWeeksQuery, [weekString, request.pickup_player_id]);
+
+      console.log(`Updated week to ${weekString} for all pending requests for player ${request.pickup_player_id}`);
+    }
+
     // Check if pickup player is still available
     const availabilityCheckQuery = `
       SELECT COUNT(*) as roster_count
@@ -550,60 +571,21 @@ exports.approveRequest = async (req, res) => {
       console.warn('Warning: Could not update lineup positions:', lineupError.message);
     }
 
-    // Ensure transaction record is properly set up for approved waiver
+    // Ensure waiver order is set for the approved request
     try {
-      // Get current season and week information
       const currentSeason = new Date().getFullYear();
 
-      // Get waiver request details with updated week and waiver order
-      const updatedRequestQuery = `
-        SELECT wr.week, wr.waiver_order_position, wr.fantasy_team_id
-        FROM waiver_requests wr
-        WHERE wr.request_id = ?
+      // Update waiver order if not set (week is already set above)
+      const updateWaiverOrderQuery = `
+        UPDATE waiver_requests wr
+        JOIN league_standings ls ON wr.fantasy_team_id = ls.fantasy_team_id
+        SET wr.waiver_order_position = (11 - ls.position)
+        WHERE wr.request_id = ? AND ls.season_year = ? AND wr.waiver_order_position IS NULL
       `;
-      const updatedRequestResult = await db.query(updatedRequestQuery, [request_id]);
-      const updatedRequest = Array.isArray(updatedRequestResult[0]) ? updatedRequestResult[0] : updatedRequestResult;
-
-      if (updatedRequest.length > 0) {
-        // Calculate current week if not set - get from most recent lineup submissions
-        let weekString = updatedRequest[0].week;
-        if (!weekString) {
-          // Get the most active week from recent lineup submissions (within last 7 days)
-          const currentWeekQuery = `
-            SELECT week_number, COUNT(*) as submission_count
-            FROM lineup_submissions
-            WHERE season_year = ?
-              AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-            GROUP BY week_number
-            ORDER BY submission_count DESC, MAX(created_at) DESC
-            LIMIT 1
-          `;
-          const weekResult = await db.query(currentWeekQuery, [currentSeason]);
-
-          if (weekResult.length > 0) {
-            weekString = `Week ${weekResult[0].week_number}`;
-          } else {
-            // Ultimate fallback
-            weekString = 'Week 1';
-          }
-        }
-
-        console.log(`Ensuring transaction record for approved waiver request ${request_id} in ${weekString}`);
-
-        // Update the request with current week and waiver order if not set
-        if (!updatedRequest[0].week || !updatedRequest[0].waiver_order_position) {
-          const updateWeekQuery = `
-            UPDATE waiver_requests wr
-            JOIN league_standings ls ON wr.fantasy_team_id = ls.fantasy_team_id
-            SET wr.week = ?, wr.waiver_order_position = (11 - ls.position)
-            WHERE wr.request_id = ? AND ls.season_year = ?
-          `;
-          await db.query(updateWeekQuery, [weekString, request_id, currentSeason]);
-          console.log(`Updated request ${request_id} with week ${weekString} and waiver order`);
-        }
-      }
+      await db.query(updateWaiverOrderQuery, [request_id, currentSeason]);
+      console.log(`Ensured waiver order is set for approved request ${request_id} in ${weekString}`);
     } catch (transactionError) {
-      console.warn('Warning: Could not ensure transaction record:', transactionError.message);
+      console.warn('Warning: Could not ensure waiver order:', transactionError.message);
     }
 
     // Log the activity
