@@ -119,6 +119,7 @@ class LineupPosition {
             ELSE 'other'
           END
         )
+        LEFT JOIN lineup_submissions ls ON lp.lineup_id = ls.lineup_id
         WHERE wr.fantasy_team_id = ?
         AND wr.status = 'pending'
         AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
@@ -184,14 +185,31 @@ class LineupPosition {
           COALESCE(nt.team_code, pt.team_code, 'UNK') as team_abbrev,
           lp.position_type,
           1 as in_lineup,
-          COALESCE(lp.player_status, 'historical') as player_status,
+          CASE
+            WHEN wr_pending.status = 'pending' THEN 'pending_waiver'
+            ELSE COALESCE(lp.player_status, 'historical')
+          END as player_status,
           NULL as waiver_request_id
         FROM lineup_positions lp
         LEFT JOIN nfl_players p ON lp.player_id = p.player_id
         LEFT JOIN nfl_teams nt ON lp.nfl_team_id = nt.nfl_team_id
         LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
+        LEFT JOIN lineup_submissions ls ON lp.lineup_id = ls.lineup_id
+        LEFT JOIN waiver_requests wr_pending ON (
+          lp.player_id = wr_pending.pickup_player_id
+          AND wr_pending.status = 'pending'
+          AND wr_pending.fantasy_team_id = ls.fantasy_team_id
+        )
+        LEFT JOIN waiver_requests wr_rejected ON (
+          lp.player_id = wr_rejected.pickup_player_id
+          AND wr_rejected.status = 'rejected'
+          AND wr_rejected.fantasy_team_id = ls.fantasy_team_id
+        )
         WHERE lp.lineup_id = ?
-        AND (lp.player_status IS NULL OR lp.player_status != 'pending_waiver')
+        AND wr_rejected.request_id IS NULL  -- Exclude players with rejected waiver requests
+        GROUP BY lp.position_id, lp.player_id, lp.position_type, lp.sort_order, lp.nfl_team_id, lp.player_status,
+                 p.display_name, p.position, p.first_name, p.last_name,
+                 nt.team_name, nt.team_code, pt.team_name, pt.team_code
         ORDER BY lp.position_type, lp.sort_order
       `;
 
