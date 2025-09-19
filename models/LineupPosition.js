@@ -144,9 +144,12 @@ class LineupPosition {
             ELSE 'other'
           END
         )
+        -- Exclude players already on current roster to prevent duplicates
+        LEFT JOIN fantasy_team_players ftp_check ON (p.player_id = ftp_check.player_id AND ftp_check.fantasy_team_id = ?)
         WHERE wr.fantasy_team_id = ?
         AND wr.status = 'pending'
         AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
+        AND ftp_check.player_id IS NULL  -- Only include if not already on roster
         GROUP BY p.player_id, p.display_name, p.position, p.first_name, p.last_name,
                  pt.team_name, pt.team_code, lp.sort_order, lp.position_id
         
@@ -160,7 +163,7 @@ class LineupPosition {
                  first_name
       `;
 
-      const results = await db.query(query, [lineupId, teamId, teamId, lineupId, lineupId, teamId]);
+      const results = await db.query(query, [lineupId, teamId, teamId, lineupId, lineupId, teamId, teamId]);
       
       
       // Group by position
@@ -326,10 +329,13 @@ class LineupPosition {
             WHERE lineup_id = ? AND player_id = ? AND player_status = 'pending_waiver'
           `, [sort_order, nfl_team_id, lineupId, player_id]);
         } else {
-          // Insert new regular position
+          // Insert new regular position with duplicate key handling
           await connection.query(`
             INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
             VALUES (?, ?, ?, ?, ?, NOW())
+            ON DUPLICATE KEY UPDATE
+            sort_order = VALUES(sort_order),
+            nfl_team_id = VALUES(nfl_team_id)
           `, [lineupId, position_type, player_id, nfl_team_id, sort_order]);
         }
       }
