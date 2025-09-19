@@ -206,7 +206,14 @@ class LineupPosition {
           AND wr_rejected.fantasy_team_id = ls.fantasy_team_id
         )
         WHERE lp.lineup_id = ?
-        AND wr_rejected.request_id IS NULL  -- Exclude players with rejected waiver requests
+        AND (
+          wr_rejected.request_id IS NULL  -- No rejected requests
+          OR EXISTS (  -- OR player is actually rostered
+            SELECT 1 FROM fantasy_team_players ftp2
+            WHERE ftp2.player_id = lp.player_id
+            AND ftp2.fantasy_team_id = ls.fantasy_team_id
+          )
+        )
         GROUP BY lp.position_id, lp.player_id, lp.position_type, lp.sort_order, lp.nfl_team_id, lp.player_status,
                  p.display_name, p.position, p.first_name, p.last_name,
                  nt.team_name, nt.team_code, pt.team_name, pt.team_code

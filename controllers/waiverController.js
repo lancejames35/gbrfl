@@ -561,11 +561,32 @@ exports.approveRequest = async (req, res) => {
         FROM waiver_requests wr
         WHERE wr.request_id = ?
       `;
-      const [updatedRequest] = await db.query(updatedRequestQuery, [request_id]);
+      const updatedRequestResult = await db.query(updatedRequestQuery, [request_id]);
+      const updatedRequest = Array.isArray(updatedRequestResult[0]) ? updatedRequestResult[0] : updatedRequestResult;
 
       if (updatedRequest.length > 0) {
-        // Calculate current week if not set
-        const weekString = updatedRequest[0].week || `Week ${Math.ceil((Date.now() - new Date(currentSeason, 8, 1)) / (7 * 24 * 60 * 60 * 1000))}`;
+        // Calculate current week if not set - get from most recent lineup submissions
+        let weekString = updatedRequest[0].week;
+        if (!weekString) {
+          // Get the most active week from recent lineup submissions (within last 7 days)
+          const currentWeekQuery = `
+            SELECT week_number, COUNT(*) as submission_count
+            FROM lineup_submissions
+            WHERE season_year = ?
+              AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            GROUP BY week_number
+            ORDER BY submission_count DESC, MAX(created_at) DESC
+            LIMIT 1
+          `;
+          const weekResult = await db.query(currentWeekQuery, [currentSeason]);
+
+          if (weekResult.length > 0) {
+            weekString = `Week ${weekResult[0].week_number}`;
+          } else {
+            // Ultimate fallback
+            weekString = 'Week 1';
+          }
+        }
 
         console.log(`Ensuring transaction record for approved waiver request ${request_id} in ${weekString}`);
 

@@ -185,17 +185,18 @@ transactionController.getTransactions = async (req, res) => {
           JOIN users u ON ft.user_id = u.user_id
           JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
           WHERE wr.pickup_player_id = ?
-            AND wr.week = ?
+            AND (wr.week = ? OR (wr.week IS NULL AND ? IS NULL))
             AND wr.waiver_round = ?
             AND wr.request_id != ?
             AND wr.fantasy_team_id != ?
             AND wr.status = 'rejected'
-            AND (wr.notes IS NULL OR wr.notes NOT LIKE '%Auto-rejected: Player no longer available for trade%')
+            AND (wr.notes IS NULL OR wr.notes LIKE '%Auto-rejected: Player acquired by another team%')
           ORDER BY wr.waiver_order_position ASC
         `;
 
         const competingParams = [
           transaction.pickup_player_id,
+          transaction.week,
           transaction.week,
           transaction.waiver_round,
           transaction.request_id,
