@@ -40,7 +40,7 @@ transactionController.getTransactionsPage = async (req, res) => {
 
 /**
  * Get transactions API
- * Fetches approved waiver transactions with competing requests
+ * Fetches all transactions (waivers, trades, etc.) from unified transactions table
  */
 transactionController.getTransactions = async (req, res) => {
   try {
@@ -55,167 +55,237 @@ transactionController.getTransactions = async (req, res) => {
     // Calculate offset for pagination
     const offset = (page - 1) * itemsPerPage;
 
-    // Base query for approved waiver transactions
+    // Base query for all transactions from unified transactions table
     let query = `
       SELECT
-        wr.request_id,
-        wr.fantasy_team_id,
-        wr.week,
-        wr.waiver_round,
-        wr.waiver_order_position,
-        wr.processed_at as transaction_date,
+        t.transaction_id,
+        t.transaction_type,
+        t.season_year,
+        t.week,
+        t.transaction_date,
+        t.notes,
+        tr.team_id as fantasy_team_id,
         ft.team_name,
         u.first_name,
         u.last_name,
-        pickup.display_name as pickup_name,
-        pickup.position as pickup_position,
-        drop_player.display_name as drop_name,
-        drop_player.position as drop_position,
-        pickup.player_id as pickup_player_id
-      FROM waiver_requests wr
-      JOIN fantasy_teams ft ON wr.fantasy_team_id = ft.team_id
+
+        -- Get acquired items for this specific team (concatenated, distinct)
+        GROUP_CONCAT(
+          DISTINCT CASE WHEN ti_acq.direction = 'Acquired' AND ti_acq.team_id = tr.team_id
+          THEN
+            CASE
+              WHEN ti_acq.item_type = 'Player' THEN CONCAT(p_acq.display_name, ' (', p_acq.position, ')')
+              WHEN ti_acq.item_type = 'Free Agent Pick' THEN CONCAT(ti_acq.free_agent_round, 'nd Round Waiver Priority (', ti_acq.free_agent_week, ')')
+              ELSE ti_acq.item_type
+            END
+          END
+          SEPARATOR ', '
+        ) as acquired_players,
+
+        -- Get lost items for this specific team (concatenated, distinct)
+        GROUP_CONCAT(
+          DISTINCT CASE WHEN ti_lost.direction = 'Lost' AND ti_lost.team_id = tr.team_id
+          THEN
+            CASE
+              WHEN ti_lost.item_type = 'Player' THEN CONCAT(p_lost.display_name, ' (', p_lost.position, ')')
+              WHEN ti_lost.item_type = 'Free Agent Pick' THEN CONCAT(ti_lost.free_agent_round, 'nd Round Waiver Priority (', ti_lost.free_agent_week, ')')
+              ELSE ti_lost.item_type
+            END
+          END
+          SEPARATOR ', '
+        ) as lost_players,
+
+        -- Get first acquired player for competitor lookup (waiver only)
+        MIN(CASE WHEN ti_acq.direction = 'Acquired' AND ti_acq.item_type = 'Player' AND ti_acq.team_id = tr.team_id
+          THEN ti_acq.player_id END) as first_acquired_player_id
+
+      FROM transactions t
+      JOIN transaction_relationships tr ON t.transaction_id = tr.transaction_id
+      JOIN fantasy_teams ft ON tr.team_id = ft.team_id
       JOIN users u ON ft.user_id = u.user_id
-      JOIN nfl_players pickup ON wr.pickup_player_id = pickup.player_id
-      JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
-      WHERE wr.status = 'approved'
+
+      -- Left join for acquired items
+      LEFT JOIN transaction_items ti_acq ON t.transaction_id = ti_acq.transaction_id
+        AND ti_acq.direction = 'Acquired'
+      LEFT JOIN nfl_players p_acq ON ti_acq.player_id = p_acq.player_id
+
+      -- Left join for lost items
+      LEFT JOIN transaction_items ti_lost ON t.transaction_id = ti_lost.transaction_id
+        AND ti_lost.direction = 'Lost'
+      LEFT JOIN nfl_players p_lost ON ti_lost.player_id = p_lost.player_id
+
+      WHERE 1=1
     `;
 
-    // Count query for pagination
+    // Count query for pagination - count each team's perspective
     let countQuery = `
       SELECT COUNT(*) as total
-      FROM waiver_requests wr
-      JOIN fantasy_teams ft ON wr.fantasy_team_id = ft.team_id
+      FROM transactions t
+      JOIN transaction_relationships tr ON t.transaction_id = tr.transaction_id
+      JOIN fantasy_teams ft ON tr.team_id = ft.team_id
       JOIN users u ON ft.user_id = u.user_id
-      WHERE wr.status = 'approved'
+      WHERE 1=1
     `;
 
     // Build additional where conditions
     const whereConditions = [];
     const queryParams = [];
 
-    // Always filter by season (default to 2025)
+    // Filter by season
     if (season && season !== 'all') {
-      // We need to add season filtering logic - but first we need a season field
-      // For now, since all our data is 2025, skip this
+      whereConditions.push('t.season_year = ?');
+      queryParams.push(season);
     }
 
+    // Filter by week
     if (week && week !== 'all') {
-      whereConditions.push('wr.week = ?');
+      whereConditions.push('t.week = ?');
       queryParams.push(week);
     }
 
+    // Filter by owner
     if (owner && owner !== 'all') {
       whereConditions.push('u.user_id = ?');
       queryParams.push(owner);
     }
 
+    // Filter by transaction type
     if (type && type !== 'all') {
-      // Map type filter to our data structure
       if (type === 'waiver') {
-        // All our current data is waiver wire, so no additional filter needed
+        whereConditions.push('t.transaction_type = ?');
+        queryParams.push('Waiver');
       } else if (type === 'trade') {
-        // When we have trade data, we'll add a filter here
-        whereConditions.push('1 = 0'); // For now, no trades exist
+        whereConditions.push('t.transaction_type = ?');
+        queryParams.push('Trade');
       }
     }
 
-    // Execute count query
-    let countQueryFinal = countQuery;
+    // Apply where conditions to both queries
     if (whereConditions.length > 0) {
-      countQueryFinal = countQueryFinal.replace('WHERE wr.status = \'approved\'',
-        `WHERE wr.status = 'approved' AND ${whereConditions.join(' AND ')}`);
+      const conditions = ' AND ' + whereConditions.join(' AND ');
+      query += conditions;
+      countQuery += conditions;
     }
 
-    console.log('Count query:', countQueryFinal);
-    const [countResult] = await db.query(countQueryFinal, queryParams);
+    // Execute count query
+    console.log('Count query:', countQuery);
+    console.log('Query params:', queryParams);
+
+    const [countResult] = await db.query(countQuery, queryParams);
     const total = countResult[0]?.total || 0;
 
-    // Build the final query with filters
-    let finalQuery = query;
-
-    console.log('Query params:', queryParams);
-    console.log('Additional conditions:', whereConditions);
-
-    // Apply filtering dynamically
-    if (whereConditions.length > 0) {
-      finalQuery = finalQuery.replace('WHERE wr.status = \'approved\'',
-        `WHERE wr.status = 'approved' AND ${whereConditions.join(' AND ')}`);
-    }
-
-    // Add ordering and pagination
-    finalQuery += `
+    // Add grouping, ordering and pagination to main query
+    query += `
+      GROUP BY t.transaction_id, tr.team_id, ft.team_name, u.first_name, u.last_name
       ORDER BY
-        wr.week DESC,
-        wr.processed_at DESC,
-        wr.request_id ASC
+        t.week DESC,
+        t.transaction_date DESC,
+        t.transaction_id DESC,
+        tr.team_id ASC
       LIMIT ${parseInt(itemsPerPage)} OFFSET ${parseInt(offset)}
     `;
 
-    console.log('Final query with filters:', finalQuery);
-    console.log('Final params for query:', queryParams);
+    console.log('Final query:', query);
 
-    const result = await db.query(finalQuery, queryParams);
-    const approvedTransactions = Array.isArray(result[0]) ? result[0] : result;
+    const result = await db.query(query, queryParams);
+    const transactions = Array.isArray(result[0]) ? result[0] : result;
 
-    if (!Array.isArray(approvedTransactions)) {
+    if (!Array.isArray(transactions)) {
       throw new Error('Query did not return an array');
     }
 
-    console.log(`Processing ${approvedTransactions.length} approved transactions for competitors`);
+    console.log(`Processing ${transactions.length} transactions`);
 
-    // For each approved transaction, get competing requests
+    // For waiver transactions, get competing requests from waiver_requests table
     const transactionsWithCompetitors = await Promise.all(
-      approvedTransactions.map(async (transaction) => {
-        console.log(`Checking competitors for transaction ${transaction.request_id}, player ${transaction.pickup_name} (ID: ${transaction.pickup_player_id})`);
+      transactions.map(async (transaction) => {
+        let competitors = [];
 
-        // Get all requests for the same pickup player in the same week and round
-        // Exclude auto-rejections for dropped players AND same team that won
-        const competingQuery = `
-          SELECT
-            wr.request_id,
-            wr.waiver_order_position,
-            ft.team_name,
-            u.first_name,
-            u.last_name,
-            drop_player.display_name as drop_name,
-            wr.status,
-            wr.notes
-          FROM waiver_requests wr
-          JOIN fantasy_teams ft ON wr.fantasy_team_id = ft.team_id
-          JOIN users u ON ft.user_id = u.user_id
-          JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
-          WHERE wr.pickup_player_id = ?
-            AND (wr.week = ? OR (wr.week IS NULL AND ? IS NULL))
-            AND wr.waiver_round = ?
-            AND wr.request_id != ?
-            AND wr.fantasy_team_id != ?
-            AND wr.status = 'rejected'
-            AND (wr.notes IS NULL OR wr.notes LIKE '%Auto-rejected: Player acquired by another team%')
-          ORDER BY wr.waiver_order_position ASC
-        `;
+        // Only get competitors for waiver transactions
+        if (transaction.transaction_type === 'Waiver' && transaction.first_acquired_player_id) {
+          console.log(`Checking competitors for waiver transaction ${transaction.transaction_id}, player ID: ${transaction.first_acquired_player_id}`);
 
-        const competingParams = [
-          transaction.pickup_player_id,
-          transaction.week,
-          transaction.week,
-          transaction.waiver_round,
-          transaction.request_id,
-          transaction.fantasy_team_id
-        ];
+          // Find the corresponding waiver request to get waiver details
+          const waiverDetailsQuery = `
+            SELECT waiver_round, waiver_order_position
+            FROM waiver_requests wr
+            WHERE wr.pickup_player_id = ?
+              AND wr.fantasy_team_id = ?
+              AND wr.week = ?
+              AND wr.status = 'approved'
+            LIMIT 1
+          `;
 
-        console.log('Competing query params:', competingParams);
+          const waiverDetailsResult = await db.query(waiverDetailsQuery, [
+            transaction.first_acquired_player_id,
+            transaction.fantasy_team_id,
+            transaction.week
+          ]);
 
-        const competingResult = await db.query(competingQuery, competingParams);
-        const competitors = Array.isArray(competingResult[0]) ? competingResult[0] : competingResult;
+          const waiverDetails = Array.isArray(waiverDetailsResult[0]) ? waiverDetailsResult[0][0] : waiverDetailsResult[0];
 
-        console.log(`Found ${competitors.length} competitors for transaction ${transaction.request_id}`);
+          if (waiverDetails) {
+            // Get competing waiver requests
+            const competingQuery = `
+              SELECT
+                wr.request_id,
+                wr.waiver_order_position,
+                ft.team_name,
+                u.first_name,
+                u.last_name,
+                drop_player.display_name as drop_name,
+                wr.status,
+                wr.notes
+              FROM waiver_requests wr
+              JOIN fantasy_teams ft ON wr.fantasy_team_id = ft.team_id
+              JOIN users u ON ft.user_id = u.user_id
+              JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
+              WHERE wr.pickup_player_id = ?
+                AND (wr.week = ? OR (wr.week IS NULL AND ? IS NULL))
+                AND wr.waiver_round = ?
+                AND wr.fantasy_team_id != ?
+                AND wr.status = 'rejected'
+                AND (wr.notes IS NULL OR wr.notes LIKE '%Auto-rejected: Player acquired by another team%')
+              ORDER BY wr.waiver_order_position ASC
+            `;
 
-        if (competitors.length > 0) {
-          console.log('Competitors:', competitors.map(c => `${c.team_name} (waiver pos: ${c.waiver_order_position})`));
+            const competingResult = await db.query(competingQuery, [
+              transaction.first_acquired_player_id,
+              transaction.week,
+              transaction.week,
+              waiverDetails.waiver_round,
+              transaction.fantasy_team_id
+            ]);
+
+            competitors = Array.isArray(competingResult[0]) ? competingResult[0] : competingResult;
+
+            console.log(`Found ${competitors.length} competitors for transaction ${transaction.transaction_id}`);
+
+            // Add waiver details to transaction
+            transaction.waiver_round = waiverDetails.waiver_round;
+            transaction.waiver_order_position = waiverDetails.waiver_order_position;
+          }
         }
 
+        // Format the transaction data for frontend compatibility
         return {
-          ...transaction,
+          transaction_id: transaction.transaction_id,
+          fantasy_team_id: transaction.fantasy_team_id,
+          week: transaction.week,
+          transaction_date: transaction.transaction_date,
+          team_name: transaction.team_name,
+          first_name: transaction.first_name,
+          last_name: transaction.last_name,
+          transaction_type: transaction.transaction_type,
+          waiver_round: transaction.waiver_round || null,
+          waiver_order_position: transaction.waiver_order_position || null,
+          // For frontend compatibility, split acquired/lost back into individual fields
+          pickup_name: transaction.acquired_players ? transaction.acquired_players.split(',')[0].replace(/ \([^)]*\)/, '') : '',
+          pickup_position: transaction.acquired_players ? transaction.acquired_players.match(/\(([^)]*)\)/)?.[1] || '' : '',
+          drop_name: transaction.lost_players ? transaction.lost_players.split(',')[0].replace(/ \([^)]*\)/, '') : '',
+          drop_position: transaction.lost_players ? transaction.lost_players.match(/\(([^)]*)\)/)?.[1] || '' : '',
+          acquired_players: transaction.acquired_players || '',
+          lost_players: transaction.lost_players || '',
           competitors: competitors || []
         };
       })

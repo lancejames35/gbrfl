@@ -227,8 +227,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const transactionRow = transactionTemplate.content.cloneNode(true);
     const mainRow = transactionRow.querySelector('.transaction-row');
 
-    // Set request ID for reference
-    mainRow.setAttribute('data-request-id', transaction.request_id);
+    // Set transaction ID for reference (updated from request_id to transaction_id)
+    mainRow.setAttribute('data-transaction-id', transaction.transaction_id);
 
     // Set team and owner name
     transactionRow.querySelector('.owner-name').innerHTML = `
@@ -236,26 +236,47 @@ document.addEventListener('DOMContentLoaded', function() {
       <small class="text-muted">${transaction.first_name} ${transaction.last_name}</small>
     `;
 
-    // Set transaction type
+    // Set transaction type based on transaction_type
     const typeEl = transactionRow.querySelector('.transaction-type');
-    typeEl.textContent = `Waiver Wire (${transaction.waiver_round} Round)`;
+    if (transaction.transaction_type === 'Waiver') {
+      typeEl.textContent = `Waiver Wire (${transaction.waiver_round} Round)`;
+      typeEl.className = 'transaction-type badge bg-primary';
+    } else if (transaction.transaction_type === 'Trade') {
+      typeEl.textContent = 'Trade';
+      typeEl.className = 'transaction-type badge bg-success';
+    } else {
+      typeEl.textContent = transaction.transaction_type;
+      typeEl.className = 'transaction-type badge bg-secondary';
+    }
 
-    // Set acquired player
+    // Set acquired items
     const acquiredEl = transactionRow.querySelector('.acquired');
-    acquiredEl.textContent = `${transaction.pickup_name} (${transaction.pickup_position})`;
+    if (transaction.transaction_type === 'Waiver') {
+      // For waivers, use individual pickup fields for compatibility
+      acquiredEl.textContent = `${transaction.pickup_name} (${transaction.pickup_position})`;
+    } else {
+      // For trades and other types, use the full acquired_players string
+      acquiredEl.textContent = transaction.acquired_players || '--';
+    }
 
-    // Set dropped player
+    // Set lost/dropped items
     const lostEl = transactionRow.querySelector('.lost');
-    lostEl.textContent = `${transaction.drop_name} (${transaction.drop_position})`;
+    if (transaction.transaction_type === 'Waiver') {
+      // For waivers, use individual drop fields for compatibility
+      lostEl.textContent = `${transaction.drop_name} (${transaction.drop_position})`;
+    } else {
+      // For trades and other types, use the full lost_players string
+      lostEl.textContent = transaction.lost_players || '--';
+    }
 
-    // Handle competitors (show expand button if there are competitors)
+    // Handle competitors (only for waiver transactions)
     const expandBtn = transactionRow.querySelector('.expand-btn');
     const competitorsSection = transactionRow.querySelector('.competitors-section');
 
-    console.log(`Transaction ${transaction.request_id} has ${transaction.competitors ? transaction.competitors.length : 0} competitors`);
+    console.log(`Transaction ${transaction.transaction_id} (${transaction.transaction_type}) has ${transaction.competitors ? transaction.competitors.length : 0} competitors`);
 
-    if (transaction.competitors && transaction.competitors.length > 0) {
-      console.log(`Showing expand button for transaction ${transaction.request_id}`);
+    if (transaction.transaction_type === 'Waiver' && transaction.competitors && transaction.competitors.length > 0) {
+      console.log(`Showing expand button for waiver transaction ${transaction.transaction_id}`);
       expandBtn.classList.remove('d-none');
       expandBtn.setAttribute('title', `${transaction.competitors.length} other team(s) also wanted this player`);
 
@@ -282,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
     } else {
-      console.log(`No competitors for transaction ${transaction.request_id}`);
+      console.log(`No competitors for transaction ${transaction.transaction_id} (type: ${transaction.transaction_type})`);
     }
 
     // Append to container
