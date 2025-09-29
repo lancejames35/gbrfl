@@ -50,6 +50,10 @@ class NotificationManager {
       if (response.ok) {
         const data = await response.json();
         this.updateBadge(data.count);
+       } else if (response.status === 401) {
+         // User not authenticated, stop polling
+         this.updateBadge(0);
+         return;
       }
     } catch (error) {
       console.error('Error loading unread count:', error);
