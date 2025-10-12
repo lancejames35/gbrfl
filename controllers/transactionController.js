@@ -75,7 +75,27 @@ transactionController.getTransactions = async (req, res) => {
           THEN
             CASE
               WHEN ti_acq.item_type = 'Player' THEN CONCAT(p_acq.display_name, ' (', p_acq.position, ')')
-              WHEN ti_acq.item_type = 'Free Agent Pick' THEN CONCAT(ti_acq.free_agent_round, 'nd Round Waiver Priority (', ti_acq.free_agent_week, ')')
+              WHEN ti_acq.item_type = 'Free Agent Pick' THEN CONCAT(
+                CASE
+                  WHEN ti_acq.free_agent_round % 100 BETWEEN 11 AND 13 THEN CONCAT(ti_acq.free_agent_round, 'th')
+                  WHEN ti_acq.free_agent_round % 10 = 1 THEN CONCAT(ti_acq.free_agent_round, 'st')
+                  WHEN ti_acq.free_agent_round % 10 = 2 THEN CONCAT(ti_acq.free_agent_round, 'nd')
+                  WHEN ti_acq.free_agent_round % 10 = 3 THEN CONCAT(ti_acq.free_agent_round, 'rd')
+                  ELSE CONCAT(ti_acq.free_agent_round, 'th')
+                END,
+                ' Round Waiver Priority (Week ', ti_acq.free_agent_week, ')'
+              )
+              WHEN ti_acq.item_type = 'Draft Pick' THEN CONCAT(
+                ti_acq.draft_year, ' ',
+                CASE
+                  WHEN ti_acq.draft_round % 100 BETWEEN 11 AND 13 THEN CONCAT(ti_acq.draft_round, 'th')
+                  WHEN ti_acq.draft_round % 10 = 1 THEN CONCAT(ti_acq.draft_round, 'st')
+                  WHEN ti_acq.draft_round % 10 = 2 THEN CONCAT(ti_acq.draft_round, 'nd')
+                  WHEN ti_acq.draft_round % 10 = 3 THEN CONCAT(ti_acq.draft_round, 'rd')
+                  ELSE CONCAT(ti_acq.draft_round, 'th')
+                END,
+                ' Draft Pick'
+              )
               ELSE ti_acq.item_type
             END
           END
@@ -88,12 +108,44 @@ transactionController.getTransactions = async (req, res) => {
           THEN
             CASE
               WHEN ti_lost.item_type = 'Player' THEN CONCAT(p_lost.display_name, ' (', p_lost.position, ')')
-              WHEN ti_lost.item_type = 'Free Agent Pick' THEN CONCAT(ti_lost.free_agent_round, 'nd Round Waiver Priority (', ti_lost.free_agent_week, ')')
+              WHEN ti_lost.item_type = 'Free Agent Pick' THEN CONCAT(
+                CASE
+                  WHEN ti_lost.free_agent_round % 100 BETWEEN 11 AND 13 THEN CONCAT(ti_lost.free_agent_round, 'th')
+                  WHEN ti_lost.free_agent_round % 10 = 1 THEN CONCAT(ti_lost.free_agent_round, 'st')
+                  WHEN ti_lost.free_agent_round % 10 = 2 THEN CONCAT(ti_lost.free_agent_round, 'nd')
+                  WHEN ti_lost.free_agent_round % 10 = 3 THEN CONCAT(ti_lost.free_agent_round, 'rd')
+                  ELSE CONCAT(ti_lost.free_agent_round, 'th')
+                END,
+                ' Round Waiver Priority (Week ', ti_lost.free_agent_week, ')'
+              )
+              WHEN ti_lost.item_type = 'Draft Pick' THEN CONCAT(
+                ti_lost.draft_year, ' ',
+                CASE
+                  WHEN ti_lost.draft_round % 100 BETWEEN 11 AND 13 THEN CONCAT(ti_lost.draft_round, 'th')
+                  WHEN ti_lost.draft_round % 10 = 1 THEN CONCAT(ti_lost.draft_round, 'st')
+                  WHEN ti_lost.draft_round % 10 = 2 THEN CONCAT(ti_lost.draft_round, 'nd')
+                  WHEN ti_lost.draft_round % 10 = 3 THEN CONCAT(ti_lost.draft_round, 'rd')
+                  ELSE CONCAT(ti_lost.draft_round, 'th')
+                END,
+                ' Draft Pick'
+              )
               ELSE ti_lost.item_type
             END
           END
           SEPARATOR ', '
         ) as lost_players,
+
+        -- Get attempted items for this specific team (failed waiver attempts)
+        GROUP_CONCAT(
+          DISTINCT CASE WHEN ti_attempted.direction = 'Attempted' AND ti_attempted.team_id = tr.team_id
+          THEN
+            CASE
+              WHEN ti_attempted.item_type = 'Player' THEN CONCAT(p_attempted.display_name, ' (', p_attempted.position, ')')
+              ELSE ti_attempted.item_type
+            END
+          END
+          SEPARATOR ', '
+        ) as attempted_players,
 
         -- Get first acquired player for competitor lookup (waiver only)
         MIN(CASE WHEN ti_acq.direction = 'Acquired' AND ti_acq.item_type = 'Player' AND ti_acq.team_id = tr.team_id
@@ -113,6 +165,11 @@ transactionController.getTransactions = async (req, res) => {
       LEFT JOIN transaction_items ti_lost ON t.transaction_id = ti_lost.transaction_id
         AND ti_lost.direction = 'Lost'
       LEFT JOIN nfl_players p_lost ON ti_lost.player_id = p_lost.player_id
+
+      -- Left join for attempted items (failed waiver attempts)
+      LEFT JOIN transaction_items ti_attempted ON t.transaction_id = ti_attempted.transaction_id
+        AND ti_attempted.direction = 'Attempted'
+      LEFT JOIN nfl_players p_attempted ON ti_attempted.player_id = p_attempted.player_id
 
       WHERE 1=1
     `;
