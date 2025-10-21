@@ -60,8 +60,8 @@ exports.getScoreboard = async (req, res) => {
     // Add scores to matchups and determine winners
     const matchupsWithScores = matchups.map(matchup => {
       const score = scoresMap[matchup.schedule_id];
-      const team1Score = score?.team_1_score || null;
-      const team2Score = score?.team_2_score || null;
+      const team1Score = score?.team_1_score ?? null;
+      const team2Score = score?.team_2_score ?? null;
 
       let winner = null;
       if (team1Score !== null && team2Score !== null) {
@@ -158,8 +158,8 @@ exports.getScoreboardData = async (req, res) => {
     // Add scores to matchups and determine winners
     const matchupsWithScores = matchups.map(matchup => {
       const score = scoresMap[matchup.schedule_id];
-      const team1Score = score?.team_1_score || null;
-      const team2Score = score?.team_2_score || null;
+      const team1Score = score?.team_1_score ?? null;
+      const team2Score = score?.team_2_score ?? null;
 
       let winner = null;
       if (team1Score !== null && team2Score !== null) {

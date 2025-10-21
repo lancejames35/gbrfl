@@ -36,8 +36,8 @@ exports.getScoreEntryPage = async (req, res) => {
     // Add scores to matchups
     const matchupsWithScores = matchups.map(matchup => ({
       ...matchup,
-      team_1_score: scoresMap[matchup.schedule_id]?.team_1_score || 0,
-      team_2_score: scoresMap[matchup.schedule_id]?.team_2_score || 0,
+      team_1_score: scoresMap[matchup.schedule_id]?.team_1_score ?? null,
+      team_2_score: scoresMap[matchup.schedule_id]?.team_2_score ?? null,
       has_score: !!scoresMap[matchup.schedule_id]
     }));
 
@@ -208,8 +208,8 @@ exports.getScoresData = async (req, res) => {
     // Add scores to matchups
     const matchupsWithScores = matchups.map(matchup => ({
       ...matchup,
-      team_1_score: scoresMap[matchup.schedule_id]?.team_1_score || 0,
-      team_2_score: scoresMap[matchup.schedule_id]?.team_2_score || 0,
+      team_1_score: scoresMap[matchup.schedule_id]?.team_1_score ?? null,
+      team_2_score: scoresMap[matchup.schedule_id]?.team_2_score ?? null,
       has_score: !!scoresMap[matchup.schedule_id]
     }));
 

@@ -61,7 +61,7 @@
                                         <input type="number"
                                                class="form-control text-center score-input"
                                                data-team="1"
-                                               value="<%= matchup.team_1_score || '' %>"
+                                               value="<%= matchup.team_1_score ?? '' %>"
                                                min="0"
                                                placeholder="Score">
                                     </div>
@@ -78,7 +78,7 @@
                                         <input type="number"
                                                class="form-control text-center score-input"
                                                data-team="2"
-                                               value="<%= matchup.team_2_score || '' %>"
+                                               value="<%= matchup.team_2_score ?? '' %>"
                                                min="0"
                                                placeholder="Score">
                                     </div>
@@ -113,7 +113,7 @@
                                         <input type="number"
                                                class="form-control text-center score-input"
                                                data-team="1"
-                                               value="<%= matchup.team_1_score || '' %>"
+                                               value="<%= matchup.team_1_score ?? '' %>"
                                                min="0"
                                                placeholder="Score">
                                     </div>
@@ -130,7 +130,7 @@
                                         <input type="number"
                                                class="form-control text-center score-input"
                                                data-team="2"
-                                               value="<%= matchup.team_2_score || '' %>"
+                                               value="<%= matchup.team_2_score ?? '' %>"
                                                min="0"
                                                placeholder="Score">
                                     </div>
