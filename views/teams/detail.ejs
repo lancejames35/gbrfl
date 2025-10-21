@@ -34,9 +34,9 @@
                     <i class="bi bi-pencil"></i> Edit Team
                 </a>
             <% } %>
-            <a href="/trades/new?team_id=<%= team.team_id %>" class="btn btn-outline-secondary">
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#tradeProposalModal" data-team-id="<%= team.team_id %>">
                 <i class="bi bi-arrow-left-right"></i> Propose Trade
-            </a>
+            </button>
         </div>
     </div>
 </div>
@@ -67,6 +67,46 @@
                                 <p class="mt-2 mb-0">No head coach assigned</p>
                             </div>
                         <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trade Notifications Section -->
+        <div class="row mb-4" id="trade-notifications-section" style="display: none;">
+            <div class="col-12">
+                <div class="alert alert-warning trade-notification-alert" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-arrow-left-right display-6 me-3 text-warning"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-2">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                Pending Trade Proposals
+                            </h5>
+                            <div id="trade-notifications-content">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Trades Section -->
+        <div class="row mb-4" id="pending-trades-section" style="display: none;">
+            <div class="col-12">
+                <div class="alert alert-info" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-clock display-6 me-3 text-info"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-2">
+                                <i class="bi bi-hourglass-split me-1"></i>
+                                Your Pending Trade Proposals
+                            </h5>
+                            <div id="pending-trades-content">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -309,3 +349,1049 @@ function loadWaiverRequestCount() {
 }
 <% } %>
 </script>
+
+<!-- Trade Proposal Modal -->
+<div class="modal fade" id="tradeProposalModal" tabindex="-1" aria-labelledby="tradeProposalModalLabel" aria-hidden="true" data-bs-backdrop="false" data-bs-keyboard="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tradeProposalModalLabel">
+                    <i class="bi bi-arrow-left-right"></i> Propose Trade
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Step 1: Select Trading Partner -->
+                <div id="step-team-selection">
+                    <div class="mb-4">
+                        <h6><i class="bi bi-1-circle text-primary"></i> Select Team</h6>
+                        <select class="form-select" id="target-team-select">
+                            <option value="">Choose team to trade with...</option>
+                            <% if (typeof allTeams !== 'undefined' && allTeams.length > 0) { %>
+                                <% allTeams.forEach(otherTeam => { %>
+                                    <% if (otherTeam.team_id !== team.team_id) { %>
+                                        <option value="<%= otherTeam.team_id %>">
+                                            <%= otherTeam.team_name %> (<%= otherTeam.owner_username %>)
+                                        </option>
+                                    <% } %>
+                                <% }); %>
+                            <% } %>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Step 2: Trade Items (Initially Hidden) -->
+                <div id="step-trade-items" style="display: none;">
+                    <div class="mb-4">
+                        <h6><i class="bi bi-2-circle text-primary"></i> Configure Trade</h6>
+                    </div>
+
+                    <div class="row">
+                        <!-- Your Team Side -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><%= team.team_name %> Gives</h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Navigation tabs -->
+                                    <ul class="nav nav-pills nav-fill mb-3" id="giving-tabs" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" id="players-giving-tab" data-bs-toggle="pill" data-bs-target="#players-giving" type="button" role="tab">
+                                                <i class="bi bi-person"></i> Players
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="picks-giving-tab" data-bs-toggle="pill" data-bs-target="#picks-giving" type="button" role="tab">
+                                                <i class="bi bi-calendar"></i> Picks
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="keeper-giving-tab" data-bs-toggle="pill" data-bs-target="#keeper-giving" type="button" role="tab">
+                                                <i class="bi bi-shield"></i> Keepers
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="priority-giving-tab" data-bs-toggle="pill" data-bs-target="#priority-giving" type="button" role="tab">
+                                                <i class="bi bi-list-ol"></i> Priority
+                                            </button>
+                                        </li>
+                                    </ul>
+
+                                    <!-- Tab content -->
+                                    <div class="tab-content" id="giving-tab-content">
+                                        <!-- Players Tab -->
+                                        <div class="tab-pane fade show active" id="players-giving" role="tabpanel">
+                                            <div id="your-players-list">
+                                                <!-- Populated dynamically -->
+                                            </div>
+                                        </div>
+
+                                        <!-- Draft Picks Tab -->
+                                        <div class="tab-pane fade" id="picks-giving" role="tabpanel">
+                                            <div class="mb-3">
+                                                <label class="form-label">Draft Year</label>
+                                                <select class="form-select" id="giving-draft-year">
+                                                    <option value="2026">2026</option>
+                                                    <option value="2027">2027</option>
+                                                    <option value="2028">2028</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Round</label>
+                                                <select class="form-select" id="giving-draft-round">
+                                                    <option value="">Select round...</option>
+                                                    <option value="1">1st Round</option>
+                                                    <option value="2">2nd Round</option>
+                                                    <option value="3">3rd Round</option>
+                                                    <option value="4">4th Round</option>
+                                                    <option value="5">5th Round</option>
+                                                    <option value="6">6th Round</option>
+                                                    <option value="7">7th Round</option>
+                                                    <option value="8">8th Round</option>
+                                                    <option value="9">9th Round</option>
+                                                    <option value="10">10th Round</option>
+                                                </select>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addDraftPick('giving')">
+                                                <i class="bi bi-plus"></i> Add Draft Pick
+                                            </button>
+                                        </div>
+
+                                        <!-- Keeper Slots Tab -->
+                                        <div class="tab-pane fade" id="keeper-giving" role="tabpanel">
+                                            <div class="mb-3">
+                                                <label class="form-label">Number of Keeper Slots</label>
+                                                <input type="number" class="form-control" id="giving-keeper-slots" min="1" max="5" placeholder="1-5 slots">
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addKeeperSlots('giving')">
+                                                <i class="bi bi-plus"></i> Add Keeper Slots
+                                            </button>
+                                        </div>
+
+                                        <!-- Free Agent Priority Tab -->
+                                        <div class="tab-pane fade" id="priority-giving" role="tabpanel">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Round</label>
+                                                    <select class="form-select" id="giving-fa-round">
+                                                        <option value="1">1st Round</option>
+                                                        <option value="2">2nd Round</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Week</label>
+                                                    <input type="text" class="form-control" id="giving-fa-week" placeholder="e.g., Week 5">
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="addFreeAgentPriority('giving')">
+                                                <i class="bi bi-plus"></i> Add Priority
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Selected Items Display -->
+                                    <div class="mt-3">
+                                        <h6>Selected Items:</h6>
+                                        <div id="giving-selected-items" class="border rounded p-2 min-height-50">
+                                            <em class="text-muted">No items selected</em>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Target Team Side -->
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><span id="target-team-name">Target Team</span> Gives</h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Navigation tabs -->
+                                    <ul class="nav nav-pills nav-fill mb-3" id="receiving-tabs" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" id="players-receiving-tab" data-bs-toggle="pill" data-bs-target="#players-receiving" type="button" role="tab">
+                                                <i class="bi bi-person"></i> Players
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="picks-receiving-tab" data-bs-toggle="pill" data-bs-target="#picks-receiving" type="button" role="tab">
+                                                <i class="bi bi-calendar"></i> Picks
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="keeper-receiving-tab" data-bs-toggle="pill" data-bs-target="#keeper-receiving" type="button" role="tab">
+                                                <i class="bi bi-shield"></i> Keepers
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="priority-receiving-tab" data-bs-toggle="pill" data-bs-target="#priority-receiving" type="button" role="tab">
+                                                <i class="bi bi-list-ol"></i> Priority
+                                            </button>
+                                        </li>
+                                    </ul>
+
+                                    <!-- Tab content -->
+                                    <div class="tab-content" id="receiving-tab-content">
+                                        <!-- Players Tab -->
+                                        <div class="tab-pane fade show active" id="players-receiving" role="tabpanel">
+                                            <div id="target-players-list">
+                                                <!-- Populated dynamically -->
+                                            </div>
+                                        </div>
+
+                                        <!-- Draft Picks Tab -->
+                                        <div class="tab-pane fade" id="picks-receiving" role="tabpanel">
+                                            <div class="mb-3">
+                                                <label class="form-label">Draft Year</label>
+                                                <select class="form-select" id="receiving-draft-year">
+                                                    <option value="2026">2026</option>
+                                                    <option value="2027">2027</option>
+                                                    <option value="2028">2028</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Round</label>
+                                                <select class="form-select" id="receiving-draft-round">
+                                                    <option value="">Select round...</option>
+                                                    <option value="1">1st Round</option>
+                                                    <option value="2">2nd Round</option>
+                                                    <option value="3">3rd Round</option>
+                                                    <option value="4">4th Round</option>
+                                                    <option value="5">5th Round</option>
+                                                    <option value="6">6th Round</option>
+                                                    <option value="7">7th Round</option>
+                                                    <option value="8">8th Round</option>
+                                                    <option value="9">9th Round</option>
+                                                    <option value="10">10th Round</option>
+                                                </select>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-success" onclick="addDraftPick('receiving')">
+                                                <i class="bi bi-plus"></i> Add Draft Pick
+                                            </button>
+                                        </div>
+
+                                        <!-- Keeper Slots Tab -->
+                                        <div class="tab-pane fade" id="keeper-receiving" role="tabpanel">
+                                            <div class="mb-3">
+                                                <label class="form-label">Number of Keeper Slots</label>
+                                                <input type="number" class="form-control" id="receiving-keeper-slots" min="1" max="5" placeholder="1-5 slots">
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-success" onclick="addKeeperSlots('receiving')">
+                                                <i class="bi bi-plus"></i> Add Keeper Slots
+                                            </button>
+                                        </div>
+
+                                        <!-- Free Agent Priority Tab -->
+                                        <div class="tab-pane fade" id="priority-receiving" role="tabpanel">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Round</label>
+                                                    <select class="form-select" id="receiving-fa-round">
+                                                        <option value="1">1st Round</option>
+                                                        <option value="2">2nd Round</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Week</label>
+                                                    <input type="text" class="form-control" id="receiving-fa-week" placeholder="e.g., Week 5">
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-success mt-3" onclick="addFreeAgentPriority('receiving')">
+                                                <i class="bi bi-plus"></i> Add Priority
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Selected Items Display -->
+                                    <div class="mt-3">
+                                        <h6>Selected Items:</h6>
+                                        <div id="receiving-selected-items" class="border rounded p-2 min-height-50">
+                                            <em class="text-muted">No items selected</em>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submit-trade-btn" disabled>
+                    <i class="bi bi-send"></i> Propose Trade
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Trade modal functionality
+document.addEventListener('DOMContentLoaded', function() {
+    let selectedGivingItems = [];
+    let selectedReceivingItems = [];
+    let targetTeamId = null;
+    let targetTeamPlayers = [];
+
+    // Team selection handler
+    document.getElementById('target-team-select').addEventListener('change', function() {
+        targetTeamId = this.value;
+        const selectedOption = this.options[this.selectedIndex];
+
+        if (targetTeamId) {
+            document.getElementById('target-team-name').textContent = selectedOption.text.split(' (')[0];
+            document.getElementById('step-trade-items').style.display = 'block';
+            loadTargetTeamPlayers(targetTeamId);
+        } else {
+            document.getElementById('step-trade-items').style.display = 'none';
+        }
+    });
+
+    // Load target team players
+    async function loadTargetTeamPlayers(teamId) {
+        try {
+            const response = await fetch(`/api/teams/${teamId}/players`);
+            const data = await response.json();
+
+            if (data.success) {
+                targetTeamPlayers = data.players;
+                displayTargetTeamPlayers();
+            }
+        } catch (error) {
+            console.error('Error loading target team players:', error);
+        }
+    }
+
+    // Display target team players
+    function displayTargetTeamPlayers() {
+        const container = document.getElementById('target-players-list');
+        container.innerHTML = '';
+
+        if (targetTeamPlayers.length === 0) {
+            container.innerHTML = '<em class="text-muted">No players found</em>';
+            return;
+        }
+
+        targetTeamPlayers.forEach(player => {
+            const div = document.createElement('div');
+            div.className = 'form-check mb-2';
+            div.innerHTML = `
+                <input class="form-check-input" type="checkbox" value="${player.player_id}" id="target-player-${player.player_id}" onchange="toggleTargetPlayer(${player.player_id}, '${player.display_name}', '${player.position}')">
+                <label class="form-check-label" for="target-player-${player.player_id}">
+                    ${player.display_name} (${player.position})
+                    ${player.team_code ? ` - ${player.team_code}` : ''}
+                </label>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // Player selection handlers
+    window.toggleYourPlayer = function(playerId, playerName, position) {
+        const checkbox = document.getElementById(`your-player-${playerId}`);
+        const item = {
+            from_team_id: <%= team.team_id %>,
+            to_team_id: targetTeamId,
+            item_type: 'Player',
+            player_id: playerId,
+            display_text: `${playerName} (${position})`
+        };
+
+        if (checkbox.checked) {
+            selectedGivingItems.push(item);
+        } else {
+            selectedGivingItems = selectedGivingItems.filter(i => !(i.item_type === 'Player' && i.player_id === playerId));
+        }
+        updateSelectedItems();
+    };
+
+    window.toggleTargetPlayer = function(playerId, playerName, position) {
+        const checkbox = document.getElementById(`target-player-${playerId}`);
+        const item = {
+            from_team_id: targetTeamId,
+            to_team_id: <%= team.team_id %>,
+            item_type: 'Player',
+            player_id: playerId,
+            display_text: `${playerName} (${position})`
+        };
+
+        if (checkbox.checked) {
+            selectedReceivingItems.push(item);
+        } else {
+            selectedReceivingItems = selectedReceivingItems.filter(i => !(i.item_type === 'Player' && i.player_id === playerId));
+        }
+        updateSelectedItems();
+    };
+
+    // Add draft pick
+    window.addDraftPick = function(side) {
+        const yearElement = document.getElementById(`${side}-draft-year`);
+        const roundElement = document.getElementById(`${side}-draft-round`);
+
+        if (!roundElement.value) {
+            alert('Please select a draft round');
+            return;
+        }
+
+        const item = {
+            from_team_id: side === 'giving' ? <%= team.team_id %> : targetTeamId,
+            to_team_id: side === 'giving' ? targetTeamId : <%= team.team_id %>,
+            item_type: 'Draft Pick',
+            draft_year: parseInt(yearElement.value),
+            draft_round: parseInt(roundElement.value),
+            display_text: `${yearElement.value} ${roundElement.options[roundElement.selectedIndex].text} Pick`
+        };
+
+        if (side === 'giving') {
+            selectedGivingItems.push(item);
+        } else {
+            selectedReceivingItems.push(item);
+        }
+
+        roundElement.value = '';
+        updateSelectedItems();
+    };
+
+    // Add keeper slots
+    window.addKeeperSlots = function(side) {
+        const slotsElement = document.getElementById(`${side}-keeper-slots`);
+        const slots = parseInt(slotsElement.value);
+
+        if (!slots || slots < 1) {
+            alert('Please enter a valid number of keeper slots');
+            return;
+        }
+
+        const item = {
+            from_team_id: side === 'giving' ? <%= team.team_id %> : targetTeamId,
+            to_team_id: side === 'giving' ? targetTeamId : <%= team.team_id %>,
+            item_type: 'Keeper Slot',
+            keeper_slots: slots,
+            display_text: `${slots} Keeper Slot${slots > 1 ? 's' : ''}`
+        };
+
+        if (side === 'giving') {
+            selectedGivingItems.push(item);
+        } else {
+            selectedReceivingItems.push(item);
+        }
+
+        slotsElement.value = '';
+        updateSelectedItems();
+    };
+
+    // Add free agent priority
+    window.addFreeAgentPriority = function(side) {
+        const roundElement = document.getElementById(`${side}-fa-round`);
+        const weekElement = document.getElementById(`${side}-fa-week`);
+
+        if (!weekElement.value.trim()) {
+            alert('Please enter a week');
+            return;
+        }
+
+        const item = {
+            from_team_id: side === 'giving' ? <%= team.team_id %> : targetTeamId,
+            to_team_id: side === 'giving' ? targetTeamId : <%= team.team_id %>,
+            item_type: 'Free Agent Pick',
+            free_agent_round: parseInt(roundElement.value),
+            free_agent_week: weekElement.value.trim(),
+            display_text: `${roundElement.options[roundElement.selectedIndex].text} Waiver Priority (${weekElement.value.trim()})`
+        };
+
+        if (side === 'giving') {
+            selectedGivingItems.push(item);
+        } else {
+            selectedReceivingItems.push(item);
+        }
+
+        weekElement.value = '';
+        updateSelectedItems();
+    };
+
+    // Update selected items display
+    function updateSelectedItems() {
+        updateSelectedItemsDisplay('giving', selectedGivingItems);
+        updateSelectedItemsDisplay('receiving', selectedReceivingItems);
+
+        // Enable/disable submit button
+        const submitBtn = document.getElementById('submit-trade-btn');
+        submitBtn.disabled = selectedGivingItems.length === 0 || selectedReceivingItems.length === 0;
+    }
+
+    function updateSelectedItemsDisplay(side, items) {
+        const container = document.getElementById(`${side}-selected-items`);
+
+        if (items.length === 0) {
+            container.innerHTML = '<em class="text-muted">No items selected</em>';
+            return;
+        }
+
+        container.innerHTML = items.map((item, index) => `
+            <span class="badge bg-secondary me-1 mb-1">
+                ${item.display_text}
+                <button type="button" class="btn-close btn-close-white btn-sm ms-1" onclick="removeItem('${side}', ${index})"></button>
+            </span>
+        `).join('');
+    }
+
+    // Remove item
+    window.removeItem = function(side, index) {
+        if (side === 'giving') {
+            const item = selectedGivingItems[index];
+            if (item.item_type === 'Player') {
+                const checkbox = document.getElementById(`your-player-${item.player_id}`);
+                if (checkbox) checkbox.checked = false;
+            }
+            selectedGivingItems.splice(index, 1);
+        } else {
+            const item = selectedReceivingItems[index];
+            if (item.item_type === 'Player') {
+                const checkbox = document.getElementById(`target-player-${item.player_id}`);
+                if (checkbox) checkbox.checked = false;
+            }
+            selectedReceivingItems.splice(index, 1);
+        }
+        updateSelectedItems();
+    };
+
+    // Submit trade
+    document.getElementById('submit-trade-btn').addEventListener('click', async function() {
+        if (!targetTeamId) {
+            alert('Please select a trading partner');
+            return;
+        }
+
+        if (selectedGivingItems.length === 0 || selectedReceivingItems.length === 0) {
+            alert('Both teams must give something in the trade');
+            return;
+        }
+
+        const tradeData = {
+            target_team_id: targetTeamId,
+            trade_items: [...selectedGivingItems, ...selectedReceivingItems]
+        };
+
+        try {
+            const response = await fetch('/trades/propose', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(tradeData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('Trade proposal submitted successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('tradeProposalModal')).hide();
+                location.reload();
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error submitting trade:', error);
+            alert('Error submitting trade proposal');
+        }
+    });
+
+    // Reset modal when closed
+    document.getElementById('tradeProposalModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('target-team-select').value = '';
+        document.getElementById('step-trade-items').style.display = 'none';
+        selectedGivingItems = [];
+        selectedReceivingItems = [];
+        targetTeamId = null;
+        updateSelectedItems();
+    });
+
+    // Fix modal display issues
+    document.getElementById('tradeProposalModal').addEventListener('show.bs.modal', function(e) {
+        console.log('Modal showing...');
+
+        // Remove any existing backdrop issues from Bootstrap
+        setTimeout(() => {
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => backdrop.remove());
+        }, 50);
+    });
+
+    document.getElementById('tradeProposalModal').addEventListener('shown.bs.modal', function() {
+        console.log('Modal shown successfully');
+        // Focus on the first select element
+        const firstSelect = this.querySelector('#target-team-select');
+        if (firstSelect) {
+            firstSelect.focus();
+        }
+    });
+});
+
+// Display your team's players
+<% if (players && players.length > 0) { %>
+document.addEventListener('DOMContentLoaded', function() {
+    const yourPlayersList = document.getElementById('your-players-list');
+    const players = <%- JSON.stringify(players) %>;
+
+    if (players.length === 0) {
+        yourPlayersList.innerHTML = '<em class="text-muted">No players found</em>';
+        return;
+    }
+
+    players.forEach(player => {
+        const div = document.createElement('div');
+        div.className = 'form-check mb-2';
+        div.innerHTML = `
+            <input class="form-check-input" type="checkbox" value="${player.player_id}" id="your-player-${player.player_id}" onchange="toggleYourPlayer(${player.player_id}, '${player.display_name.replace(/'/g, "\\'")}', '${player.position}')">
+            <label class="form-check-label" for="your-player-${player.player_id}">
+                ${player.display_name} (${player.position})
+                ${player.team_code ? ` - ${player.team_code}` : ''}
+            </label>
+        `;
+        yourPlayersList.appendChild(div);
+    });
+});
+<% } %>
+
+// Load trade notifications on page load
+loadTradeNotifications();
+
+async function loadTradeNotifications() {
+    try {
+        const response = await fetch('/api/notifications/trades/<%= team.team_id %>');
+        const data = await response.json();
+
+        if (data.success && data.tradeNotifications && data.tradeNotifications.length > 0) {
+            displayTradeNotifications(data.tradeNotifications);
+        }
+    } catch (error) {
+        console.error('Error loading trade notifications:', error);
+    }
+}
+
+function displayTradeNotifications(notifications) {
+    const section = document.getElementById('trade-notifications-section');
+    const content = document.getElementById('trade-notifications-content');
+
+    if (notifications.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    let html = '';
+    notifications.forEach(notification => {
+        const metadata = typeof notification.metadata === 'string' ?
+            JSON.parse(notification.metadata) : notification.metadata;
+
+        html += `
+            <div class="trade-notification-item mb-3 p-3 border rounded bg-light">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h6 class="mb-1 text-primary">
+                            <i class="bi bi-arrow-left-right me-1"></i>
+                            ${notification.title}
+                        </h6>
+                        <p class="mb-1">${notification.message}</p>
+                        <small class="text-muted">
+                            <i class="bi bi-clock me-1"></i>
+                            ${new Date(notification.created_at).toLocaleString()}
+                        </small>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-success" onclick="acceptTradeProposal(${metadata.trade_id}, '${metadata.proposer_team}')">
+                                <i class="bi bi-check-lg"></i> Accept
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="rejectTradeProposal(${metadata.trade_id}, '${metadata.proposer_team}')">
+                                <i class="bi bi-x-lg"></i> Reject
+                            </button>
+                            <a href="/trades/${metadata.trade_id}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="dismissTradeNotification(${notification.id})">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    content.innerHTML = html;
+    section.style.display = 'block';
+}
+
+async function dismissTradeNotification(notificationId) {
+    try {
+        const response = await fetch(`/api/notifications/${notificationId}/dismiss`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            // Reload notifications
+            loadTradeNotifications();
+        }
+    } catch (error) {
+        console.error('Error dismissing notification:', error);
+    }
+}
+
+async function acceptTradeProposal(tradeId, proposerTeam) {
+    if (!confirm(`Accept trade proposal from ${proposerTeam}?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/trades/${tradeId}/accept`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                drop_players: [] // TODO: Add drop player selection logic if needed
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showAlert('success', data.message);
+            // Reload notifications
+            loadTradeNotifications();
+        } else {
+            if (data.oversizedTeam) {
+                // TODO: Show drop player selection modal
+                showAlert('warning', data.message);
+            } else {
+                showAlert('danger', data.message);
+            }
+        }
+    } catch (error) {
+        console.error('Error accepting trade:', error);
+        showAlert('danger', 'Error accepting trade proposal');
+    }
+}
+
+async function rejectTradeProposal(tradeId, proposerTeam) {
+    const reason = prompt(`Reject trade proposal from ${proposerTeam}?\n\nOptional reason for rejection:`);
+
+    if (reason === null) {
+        return; // User cancelled
+    }
+
+    try {
+        const response = await fetch(`/trades/${tradeId}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                rejection_reason: reason || null
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showAlert('success', data.message);
+            // Reload notifications
+            loadTradeNotifications();
+        } else {
+            showAlert('danger', data.message);
+        }
+    } catch (error) {
+        console.error('Error rejecting trade:', error);
+        showAlert('danger', 'Error rejecting trade proposal');
+    }
+}
+
+// Load pending trades
+loadPendingTrades();
+
+async function loadPendingTrades() {
+    try {
+        const response = await fetch(`/api/trades/team/<%= team.team_id %>/pending`);
+        const data = await response.json();
+
+        if (data.success && data.trades && data.trades.length > 0) {
+            displayPendingTrades(data.trades);
+        }
+    } catch (error) {
+        console.error('Error loading pending trades:', error);
+    }
+}
+
+function displayPendingTrades(trades) {
+    const section = document.getElementById('pending-trades-section');
+    const content = document.getElementById('pending-trades-content');
+
+    if (trades.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    let html = '';
+    trades.forEach(trade => {
+        html += `
+            <div class="pending-trade-item mb-3 p-3 border rounded bg-white">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h6 class="mb-1 text-primary">
+                            <i class="bi bi-arrow-left-right me-1"></i>
+                            Trade with ${trade.target_team_name}
+                        </h6>
+                        <p class="mb-1 text-muted">Proposed on ${new Date(trade.proposal_date).toLocaleDateString()}</p>
+                        <div class="trade-summary">
+                            <small class="text-muted">
+                                <strong>You give:</strong> ${trade.giving_summary || 'Items not specified'}<br>
+                                <strong>You receive:</strong> ${trade.receiving_summary || 'Items not specified'}
+                            </small>
+                        </div>
+                        ${trade.notes ? `<div class="mt-2"><small class="text-info"><i class="bi bi-chat-left-text me-1"></i>${trade.notes}</small></div>` : ''}
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="btn-group">
+                            <a href="/trades/${trade.trade_id}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger" onclick="cancelTrade(${trade.trade_id}, '${trade.target_team_name}')">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    content.innerHTML = html;
+    section.style.display = 'block';
+}
+
+async function cancelTrade(tradeId, targetTeamName) {
+    if (!confirm(`Are you sure you want to cancel your trade proposal with ${targetTeamName}?`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/trades/${tradeId}/cancel`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Reload pending trades
+            loadPendingTrades();
+
+            // Show success message
+            showAlert('success', 'Trade proposal cancelled successfully');
+        } else {
+            showAlert('danger', data.message || 'Failed to cancel trade proposal');
+        }
+    } catch (error) {
+        console.error('Error cancelling trade:', error);
+        showAlert('danger', 'Error cancelling trade proposal');
+    }
+}
+
+function showAlert(type, message) {
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+
+    // Add alert to top of page
+    const container = document.querySelector('.container-fluid');
+    if (container) {
+        container.insertAdjacentHTML('afterbegin', alertHtml);
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            const alert = container.querySelector('.alert');
+            if (alert) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+}
+</script>
+
+<style>
+.min-height-50 {
+    min-height: 50px;
+}
+
+.nav-pills .nav-link {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+}
+
+.tab-content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.form-check {
+    padding-left: 1.5rem;
+}
+
+.form-check-input {
+    margin-left: -1.5rem;
+}
+
+.badge .btn-close {
+    --bs-btn-close-bg-size: 0.5em;
+}
+
+#tradeProposalModal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Complete modal override to fix all issues */
+#tradeProposalModal.modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 1050 !important;
+    display: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    outline: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+#tradeProposalModal.modal.show {
+    display: block !important;
+}
+
+/* Create our own backdrop that doesn't interfere */
+#tradeProposalModal.modal.show::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: -1;
+}
+
+#tradeProposalModal .modal-dialog {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: auto !important;
+    max-width: 1200px !important;
+    margin: 0 !important;
+    pointer-events: auto !important;
+    z-index: 1051 !important;
+}
+
+#tradeProposalModal .modal-content {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    pointer-events: auto !important;
+    background-color: #fff !important;
+    background-clip: padding-box !important;
+    border: 1px solid rgba(0,0,0,.2) !important;
+    border-radius: 0.5rem !important;
+    outline: 0 !important;
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15) !important;
+}
+
+/* Remove backdrop element issues */
+#tradeProposalModal.modal-backdrop {
+    display: none !important;
+}
+
+/* Fix any input/button issues */
+#tradeProposalModal input,
+#tradeProposalModal button,
+#tradeProposalModal select,
+#tradeProposalModal textarea,
+#tradeProposalModal .form-select,
+#tradeProposalModal .form-control,
+#tradeProposalModal .btn,
+#tradeProposalModal .form-check-input,
+#tradeProposalModal .form-check-label {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    opacity: 1 !important;
+}
+
+/* Ensure tabs work */
+#tradeProposalModal .nav-pills .nav-link {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}
+
+/* Make sure all modal content is interactive */
+#tradeProposalModal .modal-header,
+#tradeProposalModal .modal-body,
+#tradeProposalModal .modal-footer,
+#tradeProposalModal .tab-content,
+#tradeProposalModal .tab-pane {
+    pointer-events: auto !important;
+}
+
+/* Ensure all clickable elements work */
+#tradeProposalModal * {
+    pointer-events: auto !important;
+}
+
+/* Trade notification styling */
+.trade-notification-alert {
+    border-left: 4px solid #ffc107;
+    background: linear-gradient(135deg, #fff9e6 0%, #fffbf0 100%);
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+}
+
+.trade-notification-item {
+    transition: all 0.3s ease;
+    border: 1px solid #e9ecef;
+}
+
+.trade-notification-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-color: #007bff;
+}
+
+@media (max-width: 768px) {
+    #tradeProposalModal .modal-dialog {
+        margin: 0.5rem;
+        max-width: none;
+    }
+
+    .nav-pills .nav-link {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.5rem;
+    }
+
+    .trade-notification-item .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .trade-notification-item .btn-group .btn {
+        margin-bottom: 0.25rem;
+    }
+}
+</style>

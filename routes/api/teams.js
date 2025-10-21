@@ -44,6 +44,13 @@ router.get('/my-roster', ensureAuthenticated, teamController.getMyRoster);
 router.get('/:id', ensureAuthenticated, teamController.getTeamById);
 
 /**
+ * @route   GET /api/teams/:id/players
+ * @desc    Get players for a specific team
+ * @access  Private
+ */
+router.get('/:id/players', ensureAuthenticated, teamController.getTeamPlayers);
+
+/**
  * @route   POST /api/teams/:id/add-player
  * @desc    Add a player to a team's roster
  * @access  Private

@@ -1,119 +1,443 @@
 <!-- Page Header -->
 <div class="row align-items-center mb-4">
     <div class="col-md-8">
-        <h1 class="mb-0">Trade Approvals</h1>
-        <p class="text-muted">Review and approve pending trade proposals</p>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Trade Proposals</li>
+            </ol>
+        </nav>
+        <h1 class="mb-0">
+            <i class="bi bi-arrow-left-right"></i> Trade Approvals
+        </h1>
     </div>
     <div class="col-md-4 text-md-end">
-        <div class="btn-group">
-            <button class="btn btn-outline-secondary btn-sm">Pending</button>
-            <button class="btn btn-outline-secondary btn-sm">Approved</button>
-            <button class="btn btn-outline-secondary btn-sm">Rejected</button>
-        </div>
+        <span class="badge bg-warning text-dark me-2">Pending: <%= trades.length %></span>
+        <span class="badge bg-info">Total: <%= trades.length %></span>
     </div>
 </div>
 
-<!-- Trade Status Overview -->
+<% if (trades.length === 0) { %>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center py-5">
+                        <i class="bi bi-check-circle display-1 text-muted mb-3"></i>
+                        <h5 class="text-muted">No pending trade proposals</h5>
+                        <p class="text-muted">All caught up! No trade proposals need your attention.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<% } else { %>
+
+<!-- Pending Trade Proposals -->
 <div class="row mb-4">
-    <div class="col-md-3">
+    <div class="col-12">
         <div class="card">
-            <div class="card-body text-center">
-                <i class="bi bi-clock display-4 text-warning"></i>
-                <h5 class="card-title mt-3">Pending Review</h5>
-                <h3 class="text-warning">3</h3>
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock me-2"></i>Pending Trade Proposals (<%= trades.length %>)
+                </h5>
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
-                <i class="bi bi-check-circle display-4 text-success"></i>
-                <h5 class="card-title mt-3">Approved</h5>
-                <h3 class="text-success">12</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
-                <i class="bi bi-x-circle display-4 text-danger"></i>
-                <h5 class="card-title mt-3">Rejected</h5>
-                <h3 class="text-danger">2</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card">
-            <div class="card-body text-center">
-                <i class="bi bi-arrow-left-right display-4 text-info"></i>
-                <h5 class="card-title mt-3">Total Trades</h5>
-                <h3 class="text-info">17</h3>
+
+            <div class="card-body">
+                <% trades.forEach(function(trade, index) { %>
+                    <div class="card mb-3 trade-card" id="trade-<%= trade.trade_id %>">
+                        <div class="card-body">
+                            <!-- Trade Header -->
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary mb-1">
+                                        <i class="bi bi-people-fill me-1"></i><%= trade.proposing_team_name %>
+                                    </h6>
+                                    <small class="text-muted">Proposed by <%= trade.proposing_first_name %> <%= trade.proposing_last_name %></small>
+                                </div>
+                                <div class="col-md-6 text-md-end">
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i><%= new Date(trade.proposal_date).toLocaleDateString() %>
+                                        <br>
+                                        <i class="bi bi-clock me-1"></i><%= new Date(trade.proposal_date).toLocaleTimeString() %>
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Trade Details -->
+                            <div class="row">
+                                <!-- Proposing Team Side -->
+                                <div class="col-md-5">
+                                    <div class="border rounded p-3 bg-light">
+                                        <h6 class="text-primary mb-2">
+                                            <i class="bi bi-box-arrow-right text-danger me-1"></i>
+                                            <%= trade.proposing_team_name %> Gives
+                                        </h6>
+                                        <div class="trade-items">
+                                            <%
+                                            const givingItems = trade.items.filter(item => item.from_team_id === trade.proposing_team_id);
+                                            if (givingItems.length === 0) { %>
+                                                <em class="text-muted">Nothing specified</em>
+                                            <% } else {
+                                                givingItems.forEach(item => { %>
+                                                    <div class="mb-1">
+                                                        <% if (item.item_type === 'Player') { %>
+                                                            <span class="badge bg-primary me-1">
+                                                                <i class="bi bi-person"></i> <%= item.player_name %> (<%= item.player_position %>)
+                                                            </span>
+                                                        <% } else if (item.item_type === 'Draft Pick') { %>
+                                                            <span class="badge bg-secondary me-1">
+                                                                <i class="bi bi-calendar"></i> <%= item.draft_year %> Round <%= item.draft_round %> Pick
+                                                            </span>
+                                                        <% } else if (item.item_type === 'Keeper Slot') { %>
+                                                            <span class="badge bg-info me-1">
+                                                                <i class="bi bi-shield"></i> <%= item.keeper_slots %> Keeper Slot<%= item.keeper_slots > 1 ? 's' : '' %>
+                                                            </span>
+                                                        <% } else if (item.item_type === 'Free Agent Pick') { %>
+                                                            <span class="badge bg-warning text-dark me-1">
+                                                                <i class="bi bi-list-ol"></i> <%= item.free_agent_round === 1 ? '1st' : '2nd' %> Round Waiver Priority (<%= item.free_agent_week %>)
+                                                            </span>
+                                                        <% } %>
+                                                    </div>
+                                                <% });
+                                            } %>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Trade Arrow -->
+                                <div class="col-md-2 text-center d-flex align-items-center justify-content-center">
+                                    <div>
+                                        <i class="bi bi-arrow-left-right display-6 text-muted"></i>
+                                        <br><small class="text-muted">for</small>
+                                    </div>
+                                </div>
+
+                                <!-- Target Team Side -->
+                                <div class="col-md-5">
+                                    <div class="border rounded p-3 bg-light">
+                                        <h6 class="text-success mb-2">
+                                            <i class="bi bi-box-arrow-in-right text-success me-1"></i>
+                                            <%= trade.target_team_name %> Gives
+                                        </h6>
+                                        <div class="trade-items">
+                                            <%
+                                            const receivingItems = trade.items.filter(item => item.from_team_id !== trade.proposing_team_id);
+                                            if (receivingItems.length === 0) { %>
+                                                <em class="text-muted">Nothing specified</em>
+                                            <% } else {
+                                                receivingItems.forEach(item => { %>
+                                                    <div class="mb-1">
+                                                        <% if (item.item_type === 'Player') { %>
+                                                            <span class="badge bg-primary me-1">
+                                                                <i class="bi bi-person"></i> <%= item.player_name %> (<%= item.player_position %>)
+                                                            </span>
+                                                        <% } else if (item.item_type === 'Draft Pick') { %>
+                                                            <span class="badge bg-secondary me-1">
+                                                                <i class="bi bi-calendar"></i> <%= item.draft_year %> Round <%= item.draft_round %> Pick
+                                                            </span>
+                                                        <% } else if (item.item_type === 'Keeper Slot') { %>
+                                                            <span class="badge bg-info me-1">
+                                                                <i class="bi bi-shield"></i> <%= item.keeper_slots %> Keeper Slot<%= item.keeper_slots > 1 ? 's' : '' %>
+                                                            </span>
+                                                        <% } else if (item.item_type === 'Free Agent Pick') { %>
+                                                            <span class="badge bg-warning text-dark me-1">
+                                                                <i class="bi bi-list-ol"></i> <%= item.free_agent_round === 1 ? '1st' : '2nd' %> Round Waiver Priority (<%= item.free_agent_week %>)
+                                                            </span>
+                                                        <% } %>
+                                                    </div>
+                                                <% });
+                                            } %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Trade Summary -->
+                            <% if (trade.notes) { %>
+                                <div class="row mt-3">
+                                    <div class="col-12">
+                                        <div class="alert alert-info mb-0">
+                                            <i class="bi bi-info-circle me-2"></i>
+                                            <strong>Notes:</strong> <%= trade.notes %>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% } %>
+
+                            <!-- Action Buttons -->
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-people me-1"></i>Between: <%= trade.proposing_team_name %> ↔ <%= trade.target_team_name %>
+                                    </small>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-success btn-sm approve-btn"
+                                            data-trade-id="<%= trade.trade_id %>"
+                                            data-proposing-team="<%= trade.proposing_team_name %>"
+                                            data-target-team="<%= trade.target_team_name %>">
+                                        <i class="bi bi-check-lg"></i> Approve
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm reject-btn"
+                                            data-trade-id="<%= trade.trade_id %>"
+                                            data-proposing-team="<%= trade.proposing_team_name %>"
+                                            data-target-team="<%= trade.target_team_name %>">
+                                        <i class="bi bi-x-lg"></i> Reject
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Pending Trades -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0 text-warning">
-            <i class="bi bi-clock me-2"></i>Pending Trade Approvals
-        </h5>
-    </div>
-    <div class="card-body">
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle me-2"></i>
-            <strong>3 trades</strong> are waiting for your review and approval.
-        </div>
-        
-        <!-- Trade Entry -->
-        <div class="card mb-3">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-5">
-                        <h6 class="text-primary">Team Alpha</h6>
-                        <div class="trade-players">
-                            <span class="badge bg-light text-dark me-1">Tom Brady (QB)</span>
-                            <span class="badge bg-light text-dark me-1">Christian McCaffrey (RB)</span>
-                        </div>
-                    </div>
-                    <div class="col-md-2 text-center">
-                        <i class="bi bi-arrow-left-right display-6 text-muted"></i>
-                        <br><small class="text-muted">for</small>
-                    </div>
-                    <div class="col-md-5">
-                        <h6 class="text-success">Team Beta</h6>
-                        <div class="trade-players">
-                            <span class="badge bg-light text-dark me-1">Aaron Rodgers (QB)</span>
-                            <span class="badge bg-light text-dark me-1">Alvin Kamara (RB)</span>
-                            <span class="badge bg-light text-dark me-1">2024 Draft Pick</span>
-                        </div>
-                    </div>
-                </div>
-                <hr>
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">
-                        <i class="bi bi-calendar me-1"></i>Proposed: Oct 15, 2024
-                        <i class="bi bi-person ms-3 me-1"></i>By: Team Alpha
-                    </small>
-                    <div class="btn-group">
-                        <button class="btn btn-success btn-sm">
-                            <i class="bi bi-check"></i> Approve
-                        </button>
-                        <button class="btn btn-danger btn-sm">
-                            <i class="bi bi-x"></i> Reject
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-eye"></i> Details
-                        </button>
-                    </div>
+<% } %>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" data-bs-backdrop="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject Trade Proposal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to reject this trade proposal?</p>
+                <div id="reject-details"></div>
+                <div class="mb-3 mt-3">
+                    <label for="rejection-notes" class="form-label">Rejection Notes (optional):</label>
+                    <textarea class="form-control"
+                              id="rejection-notes"
+                              rows="3"
+                              placeholder="Enter reason for rejection..."></textarea>
                 </div>
             </div>
-        </div>
-        
-        <!-- More trade entries would be here -->
-        <div class="text-center">
-            <button class="btn btn-outline-primary">Load More Trades</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-reject">
+                    <i class="bi bi-x"></i> Reject Trade
+                </button>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentTradeId = null;
+
+    // Approve trade
+    document.querySelectorAll('.approve-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const tradeId = this.getAttribute('data-trade-id');
+            const proposingTeam = this.getAttribute('data-proposing-team');
+            const targetTeam = this.getAttribute('data-target-team');
+
+            if (confirm(`Approve trade between ${proposingTeam} and ${targetTeam}?`)) {
+                fetch(`/trades/admin/${tradeId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the trade card with animation
+                        const tradeCard = document.getElementById(`trade-${tradeId}`);
+                        if (tradeCard) {
+                            tradeCard.style.transition = 'opacity 0.5s';
+                            tradeCard.style.opacity = '0';
+
+                            setTimeout(() => {
+                                tradeCard.remove();
+
+                                // Check if no more trades and show empty state
+                                const remainingTrades = document.querySelectorAll('.trade-card').length;
+                                if (remainingTrades === 0) {
+                                    location.reload();
+                                }
+                            }, 500);
+                        }
+
+                        showAlert('success', data.message);
+                    } else {
+                        showAlert('danger', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error approving trade:', error);
+                    showAlert('danger', 'Error approving trade');
+                });
+            }
+        });
+    });
+
+    // Show reject modal
+    document.querySelectorAll('.reject-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            currentTradeId = this.getAttribute('data-trade-id');
+            const proposingTeam = this.getAttribute('data-proposing-team');
+            const targetTeam = this.getAttribute('data-target-team');
+
+            document.getElementById('reject-details').innerHTML = `
+                <div class="alert alert-warning">
+                    <strong>Trade:</strong> ${proposingTeam} ↔ ${targetTeam}
+                </div>
+            `;
+
+            document.getElementById('rejection-notes').value = '';
+
+            const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
+            modal.show();
+        });
+    });
+
+    // Confirm rejection
+    document.getElementById('confirm-reject').addEventListener('click', function() {
+        const notes = document.getElementById('rejection-notes').value.trim();
+
+        fetch(`/trades/admin/${currentTradeId}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                admin_notes: notes || null
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the trade card with animation
+                const tradeCard = document.getElementById(`trade-${currentTradeId}`);
+                if (tradeCard) {
+                    tradeCard.style.transition = 'opacity 0.5s';
+                    tradeCard.style.opacity = '0';
+
+                    setTimeout(() => {
+                        tradeCard.remove();
+
+                        // Check if no more trades and show empty state
+                        const remainingTrades = document.querySelectorAll('.trade-card').length;
+                        if (remainingTrades === 0) {
+                            location.reload();
+                        }
+                    }, 500);
+                }
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
+                modal.hide();
+                showAlert('success', data.message);
+            } else {
+                showAlert('danger', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error rejecting trade:', error);
+            showAlert('danger', 'Error rejecting trade');
+        });
+    });
+
+    function showAlert(type, message) {
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+
+        // Add alert to top of card body
+        const cardBody = document.querySelector('.card-body');
+        if (cardBody) {
+            cardBody.insertAdjacentHTML('afterbegin', alertHtml);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                const alert = cardBody.querySelector('.alert');
+                if (alert) {
+                    alert.remove();
+                }
+            }, 5000);
+        }
+    }
+});
+</script>
+
+<style>
+.trade-card {
+    border-left: 4px solid #ffc107;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.trade-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.trade-items .badge {
+    display: inline-block;
+    margin: 2px;
+}
+
+.display-6 {
+    font-size: 2rem;
+}
+
+@media (max-width: 768px) {
+    .display-6 {
+        font-size: 1.5rem;
+    }
+
+    .trade-card .card-body {
+        padding: 1rem 0.75rem;
+    }
+
+    .btn-group .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+}
+
+/* Modal styling */
+.modal {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal.show {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Custom backdrop for modal */
+.modal[data-bs-backdrop="false"]::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    pointer-events: none;
+}
+
+/* Ensure modal content is clickable */
+.modal[data-bs-backdrop="false"] .modal-dialog,
+.modal[data-bs-backdrop="false"] .modal-content,
+.modal[data-bs-backdrop="false"] .modal-header,
+.modal[data-bs-backdrop="false"] .modal-body,
+.modal[data-bs-backdrop="false"] .modal-footer,
+.modal[data-bs-backdrop="false"] .btn,
+.modal[data-bs-backdrop="false"] .form-control,
+.modal[data-bs-backdrop="false"] .form-label {
+    pointer-events: auto !important;
+    z-index: 1055;
+}
+</style>

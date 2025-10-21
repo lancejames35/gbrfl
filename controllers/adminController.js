@@ -562,17 +562,9 @@ exports.getScheduleManagement = async (req, res) => {
  * @param {Object} res - Express response object
  */
 exports.getTradeApprovals = async (req, res) => {
-  try {
-    res.render('admin/trades', {
-      title: 'Trade Approvals',
-      user: req.session.user,
-      activePage: 'admin'
-    });
-  } catch (error) {
-    console.error('Error displaying trade approvals:', error.message);
-    req.flash('error_msg', 'Error loading trade approvals');
-    res.redirect('/admin');
-  }
+  // Delegate to trade controller
+  const tradeController = require('./tradeController');
+  return tradeController.getAdminPendingTrades(req, res);
 };
 
 /**

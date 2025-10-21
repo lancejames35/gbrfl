@@ -239,8 +239,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set transaction type based on transaction_type
     const typeEl = transactionRow.querySelector('.transaction-type');
     if (transaction.transaction_type === 'Waiver') {
-      typeEl.textContent = `Waiver Wire (${transaction.waiver_round} Round)`;
-      typeEl.className = 'transaction-type badge bg-primary';
+      if (transaction.attempted_players) {
+        typeEl.textContent = `Waiver REJECTED`;
+        typeEl.className = 'transaction-type badge bg-danger';
+      } else {
+        typeEl.textContent = `Waiver Wire (${transaction.waiver_round} Round)`;
+        typeEl.className = 'transaction-type badge bg-primary';
+      }
     } else if (transaction.transaction_type === 'Trade') {
       typeEl.textContent = 'Trade';
       typeEl.className = 'transaction-type badge bg-success';
@@ -252,8 +257,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set acquired items
     const acquiredEl = transactionRow.querySelector('.acquired');
     if (transaction.transaction_type === 'Waiver') {
-      // For waivers, use individual pickup fields for compatibility
-      acquiredEl.textContent = `${transaction.pickup_name} (${transaction.pickup_position})`;
+      // Check if this is a rejected waiver attempt
+      if (transaction.attempted_players) {
+        acquiredEl.innerHTML = `<span class="text-muted">REJECTED: ${transaction.attempted_players}</span>`;
+      } else if (transaction.pickup_name) {
+        // For successful waivers, use individual pickup fields for compatibility
+        acquiredEl.textContent = `${transaction.pickup_name} (${transaction.pickup_position})`;
+      } else {
+        // For new unified system, use acquired_players
+        acquiredEl.textContent = transaction.acquired_players || '--';
+      }
     } else {
       // For trades and other types, use the full acquired_players string
       acquiredEl.textContent = transaction.acquired_players || '--';
@@ -262,8 +275,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set lost/dropped items
     const lostEl = transactionRow.querySelector('.lost');
     if (transaction.transaction_type === 'Waiver') {
-      // For waivers, use individual drop fields for compatibility
-      lostEl.textContent = `${transaction.drop_name} (${transaction.drop_position})`;
+      // Check if this is a rejected waiver attempt
+      if (transaction.attempted_players) {
+        lostEl.innerHTML = `<span class="text-muted">--</span>`;
+      } else if (transaction.drop_name) {
+        // For successful waivers, use individual drop fields for compatibility
+        lostEl.textContent = `${transaction.drop_name} (${transaction.drop_position})`;
+      } else {
+        // For new unified system, use lost_players
+        lostEl.textContent = transaction.lost_players || '--';
+      }
     } else {
       // For trades and other types, use the full lost_players string
       lostEl.textContent = transaction.lost_players || '--';

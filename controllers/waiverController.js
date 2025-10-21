@@ -529,6 +529,24 @@ exports.approveRequest = async (req, res) => {
       console.warn('Warning: Could not clean up conflicting lineup positions:', lineupCleanupError.message);
     }
 
+    // Get rejected requests for transaction recording
+    try {
+      const rejectedRequestsQuery = `
+        SELECT wr.*, ft.team_name
+        FROM waiver_requests wr
+        JOIN fantasy_teams ft ON wr.fantasy_team_id = ft.team_id
+        WHERE wr.status = 'rejected' AND wr.processed_by = ? AND wr.processed_at >= NOW() - INTERVAL 1 MINUTE
+      `;
+      const rejectedRequests = await db.query(rejectedRequestsQuery, [admin_user_id]);
+
+      if (rejectedRequests.length > 0) {
+        // Record rejected waiver attempts in transactions table
+        await recordRejectedWaiverAttempts(rejectedRequests, admin_user_id);
+      }
+    } catch (rejectedRecordError) {
+      console.warn('Warning: Could not record rejected waiver attempts:', rejectedRecordError.message);
+    }
+
     // Execute the waiver: remove drop player, add pickup player
     // Remove drop player from team
     const removePlayerQuery = `
@@ -563,7 +581,7 @@ exports.approveRequest = async (req, res) => {
 
       // Remove any lineup positions for the dropped player
       const removeDroppedQuery = `
-        DELETE FROM lineup_positions 
+        DELETE FROM lineup_positions
         WHERE player_id = ?
       `;
       await db.query(removeDroppedQuery, [request.drop_player_id]);
@@ -617,10 +635,18 @@ exports.approveRequest = async (req, res) => {
       
       if (playerResult.length > 0) {
         const { pickup_name, drop_name } = playerResult[0];
+
+        // Record in unified transactions table
+        try {
+          await recordWaiverTransaction(request, admin_user_id, pickup_name, drop_name);
+        } catch (transactionError) {
+          console.warn('Warning: Could not record waiver transaction:', transactionError.message);
+        }
+
         await NotificationTriggers.notifyWaiverProcessed(
-          request_id, 
-          request.fantasy_team_id, 
-          pickup_name, 
+          request_id,
+          request.fantasy_team_id,
+          pickup_name,
           'approved'
         );
       }
@@ -894,3 +920,97 @@ exports.cancelRequest = async (req, res) => {
     });
   }
 };
+
+/**
+ * Record approved waiver in unified transactions table
+ */
+async function recordWaiverTransaction(request, admin_user_id, pickupPlayerName, dropPlayerName) {
+  try {
+    // Create transaction record
+    const transactionQuery = `
+      INSERT INTO transactions (transaction_type, season_year, week, transaction_date, notes, created_by)
+      VALUES ('Waiver', 2025, ?, NOW(), ?, ?)
+    `;
+
+    const notes = `Waiver: ${pickupPlayerName} acquired`;
+    const transactionResult = await db.query(transactionQuery, [request.week, notes, admin_user_id]);
+    const transaction_id = transactionResult.insertId;
+
+    // Add transaction relationship (only the team that made the waiver request)
+    await db.query(
+      'INSERT INTO transaction_relationships (transaction_id, team_id, is_primary) VALUES (?, ?, 1)',
+      [transaction_id, request.fantasy_team_id]
+    );
+
+    // Add transaction items - player acquired
+    await db.query(`
+      INSERT INTO transaction_items (
+        transaction_id, team_id, direction, item_type, player_id
+      ) VALUES (?, ?, 'Acquired', 'Player', ?)
+    `, [transaction_id, request.fantasy_team_id, request.pickup_player_id]);
+
+    // Add transaction items - player lost
+    await db.query(`
+      INSERT INTO transaction_items (
+        transaction_id, team_id, direction, item_type, player_id
+      ) VALUES (?, ?, 'Lost', 'Player', ?)
+    `, [transaction_id, request.fantasy_team_id, request.drop_player_id]);
+
+    console.log(`Recorded waiver transaction ${transaction_id} for team ${request.fantasy_team_id}`);
+    return transaction_id;
+
+  } catch (error) {
+    console.error('Error recording waiver transaction:', error);
+    throw error;
+  }
+}
+
+/**
+ * Record rejected waiver attempts in unified transactions table for visibility
+ */
+async function recordRejectedWaiverAttempts(rejectedRequests, admin_user_id) {
+  try {
+    for (const request of rejectedRequests) {
+      // Get player names
+      const playersQuery = `
+        SELECT p1.display_name as pickup_name, p2.display_name as drop_name
+        FROM nfl_players p1, nfl_players p2
+        WHERE p1.player_id = ? AND p2.player_id = ?
+      `;
+      const playerResult = await db.query(playersQuery, [request.pickup_player_id, request.drop_player_id]);
+
+      if (playerResult.length === 0) continue;
+
+      const { pickup_name, drop_name } = playerResult[0];
+
+      // Create transaction record for rejected waiver
+      const transactionQuery = `
+        INSERT INTO transactions (transaction_type, season_year, week, transaction_date, notes, created_by)
+        VALUES ('Waiver', 2025, ?, NOW(), ?, ?)
+      `;
+
+      const notes = `Waiver REJECTED: ${pickup_name} (${request.notes || 'Player acquired by another team'})`;
+      const transactionResult = await db.query(transactionQuery, [request.week, notes, admin_user_id]);
+      const transaction_id = transactionResult.insertId;
+
+      // Add transaction relationship
+      await db.query(
+        'INSERT INTO transaction_relationships (transaction_id, team_id, is_primary) VALUES (?, ?, 1)',
+        [transaction_id, request.fantasy_team_id]
+      );
+
+      // Add transaction items to show what they tried to get (but mark as attempted)
+      await db.query(`
+        INSERT INTO transaction_items (
+          transaction_id, team_id, direction, item_type, player_id
+        ) VALUES (?, ?, 'Attempted', 'Player', ?)
+      `, [transaction_id, request.fantasy_team_id, request.pickup_player_id]);
+
+      console.log(`Recorded rejected waiver transaction ${transaction_id} for team ${request.fantasy_team_id}`);
+    }
+
+  } catch (error) {
+    console.error('Error recording rejected waiver attempts:', error);
+    // Don't throw - this is supplementary logging
+  }
+}

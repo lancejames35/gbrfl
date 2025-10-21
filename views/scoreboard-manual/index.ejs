@@ -1,0 +1,320 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-0">Scoreboard</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <span class="badge bg-info fs-6" id="currentWeekBadge">Current Week: <%= currentWeek %></span>
+    </div>
+</div>
+
+<!-- Controls Section -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <label for="weekSelect" class="form-label">Select Week</label>
+                <select class="form-select" id="weekSelect">
+                    <% for (let i = 1; i <= 17; i++) { %>
+                        <option value="<%= i %>" <%= i === weekNumber ? 'selected' : '' %>>Week <%= i %></option>
+                    <% } %>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-primary w-100" onclick="goToCurrentWeek()">
+                    <i class="bi bi-calendar-check"></i> Current Week
+                </button>
+            </div>
+            <div class="col-md-4 d-flex align-items-end justify-content-end">
+                <div id="spreadsheetDownloads"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scoreboard Content -->
+<div class="card">
+    <div class="card-header bg-light">
+        <h5 class="mb-0" id="scoreboardTitle">Week <%= weekNumber %> Results</h5>
+    </div>
+    <div class="card-body">
+        <div id="scoreboardContent">
+            <!-- Content will be populated by JavaScript initially and on week change -->
+        </div>
+    </div>
+</div>
+
+<style>
+.matchup-card {
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 1rem;
+    transition: all 0.2s;
+    background: white;
+}
+
+.matchup-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.matchup-card.winner-team1 .team-1-side {
+    background: linear-gradient(to right, #d4edda 0%, white 100%);
+}
+
+.matchup-card.winner-team2 .team-2-side {
+    background: linear-gradient(to left, #d4edda 0%, white 100%);
+}
+
+.matchup-card.tie {
+    border-color: #ffc107;
+    background: #fff8e1;
+}
+
+.team-side {
+    padding: 15px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.team-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.team-owner {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.score-display {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.score-display.winner {
+    color: #28a745;
+}
+
+.score-display.loser {
+    color: #dc3545;
+}
+
+.score-display.tie-score {
+    color: #ffc107;
+}
+
+.no-score-text {
+    font-size: 1.5rem;
+    color: #999;
+    font-weight: normal;
+}
+
+.vs-divider {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #6c757d;
+    text-align: center;
+}
+
+.no-score-badge {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+}
+
+.game-type-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 0.85rem;
+}
+
+.user-matchup {
+    border: 3px solid #0d6efd !important;
+    box-shadow: 0 0 15px rgba(13, 110, 253, 0.2);
+}
+
+@media (max-width: 768px) {
+    .team-name {
+        font-size: 0.95rem;
+    }
+
+    .score-display {
+        font-size: 2rem;
+    }
+
+    .vs-divider {
+        font-size: 1.2rem;
+        margin: 10px 0;
+    }
+}
+</style>
+
+<script>
+const seasonYear = <%= seasonYear %>;
+let currentWeek = <%= currentWeek %>;
+const userTeamId = <%= userTeam ? userTeam.team_id : 'null' %>;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load initial scoreboard data
+    loadScoreboardData(<%=weekNumber %>);
+
+    // Week selector change
+    document.getElementById('weekSelect').addEventListener('change', function() {
+        loadScoreboardData(parseInt(this.value));
+    });
+});
+
+async function loadScoreboardData(week) {
+    try {
+        const response = await fetch(`/scoreboard-results/data?week=${week}&season=${seasonYear}`);
+        const data = await response.json();
+
+        if (data.success) {
+            renderScoreboard(data.matchups, week);
+            renderSpreadsheetDownloads(data.spreadsheet, week);
+            document.getElementById('scoreboardTitle').textContent = `Week ${week} Results`;
+        } else {
+            document.getElementById('scoreboardContent').innerHTML =
+                '<div class="alert alert-warning">Error loading scoreboard data</div>';
+        }
+    } catch (error) {
+        console.error('Error fetching scoreboard data:', error);
+        document.getElementById('scoreboardContent').innerHTML =
+            '<div class="alert alert-danger">Error loading scoreboard data</div>';
+    }
+}
+
+function renderScoreboard(matchups, week) {
+    const content = document.getElementById('scoreboardContent');
+
+    if (!matchups || matchups.length === 0) {
+        content.innerHTML = '<div class="alert alert-info text-center">No matchups found for this week.</div>';
+        return;
+    }
+
+    // Helper function to check if user's team is in the game
+    function isUserGame(game) {
+        return userTeamId && (game.team_1.team_id === userTeamId || game.team_2.team_id === userTeamId);
+    }
+
+    // Separate and sort primary games (user's games first)
+    const allPrimaryGames = matchups.filter(m => m.game_type === 'primary');
+    const userPrimaryGames = allPrimaryGames.filter(isUserGame);
+    const otherPrimaryGames = allPrimaryGames.filter(game => !isUserGame(game));
+    const primaryGames = [...userPrimaryGames, ...otherPrimaryGames];
+
+    // Separate and sort bonus games (user's games first)
+    const allBonusGames = matchups.filter(m => m.game_type === 'bonus');
+    const userBonusGames = allBonusGames.filter(isUserGame);
+    const otherBonusGames = allBonusGames.filter(game => !isUserGame(game));
+    const bonusGames = [...userBonusGames, ...otherBonusGames];
+
+    let html = '<div class="row">';
+
+    // Desktop layout: Primary on left, Bonus on right
+    if (primaryGames.length > 0) {
+        html += '<div class="col-lg-6 d-none d-lg-block">';
+        html += '<h6 class="fw-bold text-primary mb-3"><i class="bi bi-trophy me-2"></i>Primary Games</h6>';
+        primaryGames.forEach(game => {
+            html += renderMatchupCard(game);
+        });
+        html += '</div>';
+    }
+
+    if (bonusGames.length > 0) {
+        html += '<div class="col-lg-6 d-none d-lg-block">';
+        html += '<h6 class="fw-bold text-success mb-3"><i class="bi bi-star me-2"></i>Bonus Games</h6>';
+        bonusGames.forEach(game => {
+            html += renderMatchupCard(game);
+        });
+        html += '</div>';
+    }
+
+    // Mobile layout: All games stacked
+    html += '<div class="d-lg-none">';
+    if (primaryGames.length > 0) {
+        html += '<h6 class="fw-bold text-primary mb-3"><i class="bi bi-trophy me-2"></i>Primary Games</h6>';
+        primaryGames.forEach(game => {
+            html += renderMatchupCard(game);
+        });
+    }
+    if (bonusGames.length > 0) {
+        html += '<h6 class="fw-bold text-success mb-3 mt-4"><i class="bi bi-star me-2"></i>Bonus Games</h6>';
+        bonusGames.forEach(game => {
+            html += renderMatchupCard(game);
+        });
+    }
+    html += '</div>';
+
+    html += '</div>';
+    content.innerHTML = html;
+}
+
+function renderMatchupCard(matchup) {
+    const hasScore = matchup.has_score && matchup.team_1_score !== null && matchup.team_2_score !== null;
+    const isUserMatchup = userTeamId && (matchup.team_1.team_id === userTeamId || matchup.team_2.team_id === userTeamId);
+
+    let winnerClass = '';
+    if (hasScore && matchup.winner) {
+        winnerClass = matchup.winner === 'tie' ? 'tie' : `winner-${matchup.winner}`;
+    }
+
+    const userClass = isUserMatchup ? 'user-matchup' : '';
+
+    const team1ScoreClass = hasScore && matchup.winner === 'team1' ? 'winner' : (hasScore && matchup.winner === 'team2' ? 'loser' : hasScore && matchup.winner === 'tie' ? 'tie-score' : '');
+    const team2ScoreClass = hasScore && matchup.winner === 'team2' ? 'winner' : (hasScore && matchup.winner === 'team1' ? 'loser' : hasScore && matchup.winner === 'tie' ? 'tie-score' : '');
+
+    const gameTypeBadge = matchup.game_type === 'primary' ?
+        '<span class="badge bg-primary game-type-badge">Primary</span>' :
+        '<span class="badge bg-success game-type-badge">Bonus</span>';
+
+    return `
+        <div class="matchup-card ${winnerClass} ${userClass} position-relative">
+            ${gameTypeBadge}
+            <div class="row align-items-center">
+                <div class="col-5">
+                    <div class="team-side team-1-side text-end">
+                        <div class="team-name">${matchup.team_1.team_name}</div>
+                        <div class="team-owner">${matchup.team_1.username || ''}</div>
+                        ${hasScore ? `<div class="score-display ${team1ScoreClass} mt-2">${matchup.team_1_score}</div>` : '<div class="no-score-text mt-2">-</div>'}
+                    </div>
+                </div>
+                <div class="col-2 d-flex align-items-center justify-content-center">
+                    <div class="vs-divider">vs</div>
+                </div>
+                <div class="col-5">
+                    <div class="team-side team-2-side">
+                        <div class="team-name">${matchup.team_2.team_name}</div>
+                        <div class="team-owner">${matchup.team_2.username || ''}</div>
+                        ${hasScore ? `<div class="score-display ${team2ScoreClass} mt-2">${matchup.team_2_score}</div>` : '<div class="no-score-text mt-2">-</div>'}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderSpreadsheetDownloads(spreadsheet, week) {
+    const container = document.getElementById('spreadsheetDownloads');
+
+    let html = '';
+
+    if (spreadsheet) {
+        html += `<a href="/scoreboard-results/download/${spreadsheet.spreadsheet_id}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-download me-1"></i>Download Spreadsheet
+        </a>`;
+    } else {
+        html = '<small class="text-muted">No spreadsheet available</small>';
+    }
+
+    container.innerHTML = html;
+}
+
+function goToCurrentWeek() {
+    document.getElementById('weekSelect').value = currentWeek;
+    loadScoreboardData(currentWeek);
+}
+</script>

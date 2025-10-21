@@ -183,4 +183,45 @@ router.post('/test', authenticateHybrid, async (req, res) => {
   }
 });
 
+// Get trade notifications for a specific team
+router.get('/trades/:teamId', authenticateHybrid, [
+  param('teamId').isInt().toInt()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Verify user owns this team
+    const db = require('../../config/database');
+    const teamCheck = await db.query(
+      'SELECT user_id FROM fantasy_teams WHERE team_id = ?',
+      [req.params.teamId]
+    );
+
+    if (teamCheck.length === 0 || teamCheck[0].user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Get trade notifications for the user
+    const tradeNotifications = await Notification.getByUserId(req.user.id, {
+      type: 'trade',
+      unreadOnly: false,
+      limit: 10
+    });
+
+    res.json({
+      success: true,
+      tradeNotifications
+    });
+  } catch (error) {
+    console.error('Error fetching trade notifications:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch trade notifications'
+    });
+  }
+});
+
 module.exports = router;

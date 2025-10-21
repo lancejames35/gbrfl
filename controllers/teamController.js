@@ -160,6 +160,29 @@ exports.getTeamById = async (req, res) => {
 };
 
 /**
+ * Get players for a specific team
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.getTeamPlayers = async (req, res) => {
+  try {
+    const teamId = req.params.id;
+    const players = await FantasyTeam.getPlayers(teamId);
+
+    res.json({
+      success: true,
+      players
+    });
+  } catch (error) {
+    console.error('Error getting team players:', error.message);
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving team players'
+    });
+  }
+};
+
+/**
  * Show the create team form
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object

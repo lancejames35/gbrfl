@@ -10,6 +10,7 @@ const LineupSubmission = require('../models/LineupSubmission');
 const LineupPosition = require('../models/LineupPosition');
 const LineupLock = require('../models/LineupLock');
 const WeekStatus = require('../models/WeekStatus');
+const MatchupScore = require('../models/MatchupScore');
 
 /**
  * Get current week based on NFL game completion status
@@ -114,23 +115,48 @@ exports.getScheduleData = async (req, res) => {
       // Check if lineups are locked for this week
       const lockStatus = await LineupLock.getLockStatus(parseInt(week), 'primary', parseInt(seasonYear));
       const isLocked = lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked';
-      
+
       // Get week status once for all games in this week
       const weekStatus = await WeekStatus.getWeekStatus(parseInt(week), parseInt(seasonYear));
-      
+
+      // Get manual scores for this week
+      const manualScores = await MatchupScore.getScoresByWeek(parseInt(week), parseInt(seasonYear));
+      const scoresMap = {};
+      manualScores.forEach(score => {
+        scoresMap[score.schedule_id] = score;
+      });
+
       for (let game of scheduleData) {
         if (game.team_1 && game.team_2) {
           // Check if lineups were submitted for this week
           const team1Lineup = await LineupSubmission.getByTeamAndWeek(game.team_1.team_id, parseInt(week), game.game_type, parseInt(seasonYear));
           const team2Lineup = await LineupSubmission.getByTeamAndWeek(game.team_2.team_id, parseInt(week), game.game_type, parseInt(seasonYear));
-          
+
           // Apply week status to this game
           game.is_completed = weekStatus.status === 'completed';
           game.is_live = weekStatus.status === 'live';
-          
-          // Scores will be added when scoring system is implemented
-          game.team_1_score = null;
-          game.team_2_score = null;
+
+          // Add manual scores if they exist
+          const manualScore = scoresMap[game.schedule_id];
+          if (manualScore) {
+            game.team_1_score = manualScore.team_1_score;
+            game.team_2_score = manualScore.team_2_score;
+            game.has_manual_score = true;
+
+            // Determine winner
+            if (manualScore.team_1_score > manualScore.team_2_score) {
+              game.winner = 'team1';
+            } else if (manualScore.team_2_score > manualScore.team_1_score) {
+              game.winner = 'team2';
+            } else {
+              game.winner = 'tie';
+            }
+          } else {
+            game.team_1_score = null;
+            game.team_2_score = null;
+            game.has_manual_score = false;
+            game.winner = null;
+          }
           
           // Add lineup data if lineups are locked
           if (isLocked) {

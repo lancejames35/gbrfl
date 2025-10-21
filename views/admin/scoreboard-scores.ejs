@@ -1,0 +1,363 @@
+<!-- Page Header -->
+<div class="row align-items-center mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-0">Manage Scoreboard</h1>
+        <p class="text-muted mb-0">Enter scores and upload spreadsheets for weekly matchups</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="/scoreboard-results" class="btn btn-outline-primary" target="_blank">
+            <i class="bi bi-eye me-2"></i>View Public Scoreboard
+        </a>
+    </div>
+</div>
+
+<!-- Week Selector -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <label for="seasonSelect" class="form-label mb-0">Season</label>
+                <select class="form-select" id="seasonSelect" onchange="changeWeek()">
+                    <option value="2024" <%= seasonYear === 2024 ? 'selected' : '' %>>2024</option>
+                    <option value="2025" <%= seasonYear === 2025 ? 'selected' : '' %>>2025</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="weekSelect" class="form-label mb-0">Week</label>
+                <select class="form-select" id="weekSelect" onchange="changeWeek()">
+                    <% for (let i = 1; i <= 17; i++) { %>
+                        <option value="<%= i %>" <%= i === weekNumber ? 'selected' : '' %>>Week <%= i %></option>
+                    <% } %>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-success w-100" onclick="saveAllScores()">
+                    <i class="bi bi-save me-2"></i>Save All Scores
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scores Entry -->
+<div class="row">
+    <!-- Primary Games -->
+    <% const primaryGames = matchups.filter(m => m.game_type === 'primary'); %>
+    <% if (primaryGames.length > 0) { %>
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-trophy me-2"></i>Primary Games</h5>
+            </div>
+            <div class="card-body">
+                <% primaryGames.forEach((matchup, index) => { %>
+                    <div class="matchup-card mb-3 <%= matchup.has_score ? 'has-scores' : '' %>" data-schedule-id="<%= matchup.schedule_id %>" data-game-type="primary">
+                        <div class="row align-items-center">
+                            <div class="col-5">
+                                <div class="team-info text-end">
+                                    <div class="team-name"><%= matchup.team_1.team_name %></div>
+                                    <small class="text-muted"><%= matchup.team_1.username || '' %></small>
+                                    <div class="mt-2">
+                                        <input type="number"
+                                               class="form-control text-center score-input"
+                                               data-team="1"
+                                               value="<%= matchup.team_1_score || '' %>"
+                                               min="0"
+                                               placeholder="Score">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="vs-text">vs</div>
+                            </div>
+                            <div class="col-5">
+                                <div class="team-info">
+                                    <div class="team-name"><%= matchup.team_2.team_name %></div>
+                                    <small class="text-muted"><%= matchup.team_2.username || '' %></small>
+                                    <div class="mt-2">
+                                        <input type="number"
+                                               class="form-control text-center score-input"
+                                               data-team="2"
+                                               value="<%= matchup.team_2_score || '' %>"
+                                               min="0"
+                                               placeholder="Score">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+
+    </div>
+    <% } %>
+
+    <!-- Bonus Games -->
+    <% const bonusGames = matchups.filter(m => m.game_type === 'bonus'); %>
+    <% if (bonusGames.length > 0) { %>
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-star me-2"></i>Bonus Games</h5>
+            </div>
+            <div class="card-body">
+                <% bonusGames.forEach((matchup, index) => { %>
+                    <div class="matchup-card mb-3 <%= matchup.has_score ? 'has-scores' : '' %>" data-schedule-id="<%= matchup.schedule_id %>" data-game-type="bonus">
+                        <div class="row align-items-center">
+                            <div class="col-5">
+                                <div class="team-info text-end">
+                                    <div class="team-name"><%= matchup.team_1.team_name %></div>
+                                    <small class="text-muted"><%= matchup.team_1.username || '' %></small>
+                                    <div class="mt-2">
+                                        <input type="number"
+                                               class="form-control text-center score-input"
+                                               data-team="1"
+                                               value="<%= matchup.team_1_score || '' %>"
+                                               min="0"
+                                               placeholder="Score">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-2">
+                                <div class="vs-text">vs</div>
+                            </div>
+                            <div class="col-5">
+                                <div class="team-info">
+                                    <div class="team-name"><%= matchup.team_2.team_name %></div>
+                                    <small class="text-muted"><%= matchup.team_2.username || '' %></small>
+                                    <div class="mt-2">
+                                        <input type="number"
+                                               class="form-control text-center score-input"
+                                               data-team="2"
+                                               value="<%= matchup.team_2_score || '' %>"
+                                               min="0"
+                                               placeholder="Score">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+    <% } %>
+</div>
+
+<!-- Spreadsheet Upload Section -->
+<div class="card mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-file-earmark-excel me-2"></i>Week <%= weekNumber %> Spreadsheet</h5>
+    </div>
+    <div class="card-body">
+        <% if (spreadsheet) { %>
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle me-2"></i>
+                <strong>Uploaded:</strong> <%= spreadsheet.original_filename %>
+                <button class="btn btn-sm btn-outline-danger float-end" onclick="deleteSpreadsheet(<%= spreadsheet.spreadsheet_id %>)">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
+            </div>
+        <% } else { %>
+            <form id="spreadsheetForm" class="spreadsheet-upload-form">
+                <div class="input-group">
+                    <input type="file" class="form-control" name="spreadsheet" accept=".xls,.xlsx" required>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-upload me-1"></i>Upload Spreadsheet
+                    </button>
+                </div>
+                <small class="text-muted">Accepted formats: .xls, .xlsx (Max 10MB)</small>
+            </form>
+        <% } %>
+    </div>
+</div>
+
+<% if (primaryGames.length === 0 && bonusGames.length === 0) { %>
+<div class="alert alert-info text-center">
+    <i class="bi bi-info-circle me-2"></i>
+    No matchups found for Week <%= weekNumber %> of the <%= seasonYear %> season.
+</div>
+<% } %>
+
+<style>
+.matchup-card {
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    transition: all 0.2s;
+    background: white;
+}
+
+.matchup-card.has-scores {
+    border-color: #28a745;
+    background: #f8fff8;
+}
+
+.matchup-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.team-info {
+    padding: 5px;
+}
+
+.team-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #333;
+}
+
+.score-input {
+    font-size: 1.1rem;
+    font-weight: bold;
+    padding: 8px;
+    max-width: 120px;
+    margin: 0 auto;
+}
+
+.vs-text {
+    text-align: center;
+    font-weight: bold;
+    color: #6c757d;
+    font-size: 0.9rem;
+    padding: 3px 0;
+}
+
+@media (max-width: 768px) {
+    .team-name {
+        font-size: 0.9rem;
+    }
+
+    .score-input {
+        font-size: 1rem;
+        height: 40px;
+    }
+}
+</style>
+
+<script>
+const currentWeek = <%= weekNumber %>;
+const currentSeason = <%= seasonYear %>;
+
+function changeWeek() {
+    const week = document.getElementById('weekSelect').value;
+    const season = document.getElementById('seasonSelect').value;
+    window.location.href = `/admin/scoreboard-scores?week=${week}&season=${season}`;
+}
+
+async function saveAllScores() {
+    const matchupCards = document.querySelectorAll('.matchup-card');
+    const scores = [];
+
+    matchupCards.forEach(card => {
+        const scheduleId = card.dataset.scheduleId;
+        const gameType = card.dataset.gameType;
+        const inputs = card.querySelectorAll('.score-input');
+
+        scores.push({
+            schedule_id: scheduleId,
+            game_type: gameType,
+            team_1_score: inputs[0].value || 0,
+            team_2_score: inputs[1].value || 0
+        });
+    });
+
+    try {
+        const response = await fetch('/admin/scoreboard-scores/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                scores: scores,
+                weekNumber: currentWeek,
+                seasonYear: currentSeason
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showAlert('success', result.message);
+            // Mark all cards as having scores
+            matchupCards.forEach(card => card.classList.add('has-scores'));
+        } else {
+            showAlert('danger', result.message || 'Error saving scores');
+        }
+    } catch (error) {
+        console.error('Error saving scores:', error);
+        showAlert('danger', 'Error saving scores');
+    }
+}
+
+// Handle spreadsheet upload
+const spreadsheetForm = document.querySelector('.spreadsheet-upload-form');
+if (spreadsheetForm) {
+    spreadsheetForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(spreadsheetForm);
+        formData.append('weekNumber', currentWeek);
+        formData.append('seasonYear', currentSeason);
+
+        try {
+            const response = await fetch('/admin/scoreboard-scores/upload-spreadsheet', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert('success', result.message);
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showAlert('danger', result.message || 'Error uploading spreadsheet');
+            }
+        } catch (error) {
+            console.error('Error uploading spreadsheet:', error);
+            showAlert('danger', 'Error uploading spreadsheet');
+        }
+    });
+}
+
+async function deleteSpreadsheet(spreadsheetId) {
+    if (!confirm('Delete the spreadsheet for this week?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/admin/scoreboard-scores/spreadsheet/${spreadsheetId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showAlert('success', result.message);
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showAlert('danger', result.message || 'Error deleting spreadsheet');
+        }
+    } catch (error) {
+        console.error('Error deleting spreadsheet:', error);
+        showAlert('danger', 'Error deleting spreadsheet');
+    }
+}
+
+function showAlert(type, message) {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alert.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(alert);
+
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+</script>

@@ -9,6 +9,7 @@ const { check } = require('express-validator');
 const multer = require('multer');
 const path = require('path');
 const adminController = require('../controllers/adminController');
+const adminScoreboardController = require('../controllers/adminScoreboardController');
 const { ensureAuthenticated, isAdmin } = require('../middleware/auth');
 
 // Set up multer for file uploads
@@ -33,10 +34,45 @@ const upload = multer({
   }
 });
 
-// Ensure uploads directory exists
+// Set up multer for Excel spreadsheet uploads
+const excelStorage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, 'uploads/spreadsheets/');
+  },
+  filename: function(req, file, cb) {
+    const week = req.body.weekNumber || 'unknown';
+    const gameType = req.body.gameType || 'primary';
+    cb(null, `week${week}-${gameType}-` + Date.now() + path.extname(file.originalname));
+  }
+});
+
+const excelUpload = multer({
+  storage: excelStorage,
+  limits: { fileSize: 1024 * 1024 * 10 }, // 10MB max file size
+  fileFilter: function(req, file, cb) {
+    // Accept Excel files
+    const allowedMimeTypes = [
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+    const allowedExtensions = ['.xls', '.xlsx'];
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    if (allowedMimeTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files (.xls, .xlsx) are allowed'));
+    }
+  }
+});
+
+// Ensure uploads directories exist
 const fs = require('fs');
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
+}
+if (!fs.existsSync('uploads/spreadsheets')) {
+  fs.mkdirSync('uploads/spreadsheets', { recursive: true });
 }
 
 /**
@@ -325,6 +361,41 @@ router.post('/lineup-locks/toggle-lock', ensureAuthenticated, isAdmin, [
  * @access  Private/Admin
  */
 router.get('/lineup-locks/data', ensureAuthenticated, isAdmin, adminController.getLineupLockData);
+
+/**
+ * @route   GET /admin/scoreboard-scores
+ * @desc    Score entry page for weekly matchups
+ * @access  Private/Admin
+ */
+router.get('/scoreboard-scores', ensureAuthenticated, isAdmin, adminScoreboardController.getScoreEntryPage);
+
+/**
+ * @route   POST /admin/scoreboard-scores/save
+ * @desc    Save scores for weekly matchups
+ * @access  Private/Admin
+ */
+router.post('/scoreboard-scores/save', ensureAuthenticated, isAdmin, adminScoreboardController.saveScores);
+
+/**
+ * @route   POST /admin/scoreboard-scores/upload-spreadsheet
+ * @desc    Upload Excel spreadsheet for a week
+ * @access  Private/Admin
+ */
+router.post('/scoreboard-scores/upload-spreadsheet', ensureAuthenticated, isAdmin, excelUpload.single('spreadsheet'), adminScoreboardController.uploadSpreadsheet);
+
+/**
+ * @route   DELETE /admin/scoreboard-scores/spreadsheet/:spreadsheetId
+ * @desc    Delete uploaded spreadsheet
+ * @access  Private/Admin
+ */
+router.delete('/scoreboard-scores/spreadsheet/:spreadsheetId', ensureAuthenticated, isAdmin, adminScoreboardController.deleteSpreadsheet);
+
+/**
+ * @route   GET /admin/scoreboard-scores/data
+ * @desc    Get scores data for AJAX
+ * @access  Private/Admin
+ */
+router.get('/scoreboard-scores/data', ensureAuthenticated, isAdmin, adminScoreboardController.getScoresData);
 
 
 module.exports = router;

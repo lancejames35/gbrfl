@@ -198,11 +198,29 @@
     .game-result {
         font-weight: bold;
     }
-    
+
+    .game-score {
+        font-size: 1.3rem;
+        font-weight: bold;
+        padding: 4px 12px;
+        border-radius: 6px;
+        display: inline-block;
+    }
+
+    .game-score.win {
+        color: #fff;
+        background-color: #28a745;
+    }
+
+    .game-score.loss {
+        color: #fff;
+        background-color: #dc3545;
+    }
+
     .win {
         color: #28a745;
     }
-    
+
     .loss {
         color: #dc3545;
     }
@@ -535,8 +553,9 @@
         function renderGameCard(game, colClass, weekNumber, userTeamId, idSuffix = '') {
             const isCompleted = game.is_completed;
             const isUserGame = userTeamId && (game.team_1.team_id === userTeamId || game.team_2.team_id === userTeamId);
+            const hasScore = game.has_manual_score && game.team_1_score !== null && game.team_2_score !== null;
             let resultsContent = '';
-            
+
             // Use automated completion status from database
             if (game.is_completed) {
                 resultsContent = '<span class="fw-bold text-success">Final</span>';
@@ -562,21 +581,24 @@
                 `;
             }
             
+            const team1ScoreClass = hasScore && game.winner === 'team1' ? 'win' : (hasScore && game.winner === 'team2' ? 'loss' : '');
+            const team2ScoreClass = hasScore && game.winner === 'team2' ? 'win' : (hasScore && game.winner === 'team1' ? 'loss' : '');
+
             return `
                 <div class="${colClass} mb-3">
                     <div class="${cardClass}" id="game-${game.schedule_id}${idSuffix}">
                         <div class="text-center">
                             <div class="d-flex justify-content-center align-items-center">
-                                <div class="text-center">
+                                <div class="text-center flex-fill">
                                     <div class="team-name ${game.team_1.team_id === userTeamId ? 'user-team' : ''}">${game.team_1.team_name}</div>
                                     <small class="text-muted">${game.team_1.username || ''}</small>
-                                    ${isCompleted && game.team_1_score ? `<div class="game-result ${game.team_1_score === 'W' ? 'win' : 'loss'}">${game.team_1_score}</div>` : ''}
+                                    ${hasScore ? `<div class="game-score ${team1ScoreClass} mt-2">${game.team_1_score}</div>` : ''}
                                 </div>
                                 <div class="vs-separator">vs</div>
-                                <div class="text-center">
+                                <div class="text-center flex-fill">
                                     <div class="team-name ${game.team_2.team_id === userTeamId ? 'user-team' : ''}">${game.team_2.team_name}</div>
                                     <small class="text-muted">${game.team_2.username || ''}</small>
-                                    ${isCompleted && game.team_2_score ? `<div class="game-result ${game.team_2_score === 'W' ? 'win' : 'loss'}">${game.team_2_score}</div>` : ''}
+                                    ${hasScore ? `<div class="game-score ${team2ScoreClass} mt-2">${game.team_2_score}</div>` : ''}
                                 </div>
                             </div>
                             <div class="mt-2">${resultsContent}</div>
