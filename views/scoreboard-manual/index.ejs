@@ -52,10 +52,17 @@
     margin-bottom: 1rem;
     transition: all 0.2s;
     background: white;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
 }
 
 .matchup-card:hover {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.matchup-card .row {
+    flex: 1;
 }
 
 .matchup-card.winner-team1 .team-1-side {
@@ -75,6 +82,21 @@
     padding: 15px;
     border-radius: 6px;
     transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    min-height: 140px;
+    height: 100%;
+}
+
+.team-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.score-container {
+    margin-top: auto;
+    padding-top: 10px;
 }
 
 .team-name {
@@ -148,6 +170,14 @@
     .vs-divider {
         font-size: 1.2rem;
         margin: 10px 0;
+    }
+
+    .matchup-card {
+        min-height: 160px;
+    }
+
+    .team-side {
+        min-height: 120px;
     }
 }
 </style>
@@ -274,12 +304,16 @@ function renderMatchupCard(matchup) {
     return `
         <div class="matchup-card ${winnerClass} ${userClass} position-relative">
             ${gameTypeBadge}
-            <div class="row align-items-center">
+            <div class="row align-items-stretch">
                 <div class="col-5">
                     <div class="team-side team-1-side text-end">
-                        <div class="team-name">${matchup.team_1.team_name}</div>
-                        <div class="team-owner">${matchup.team_1.username || ''}</div>
-                        ${hasScore ? `<div class="score-display ${team1ScoreClass} mt-2">${matchup.team_1_score}</div>` : '<div class="no-score-text mt-2">-</div>'}
+                        <div class="team-info">
+                            <div class="team-name">${matchup.team_1.team_name}</div>
+                            <div class="team-owner">${matchup.team_1.username || ''}</div>
+                        </div>
+                        <div class="score-container">
+                            ${hasScore ? `<div class="score-display ${team1ScoreClass}">${matchup.team_1_score}</div>` : '<div class="no-score-text">-</div>'}
+                        </div>
                     </div>
                 </div>
                 <div class="col-2 d-flex align-items-center justify-content-center">
@@ -287,9 +321,13 @@ function renderMatchupCard(matchup) {
                 </div>
                 <div class="col-5">
                     <div class="team-side team-2-side">
-                        <div class="team-name">${matchup.team_2.team_name}</div>
-                        <div class="team-owner">${matchup.team_2.username || ''}</div>
-                        ${hasScore ? `<div class="score-display ${team2ScoreClass} mt-2">${matchup.team_2_score}</div>` : '<div class="no-score-text mt-2">-</div>'}
+                        <div class="team-info">
+                            <div class="team-name">${matchup.team_2.team_name}</div>
+                            <div class="team-owner">${matchup.team_2.username || ''}</div>
+                        </div>
+                        <div class="score-container">
+                            ${hasScore ? `<div class="score-display ${team2ScoreClass}">${matchup.team_2_score}</div>` : '<div class="no-score-text">-</div>'}
+                        </div>
                     </div>
                 </div>
             </div>

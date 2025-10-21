@@ -173,21 +173,38 @@
         margin-bottom: 1rem;
         transition: box-shadow 0.15s ease-in-out;
     }
-    
+
     .game-card:hover {
         box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     }
-    
+
     .game-card.completed {
         background-color: #f8f9fa;
         border-color: #28a745;
     }
-    
+
+    .team-section {
+        display: flex;
+        flex-direction: column;
+        min-height: 110px;
+    }
+
+    .team-info-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .team-score-wrapper {
+        margin-top: auto;
+        padding-top: 8px;
+    }
+
     .team-name {
         font-weight: 600;
         color: #495057;
     }
-    
+
     .vs-separator {
         color: #6c757d;
         font-weight: 500;
@@ -335,26 +352,30 @@
 
     /* Mobile optimizations */
     @media (max-width: 768px) {
+        .team-section {
+            min-height: 95px;
+        }
+
         .lineup-display .row {
             margin: 0;
         }
-        
+
         .lineup-display .col-md-6 {
             padding: 0 5px;
         }
-        
+
         .lineup-player {
             padding: 6px 8px;
         }
-        
+
         .player-name {
             font-size: 0.85rem;
         }
-        
+
         .player-team {
             font-size: 0.75rem;
         }
-        
+
         .role-badge {
             font-size: 0.7rem;
             padding: 2px 6px;
@@ -588,17 +609,25 @@
                 <div class="${colClass} mb-3">
                     <div class="${cardClass}" id="game-${game.schedule_id}${idSuffix}">
                         <div class="text-center">
-                            <div class="d-flex justify-content-center align-items-center">
-                                <div class="text-center flex-fill">
-                                    <div class="team-name ${game.team_1.team_id === userTeamId ? 'user-team' : ''}">${game.team_1.team_name}</div>
-                                    <small class="text-muted">${game.team_1.username || ''}</small>
-                                    ${hasScore ? `<div class="game-score ${team1ScoreClass} mt-2">${game.team_1_score}</div>` : ''}
+                            <div class="d-flex justify-content-center align-items-stretch">
+                                <div class="text-center flex-fill team-section">
+                                    <div class="team-info-wrapper">
+                                        <div class="team-name ${game.team_1.team_id === userTeamId ? 'user-team' : ''}">${game.team_1.team_name}</div>
+                                        <small class="text-muted">${game.team_1.username || ''}</small>
+                                    </div>
+                                    <div class="team-score-wrapper">
+                                        ${hasScore ? `<div class="game-score ${team1ScoreClass}">${game.team_1_score}</div>` : ''}
+                                    </div>
                                 </div>
                                 <div class="vs-separator">vs</div>
-                                <div class="text-center flex-fill">
-                                    <div class="team-name ${game.team_2.team_id === userTeamId ? 'user-team' : ''}">${game.team_2.team_name}</div>
-                                    <small class="text-muted">${game.team_2.username || ''}</small>
-                                    ${hasScore ? `<div class="game-score ${team2ScoreClass} mt-2">${game.team_2_score}</div>` : ''}
+                                <div class="text-center flex-fill team-section">
+                                    <div class="team-info-wrapper">
+                                        <div class="team-name ${game.team_2.team_id === userTeamId ? 'user-team' : ''}">${game.team_2.team_name}</div>
+                                        <small class="text-muted">${game.team_2.username || ''}</small>
+                                    </div>
+                                    <div class="team-score-wrapper">
+                                        ${hasScore ? `<div class="game-score ${team2ScoreClass}">${game.team_2_score}</div>` : ''}
+                                    </div>
                                 </div>
                             </div>
                             <div class="mt-2">${resultsContent}</div>
