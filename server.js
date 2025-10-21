@@ -327,7 +327,7 @@ app.use('/dashboard', require('./routes/dashboard'));
 app.use('/teams', require('./routes/teams'));
 app.use('/keepers', require('./routes/keepers'));
 app.use('/waivers', require('./routes/waivers'));
-app.use('/trades', require('./routes/trades'));
+// app.use('/trades', require('./routes/trades')); // TODO: Uncomment when trade routes are complete
 app.use('/draft', require('./routes/draft'));
 app.use('/players', require('./routes/players'));
 app.use('/history', require('./routes/history'));
