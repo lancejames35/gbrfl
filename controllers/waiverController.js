@@ -926,13 +926,14 @@ exports.cancelRequest = async (req, res) => {
  */
 async function recordWaiverTransaction(request, admin_user_id, pickupPlayerName, dropPlayerName) {
   try {
-    // Create transaction record
+    // Create transaction record with proper waiver wire format
     const transactionQuery = `
       INSERT INTO transactions (transaction_type, season_year, week, transaction_date, notes, created_by)
-      VALUES ('Waiver', 2025, ?, NOW(), ?, ?)
+      VALUES ('Waiver', 2025, ?, CURDATE(), ?, ?)
     `;
 
-    const notes = `Waiver: ${pickupPlayerName} acquired`;
+    // Format notes to match standard: "Waiver wire - 1st round, position 3"
+    const notes = `Waiver wire - ${request.waiver_round} round, position ${request.waiver_order_position}`;
     const transactionResult = await db.query(transactionQuery, [request.week, notes, admin_user_id]);
     const transaction_id = transactionResult.insertId;
 
@@ -956,7 +957,7 @@ async function recordWaiverTransaction(request, admin_user_id, pickupPlayerName,
       ) VALUES (?, ?, 'Lost', 'Player', ?)
     `, [transaction_id, request.fantasy_team_id, request.drop_player_id]);
 
-    console.log(`Recorded waiver transaction ${transaction_id} for team ${request.fantasy_team_id}`);
+    console.log(`Recorded waiver transaction ${transaction_id} for team ${request.fantasy_team_id}: ${notes}`);
     return transaction_id;
 
   } catch (error) {
