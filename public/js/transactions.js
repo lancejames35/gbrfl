@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // State
   let currentPage = 1;
-  const itemsPerPage = 50;
+  const itemsPerPage = 500; // Plenty of room for multi-season history
   let totalPages = 1;
   
   // Initialize

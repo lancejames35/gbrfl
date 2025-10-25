@@ -46,7 +46,7 @@ transactionController.getTransactions = async (req, res) => {
   try {
     // Get query parameters
     const page = parseInt(req.query.page) || 1;
-    const itemsPerPage = parseInt(req.query.itemsPerPage) || 250; // Handle full 18-week season (~200 transactions)
+    const itemsPerPage = parseInt(req.query.itemsPerPage) || 500; // Plenty for multi-season transaction history
     const season = req.query.season || 2025;
     const week = req.query.week || null;
     const owner = req.query.owner || null;
