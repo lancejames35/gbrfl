@@ -151,6 +151,11 @@ transactionController.getTransactions = async (req, res) => {
         MIN(CASE WHEN ti_acq.direction = 'Acquired' AND ti_acq.item_type = 'Player' AND ti_acq.team_id = tr.team_id
           THEN ti_acq.player_id END) as first_acquired_player_id
 
+      FROM transactions t
+      JOIN transaction_relationships tr ON t.transaction_id = tr.transaction_id
+      JOIN fantasy_teams ft ON tr.team_id = ft.team_id
+      JOIN users u ON ft.user_id = u.user_id
+
       -- Left join for acquired items
       LEFT JOIN transaction_items ti_acq ON t.transaction_id = ti_acq.transaction_id
         AND ti_acq.direction = 'Acquired'
