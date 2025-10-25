@@ -46,7 +46,7 @@ transactionController.getTransactions = async (req, res) => {
   try {
     // Get query parameters
     const page = parseInt(req.query.page) || 1;
-    const itemsPerPage = parseInt(req.query.itemsPerPage) || 50;
+    const itemsPerPage = parseInt(req.query.itemsPerPage) || 250; // Handle full 18-week season (~200 transactions)
     const season = req.query.season || 2025;
     const week = req.query.week || null;
     const owner = req.query.owner || null;
@@ -232,10 +232,11 @@ transactionController.getTransactions = async (req, res) => {
     const total = countResult[0]?.total || 0;
 
     // Add grouping, ordering and pagination to main query
+    // Extract week number for proper numeric sorting (handles both "Week 8" and "8" formats)
     query += `
       GROUP BY t.transaction_id, tr.team_id, ft.team_name, u.first_name, u.last_name
       ORDER BY
-        t.week DESC,
+        CAST(REGEXP_REPLACE(t.week, '[^0-9]', '') AS UNSIGNED) DESC,
         t.transaction_date DESC,
         t.transaction_id DESC,
         tr.team_id ASC
@@ -282,10 +283,11 @@ transactionController.getTransactions = async (req, res) => {
           const waiverDetails = Array.isArray(waiverDetailsResult[0]) ? waiverDetailsResult[0][0] : waiverDetailsResult[0];
 
           if (waiverDetails) {
-            // Get competing waiver requests
+            // Get competing waiver requests (ALL rounds, not just the same round)
             const competingQuery = `
               SELECT
                 wr.request_id,
+                wr.waiver_round,
                 wr.waiver_order_position,
                 ft.team_name,
                 u.first_name,
@@ -299,18 +301,16 @@ transactionController.getTransactions = async (req, res) => {
               JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
               WHERE wr.pickup_player_id = ?
                 AND (wr.week = ? OR (wr.week IS NULL AND ? IS NULL))
-                AND wr.waiver_round = ?
                 AND wr.fantasy_team_id != ?
                 AND wr.status = 'rejected'
                 AND (wr.notes IS NULL OR wr.notes LIKE '%Auto-rejected: Player acquired by another team%')
-              ORDER BY wr.waiver_order_position ASC
+              ORDER BY wr.waiver_round ASC, wr.waiver_order_position ASC
             `;
 
             const competingResult = await db.query(competingQuery, [
               transaction.first_acquired_player_id,
               transaction.week,
               transaction.week,
-              waiverDetails.waiver_round,
               transaction.fantasy_team_id
             ]);
 

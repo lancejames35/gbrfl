@@ -369,9 +369,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const loserPosition = competitor.waiver_order_position;
     const positionDiff = Math.abs(winnerPosition - loserPosition);
 
+    // Check if competitor tried in a different round
+    const winnerRound = winningTransaction.waiver_round || '1st';
+    const competitorRound = competitor.waiver_round || '1st';
+    const differentRound = winnerRound !== competitorRound;
+
     let story = '';
 
-    if (winnerPosition < loserPosition) {
+    if (differentRound) {
+      // Competitor tried in a different round
+      story = `Tried in <span class="badge bg-info">${competitorRound} round</span>, position ${toOrdinal(loserPosition)} - Lost to ${winningTransaction.team_name} who claimed in ${winnerRound} round`;
+    } else if (winnerPosition < loserPosition) {
       // Winner had higher priority (lower number)
       if (positionDiff === 1) {
         story = `Lost by <span class="text-danger">1 waiver position</span> to ${winningTransaction.team_name} (${toOrdinal(winnerPosition)} vs ${toOrdinal(loserPosition)})`;

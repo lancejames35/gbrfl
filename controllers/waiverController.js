@@ -465,9 +465,10 @@ exports.approveRequest = async (req, res) => {
 
     // Calculate current week if not set - BEFORE processing rejections
     let weekString = request.week;
+    const currentSeason = new Date().getFullYear();
+
     if (!weekString) {
       const WeekStatus = require('../models/WeekStatus');
-      const currentSeason = new Date().getFullYear();
 
       // Use the same week logic as lineup submissions for consistency
       const currentWeekNumber = await WeekStatus.getCurrentWeek(currentSeason);
@@ -484,14 +485,47 @@ exports.approveRequest = async (req, res) => {
       console.log(`Updated week to ${weekString} for all pending requests for player ${request.pickup_player_id}`);
     }
 
+    // Set waiver_order_position for ALL pending requests BEFORE auto-rejection
+    // This ensures rejected requests also get their position recorded
+    try {
+      const updateAllWaiverOrdersQuery = `
+        UPDATE waiver_requests wr
+        JOIN fantasy_teams ft ON wr.fantasy_team_id = ft.team_id
+        JOIN league_standings ls ON ft.team_id = ls.fantasy_team_id
+        SET wr.waiver_order_position = (11 - ls.position)
+        WHERE wr.pickup_player_id = ?
+          AND wr.status = 'pending'
+          AND ls.season_year = ?
+          AND wr.waiver_order_position IS NULL
+      `;
+      await db.query(updateAllWaiverOrdersQuery, [request.pickup_player_id, currentSeason]);
+      console.log(`Set waiver_order_position for all pending requests for player ${request.pickup_player_id}`);
+
+      // Re-fetch the request to get the updated waiver_order_position
+      const updatedRequestQuery = `
+        SELECT wr.*, ft.team_name
+        FROM waiver_requests wr
+        JOIN fantasy_teams ft ON wr.fantasy_team_id = ft.team_id
+        WHERE wr.request_id = ?
+      `;
+      const updatedRequestResult = await db.query(updatedRequestQuery, [request_id]);
+      if (updatedRequestResult.length > 0) {
+        Object.assign(request, updatedRequestResult[0]);
+        console.log(`Updated request object with waiver_order_position: ${request.waiver_order_position}`);
+      }
+    } catch (orderError) {
+      console.error('Error setting waiver order positions:', orderError);
+      // Don't fail the approval, but log the error
+    }
+
     // Check if pickup player is still available
     const availabilityCheckQuery = `
       SELECT COUNT(*) as roster_count
-      FROM fantasy_team_players 
+      FROM fantasy_team_players
       WHERE player_id = ?
     `;
     const availabilityResult = await db.query(availabilityCheckQuery, [request.pickup_player_id]);
-    
+
     if (availabilityResult[0].roster_count > 0) {
       return res.status(400).json({
         success: false,
@@ -589,21 +623,27 @@ exports.approveRequest = async (req, res) => {
       console.warn('Warning: Could not update lineup positions:', lineupError.message);
     }
 
-    // Ensure waiver order is set for the approved request
-    try {
-      const currentSeason = new Date().getFullYear();
+    // NOTE: waiver_order_position was already set earlier (before auto-rejection)
+    // This ensures both approved and rejected requests have proper position values
 
-      // Update waiver order if not set (week is already set above)
-      const updateWaiverOrderQuery = `
-        UPDATE waiver_requests wr
-        JOIN league_standings ls ON wr.fantasy_team_id = ls.fantasy_team_id
-        SET wr.waiver_order_position = (11 - ls.position)
-        WHERE wr.request_id = ? AND ls.season_year = ? AND wr.waiver_order_position IS NULL
+    // Record in unified transactions table
+    try {
+      // Get player names for the transaction
+      const playerQuery = `
+        SELECT p1.display_name as pickup_name, p2.display_name as drop_name
+        FROM nfl_players p1, nfl_players p2
+        WHERE p1.player_id = ? AND p2.player_id = ?
       `;
-      await db.query(updateWaiverOrderQuery, [request_id, currentSeason]);
-      console.log(`Ensured waiver order is set for approved request ${request_id} in ${weekString}`);
+      const playerResult = await db.query(playerQuery, [request.pickup_player_id, request.drop_player_id]);
+
+      if (playerResult.length > 0) {
+        const { pickup_name, drop_name } = playerResult[0];
+        await recordWaiverTransaction(request, admin_user_id, pickup_name, drop_name);
+        console.log(`Successfully recorded waiver transaction for request ${request_id}`);
+      }
     } catch (transactionError) {
-      console.warn('Warning: Could not ensure waiver order:', transactionError.message);
+      console.error('ERROR: Could not record waiver transaction:', transactionError.message);
+      console.error('Transaction error stack:', transactionError.stack);
     }
 
     // Log the activity
@@ -632,17 +672,9 @@ exports.approveRequest = async (req, res) => {
         WHERE p1.player_id = ? AND p2.player_id = ?
       `;
       const playerResult = await db.query(playerQuery, [request.pickup_player_id, request.drop_player_id]);
-      
+
       if (playerResult.length > 0) {
         const { pickup_name, drop_name } = playerResult[0];
-
-        // Record in unified transactions table
-        try {
-          await recordWaiverTransaction(request, admin_user_id, pickup_name, drop_name);
-        } catch (transactionError) {
-          console.warn('Warning: Could not record waiver transaction:', transactionError.message);
-        }
-
         await NotificationTriggers.notifyWaiverProcessed(
           request_id,
           request.fantasy_team_id,
@@ -926,6 +958,24 @@ exports.cancelRequest = async (req, res) => {
  */
 async function recordWaiverTransaction(request, admin_user_id, pickupPlayerName, dropPlayerName) {
   try {
+    console.log('Recording waiver transaction with data:', {
+      request_id: request.request_id,
+      week: request.week,
+      waiver_round: request.waiver_round,
+      waiver_order_position: request.waiver_order_position,
+      fantasy_team_id: request.fantasy_team_id,
+      pickup_player_id: request.pickup_player_id,
+      drop_player_id: request.drop_player_id
+    });
+
+    // Validate required fields
+    if (!request.week) {
+      throw new Error('Week is required but is NULL or undefined');
+    }
+    if (!request.waiver_order_position && request.waiver_order_position !== 0) {
+      console.warn('Warning: waiver_order_position is NULL or undefined - transaction notes will be incomplete');
+    }
+
     // Create transaction record with proper waiver wire format
     const transactionQuery = `
       INSERT INTO transactions (transaction_type, season_year, week, transaction_date, notes, created_by)
@@ -933,7 +983,12 @@ async function recordWaiverTransaction(request, admin_user_id, pickupPlayerName,
     `;
 
     // Format notes to match standard: "Waiver wire - 1st round, position 3"
-    const notes = `Waiver wire - ${request.waiver_round} round, position ${request.waiver_order_position}`;
+    const roundText = request.waiver_round === 1 ? '1st' : request.waiver_round === 2 ? '2nd' : `${request.waiver_round}th`;
+    const positionText = request.waiver_order_position || 'unknown';
+    const notes = `Waiver wire - ${roundText} round, position ${positionText}`;
+
+    console.log(`Creating transaction with notes: "${notes}"`);
+
     const transactionResult = await db.query(transactionQuery, [request.week, notes, admin_user_id]);
     const transaction_id = transactionResult.insertId;
 
@@ -957,11 +1012,12 @@ async function recordWaiverTransaction(request, admin_user_id, pickupPlayerName,
       ) VALUES (?, ?, 'Lost', 'Player', ?)
     `, [transaction_id, request.fantasy_team_id, request.drop_player_id]);
 
-    console.log(`Recorded waiver transaction ${transaction_id} for team ${request.fantasy_team_id}: ${notes}`);
+    console.log(`Successfully recorded waiver transaction ${transaction_id} for team ${request.fantasy_team_id}: ${notes}`);
     return transaction_id;
 
   } catch (error) {
     console.error('Error recording waiver transaction:', error);
+    console.error('Request data at time of error:', request);
     throw error;
   }
 }
