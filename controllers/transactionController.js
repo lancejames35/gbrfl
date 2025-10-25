@@ -234,7 +234,17 @@ transactionController.getTransactions = async (req, res) => {
     // Add grouping, ordering and pagination to main query
     // Extract week number for proper numeric sorting (handles both "Week 8" and "8" formats)
     query += `
-      GROUP BY t.transaction_id, tr.team_id, ft.team_name, u.first_name, u.last_name
+      GROUP BY
+        t.transaction_id,
+        t.transaction_type,
+        t.season_year,
+        t.week,
+        t.transaction_date,
+        t.notes,
+        tr.team_id,
+        ft.team_name,
+        u.first_name,
+        u.last_name
       ORDER BY
         CAST(REGEXP_REPLACE(t.week, '[^0-9]', '') AS UNSIGNED) DESC,
         t.transaction_date DESC,
