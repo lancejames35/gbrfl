@@ -149,24 +149,7 @@ transactionController.getTransactions = async (req, res) => {
 
         -- Get first acquired player for competitor lookup (waiver only)
         MIN(CASE WHEN ti_acq.direction = 'Acquired' AND ti_acq.item_type = 'Player' AND ti_acq.team_id = tr.team_id
-          THEN ti_acq.player_id END) as first_acquired_player_id,
-
-        -- Get waiver details for sorting (if this is a waiver transaction)
-        wr.waiver_round,
-        wr.waiver_order_position
-
-      FROM transactions t
-      JOIN transaction_relationships tr ON t.transaction_id = tr.transaction_id
-      JOIN fantasy_teams ft ON tr.team_id = ft.team_id
-      JOIN users u ON ft.user_id = u.user_id
-      LEFT JOIN waiver_requests wr ON t.transaction_type = 'Waiver'
-        AND wr.fantasy_team_id = tr.team_id
-        AND wr.status = 'approved'
-        AND wr.week = t.week
-        AND wr.pickup_player_id IN (
-          SELECT ti.player_id FROM transaction_items ti
-          WHERE ti.transaction_id = t.transaction_id AND ti.direction = 'Acquired' LIMIT 1
-        )
+          THEN ti_acq.player_id END) as first_acquired_player_id
 
       -- Left join for acquired items
       LEFT JOIN transaction_items ti_acq ON t.transaction_id = ti_acq.transaction_id
@@ -246,11 +229,9 @@ transactionController.getTransactions = async (req, res) => {
     // Add grouping, ordering and pagination to main query
     // Extract week number for proper numeric sorting (handles both "Week 8" and "8" formats)
     query += `
-      GROUP BY t.transaction_id, tr.team_id, ft.team_name, u.first_name, u.last_name, wr.waiver_round, wr.waiver_order_position
+      GROUP BY t.transaction_id, tr.team_id, ft.team_name, u.first_name, u.last_name
       ORDER BY
         CAST(REGEXP_REPLACE(t.week, '[^0-9]', '') AS UNSIGNED) DESC,
-        CASE WHEN wr.waiver_round = '1st' THEN 1 WHEN wr.waiver_round = '2nd' THEN 2 ELSE 999 END ASC,
-        wr.waiver_order_position ASC,
         t.transaction_date DESC,
         t.transaction_id DESC,
         tr.team_id ASC
@@ -361,6 +342,32 @@ transactionController.getTransactions = async (req, res) => {
         };
       })
     );
+
+    // Sort transactions by week (desc), then waiver round (asc), then position (asc)
+    transactionsWithCompetitors.sort((a, b) => {
+      // Extract week numbers for sorting
+      const weekA = parseInt(a.week?.replace(/\D/g, '') || '0');
+      const weekB = parseInt(b.week?.replace(/\D/g, '') || '0');
+
+      // Sort by week descending (newest first)
+      if (weekA !== weekB) return weekB - weekA;
+
+      // For same week, sort by waiver round (1st before 2nd)
+      const roundOrder = { '1st': 1, '2nd': 2 };
+      const roundA = roundOrder[a.waiver_round] || 999;
+      const roundB = roundOrder[b.waiver_round] || 999;
+
+      if (roundA !== roundB) return roundA - roundB;
+
+      // For same round, sort by waiver position (1 before 2)
+      const posA = a.waiver_order_position || 999;
+      const posB = b.waiver_order_position || 999;
+
+      if (posA !== posB) return posA - posB;
+
+      // Finally by transaction_id
+      return b.transaction_id - a.transaction_id;
+    });
 
     // Build response
     const response = {
