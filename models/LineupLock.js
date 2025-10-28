@@ -267,56 +267,107 @@ class LineupLock {
     try {
       console.log(`Populating empty lineups for Week ${weekNumber}, Season ${seasonYear}`);
 
-      // Get all lineup submissions for this week
-      const lineupsQuery = `
-        SELECT ls.lineup_id, ls.fantasy_team_id, ls.week_number, ls.game_type, ls.season_year
-        FROM lineup_submissions ls
-        WHERE ls.week_number = ? AND ls.season_year = ?
+      // Get all active fantasy teams
+      const teamsQuery = `
+        SELECT team_id, team_name
+        FROM fantasy_teams
+        WHERE is_active = 1
       `;
+      const teams = await db.query(teamsQuery);
+      console.log(`Found ${teams.length} active fantasy teams`);
 
-      const lineups = await db.query(lineupsQuery, [weekNumber, seasonYear]);
-      console.log(`Found ${lineups.length} lineup submissions for Week ${weekNumber}`);
+      // Get game types for this week from weekly_schedule
+      const scheduleQuery = `
+        SELECT DISTINCT game_type
+        FROM weekly_schedule
+        WHERE week_number = ? AND season_year = ?
+      `;
+      const gameTypes = await db.query(scheduleQuery, [weekNumber, seasonYear]);
+      console.log(`Found ${gameTypes.length} game type(s) for Week ${weekNumber}: ${gameTypes.map(g => g.game_type).join(', ')}`);
+
+      // If no schedule exists, default to primary only
+      const gameTypesToProcess = gameTypes.length > 0
+        ? gameTypes.map(g => g.game_type)
+        : ['primary'];
 
       let populated = 0;
       let skipped = 0;
+      let created = 0;
 
-      for (const lineup of lineups) {
-        // Check if this lineup already has saved positions (excluding pending waivers)
-        // We only count regular saved positions - pending waivers don't count as "user saved"
-        const existingPositions = await db.query(
-          'SELECT COUNT(*) as count FROM lineup_positions WHERE lineup_id = ? AND (player_status IS NULL OR player_status != \'pending_waiver\')',
-          [lineup.lineup_id]
-        );
+      // Process each team + game_type combination
+      for (const team of teams) {
+        for (const gameType of gameTypesToProcess) {
+          // Check if lineup_submission exists, create if not
+          let lineupQuery = `
+            SELECT lineup_id, fantasy_team_id, week_number, game_type, season_year
+            FROM lineup_submissions
+            WHERE fantasy_team_id = ?
+              AND week_number = ?
+              AND game_type = ?
+              AND season_year = ?
+          `;
 
-        if (existingPositions[0].count > 0) {
-          console.log(`Lineup ${lineup.lineup_id} already has ${existingPositions[0].count} saved positions, skipping`);
-          skipped++;
-          continue;
-        }
+          let lineupResult = await db.query(lineupQuery, [team.team_id, weekNumber, gameType, seasonYear]);
 
-        console.log(`Populating lineup ${lineup.lineup_id} (Team ${lineup.fantasy_team_id}, ${lineup.game_type})`);
+          let lineup;
+          if (lineupResult.length === 0) {
+            // Create the lineup_submission
+            console.log(`Creating lineup_submission for Team ${team.team_id} (${team.team_name}), Week ${weekNumber}, ${gameType}`);
+            const insertResult = await db.query(`
+              INSERT INTO lineup_submissions (fantasy_team_id, week_number, game_type, season_year, created_at)
+              VALUES (?, ?, ?, ?, NOW())
+            `, [team.team_id, weekNumber, gameType, seasonYear]);
 
-        // Find the most recent previous lineup with saved positions
-        const previousLineup = await this.findPreviousLineupWithPositions(
-          lineup.fantasy_team_id,
-          lineup.week_number,
-          lineup.game_type,
-          lineup.season_year
-        );
+            lineup = {
+              lineup_id: insertResult.insertId,
+              fantasy_team_id: team.team_id,
+              week_number: weekNumber,
+              game_type: gameType,
+              season_year: seasonYear
+            };
+            created++;
+          } else {
+            lineup = lineupResult[0];
+          }
 
-        if (previousLineup) {
-          console.log(`Found previous lineup: ${previousLineup.lineup_id} from Week ${previousLineup.week_number}`);
-          await this.copyLineupWithNewPlayerHandling(previousLineup.lineup_id, lineup.lineup_id, lineup.fantasy_team_id);
-          populated++;
-        } else {
-          console.log(`No previous lineup found, using alphabetical order`);
-          await this.createAlphabeticalLineup(lineup.lineup_id, lineup.fantasy_team_id);
-          populated++;
+          // Check if this lineup already has saved positions (excluding pending waivers)
+          // We only count regular saved positions - pending waivers don't count as "user saved"
+          const existingPositions = await db.query(
+            'SELECT COUNT(*) as count FROM lineup_positions WHERE lineup_id = ? AND (player_status IS NULL OR player_status != \'pending_waiver\')',
+            [lineup.lineup_id]
+          );
+
+          if (existingPositions[0].count > 0) {
+            console.log(`Lineup ${lineup.lineup_id} (Team ${team.team_id}, ${gameType}) already has ${existingPositions[0].count} saved positions, skipping`);
+            skipped++;
+            continue;
+          }
+
+          console.log(`Populating lineup ${lineup.lineup_id} (Team ${team.team_id}, ${gameType})`);
+
+          // Always look for previous week's PRIMARY lineup as the source
+          const previousLineup = await this.findPreviousLineupWithPositions(
+            lineup.fantasy_team_id,
+            lineup.week_number,
+            'primary', // Always use primary as source
+            lineup.season_year
+          );
+
+          if (previousLineup) {
+            console.log(`Found previous lineup: ${previousLineup.lineup_id} from Week ${previousLineup.week_number}`);
+            await this.copyLineupWithNewPlayerHandling(previousLineup.lineup_id, lineup.lineup_id, lineup.fantasy_team_id);
+            populated++;
+          } else {
+            console.log(`No previous lineup found, using alphabetical order`);
+            await this.createAlphabeticalLineup(lineup.lineup_id, lineup.fantasy_team_id);
+            populated++;
+          }
         }
       }
 
       return {
-        total: lineups.length,
+        total: teams.length * gameTypesToProcess.length,
+        created,
         populated,
         skipped
       };
