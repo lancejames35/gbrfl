@@ -267,7 +267,21 @@ static async getPlayers(teamId) {
       );
       
       const playerInfo = playerQuery.length > 0 ? playerQuery[0] : null;
-      
+
+      // Before deleting, save to historical_rosters with end date
+      await db.query(
+        `INSERT INTO historical_rosters
+         (season_year, fantasy_team_id, player_id, espn_id, active_from, active_until,
+          acquisition_type, acquisition_date, was_keeper, notes)
+         SELECT YEAR(CURDATE()), ftp.fantasy_team_id, ftp.player_id, np.espn_id,
+                ftp.acquisition_date, NOW(), ftp.acquisition_type, ftp.acquisition_date,
+                ftp.is_keeper, 'Player dropped'
+         FROM fantasy_team_players ftp
+         JOIN nfl_players np ON ftp.player_id = np.player_id
+         WHERE ftp.fantasy_team_id = ? AND ftp.player_id = ?`,
+        [teamId, playerId]
+      );
+
       // Remove player from roster
       const result = await db.query(
         'DELETE FROM fantasy_team_players WHERE fantasy_team_id = ? AND player_id = ?',

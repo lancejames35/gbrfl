@@ -30,7 +30,12 @@
                                 <i class="bi bi-person-badge text-primary me-2"></i>
                                 <strong>Head Coach:</strong>
                             </div>
-                            <span class="ms-4"><%= team.head_coach || 'Not assigned' %></span>
+                            <span class="ms-4">
+                                <%= team.head_coach || 'Not assigned' %>
+                                <% if (team.head_coach && team.head_coach_team) { %>
+                                    <span class="text-muted">(<%= team.head_coach_team %>)</span>
+                                <% } %>
+                            </span>
                         </div>
                         
                         <div class="mb-3">

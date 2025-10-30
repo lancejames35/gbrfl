@@ -58,7 +58,7 @@
                                 </div>
                                 <div>
                                     <h4 class="mb-1"><%= team.head_coach %></h4>
-                                    <p class="text-muted mb-0">Coach</p>
+                                    <p class="text-muted mb-0"><%= team.head_coach_team || 'Coach' %></p>
                                 </div>
                             </div>
                         <% } else { %>
@@ -210,32 +210,6 @@
                         </dl>
                     </div>
                 </div>
-
-                <!-- Keeper Management Link (only for team owner) -->
-                <% if (canEdit) { %>
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Keeper Management</h5>
-                    </div>
-                    <div class="card-body text-center">
-                        <% if (!deadlinePassed) { %>
-                            <p class="text-muted mb-3">
-                                <%= keeperCount %> of <%= keeperLimit %> keepers selected
-                            </p>
-                            <a href="/keepers/<%= team.team_id %>" class="btn btn-primary">
-                                <i class="bi bi-shield-check"></i> Manage Keepers
-                            </a>
-                        <% } else { %>
-                            <p class="text-muted mb-3">
-                                <%= keeperCount %> keepers finalized
-                            </p>
-                            <a href="/keepers/<%= team.team_id %>" class="btn btn-outline-secondary">
-                                <i class="bi bi-eye"></i> View Keepers
-                            </a>
-                        <% } %>
-                    </div>
-                </div>
-                <% } %>
 
                 <!-- Waiver Requests (for team owner only) -->
                 <% if (canEdit) { %>

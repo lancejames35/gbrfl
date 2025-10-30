@@ -80,6 +80,11 @@
                     <i class="bi bi-people-fill me-2"></i>By Team
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="keepers-tab" data-bs-toggle="tab" data-bs-target="#keepers" type="button" role="tab">
+                    <i class="bi bi-star-fill me-2"></i>Keepers
+                </button>
+            </li>
         </ul>
 
         <!-- Tab Content -->
@@ -287,6 +292,56 @@
                                             <div class="list-group-item text-center text-muted py-4">
                                                 <i class="bi bi-inbox display-6 d-block mb-2"></i>
                                                 No picks yet
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <!-- Keepers Tab -->
+            <div class="tab-pane fade" id="keepers" role="tabpanel">
+                <div class="row">
+                    <% allTeams.forEach(team => {
+                        const teamKeepers = keepers.filter(k => k.team_id === team.team_id);
+                    %>
+                        <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-star-fill me-1"></i>
+                                        <%= team.team_name %>
+                                        <br><small><%= team.first_name %> <%= team.last_name %></small>
+                                    </h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="list-group list-group-flush">
+                                        <% if (teamKeepers.length > 0) { %>
+                                            <% teamKeepers.forEach(keeper => { %>
+                                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <div class="fw-bold"><%= keeper.display_name %></div>
+                                                        <small class="text-muted">
+                                                            <span class="position-badge position-<%= keeper.position.toLowerCase() %>">
+                                                                <%= keeper.position %>
+                                                            </span>
+                                                            <%= keeper.team_code || 'FA' %>
+                                                        </small>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <span class="badge bg-warning text-dark">
+                                                            <i class="bi bi-star-fill me-1"></i>Keeper
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            <% }); %>
+                                        <% } else { %>
+                                            <div class="list-group-item text-center text-muted py-4">
+                                                <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                                                No keepers designated
                                             </div>
                                         <% } %>
                                     </div>

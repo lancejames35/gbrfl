@@ -960,12 +960,27 @@ exports.getDraftResults = async (req, res) => {
     // Get draft status
     const draftStatus = await this.getDraftStatus();
 
+    // Get keepers for current season
+    const keepers = await db.query(
+      `SELECT hk.*, p.display_name, p.position, nt.team_code,
+              ft.team_name, ft.team_id, u.first_name, u.last_name
+       FROM historical_keepers hk
+       JOIN nfl_players p ON hk.player_id = p.player_id
+       LEFT JOIN nfl_teams nt ON p.nfl_team_id = nt.nfl_team_id
+       JOIN fantasy_teams ft ON hk.fantasy_team_id = ft.team_id
+       JOIN users u ON ft.user_id = u.user_id
+       WHERE hk.season_year = ?
+       ORDER BY ft.team_name, FIELD(p.position, 'QB', 'RB', 'RC', 'PK', 'DU')`,
+      [CURRENT_SEASON]
+    );
+
     res.render('draft/results', {
       title: 'Draft Results',
       allTeams,
       picks,
       draftOrder,
       draftStatus,
+      keepers,
       user: req.session.user,
       originalAdmin: req.session.originalAdmin,
       activePage: 'draft'

@@ -762,11 +762,12 @@
             
             // Head Coach
             if (lineupData.head_coach) {
+                const coachTeam = lineupData.head_coach_team ? ` (${lineupData.head_coach_team})` : '';
                 html += `
                     <div class="lineup-section mb-3">
                         <h6 class="text-muted mb-2"><i class="bi bi-person-badge"></i> Head Coach</h6>
                         <div class="lineup-player head-coach">
-                            <span class="player-name">${lineupData.head_coach}</span>
+                            <span class="player-name">${lineupData.head_coach}${coachTeam}</span>
                         </div>
                     </div>
                 `;
@@ -783,17 +784,17 @@
             
             for (const [position, config] of Object.entries(positionConfig)) {
                 const players = lineupData.positions[position] || [];
+                html += `
+                    <div class="lineup-section mb-3">
+                        <h6 class="text-muted mb-2"><i class="${config.icon}"></i> ${config.name}</h6>
+                `;
+
                 if (players.length > 0) {
-                    html += `
-                        <div class="lineup-section mb-3">
-                            <h6 class="text-muted mb-2"><i class="${config.icon}"></i> ${config.name}</h6>
-                    `;
-                    
                     players.forEach((player, index) => {
                         const isStarter = index < config.starters;
                         const starterClass = isStarter ? 'starter' : 'backup';
                         const roleText = isStarter ? 'Starter' : 'Backup';
-                        
+
                         html += `
                             <div class="lineup-player ${starterClass}">
                                 <div class="player-info">
@@ -804,9 +805,15 @@
                             </div>
                         `;
                     });
-                    
-                    html += '</div>';
+                } else {
+                    html += `
+                        <div class="lineup-player empty">
+                            <span class="text-muted fst-italic">No player selected for this position</span>
+                        </div>
+                    `;
                 }
+
+                html += '</div>';
             }
             
             container.innerHTML = html;

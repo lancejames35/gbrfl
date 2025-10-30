@@ -8,7 +8,11 @@
       "Bash(git reset:*)",
       "Bash(npm install:*)",
       "Bash(node:*)",
-      "Bash(npm test)"
+      "Bash(npm test)",
+      "Bash(grep:*)",
+      "Bash(git log:*)",
+      "Bash(python3:*)",
+      "Bash(mysql:*)"
     ],
     "deny": [],
     "ask": []

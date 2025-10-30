@@ -9,6 +9,7 @@ const LineupLock = require('../models/LineupLock');
 const FantasyTeam = require('../models/FantasyTeam');
 const WeeklySchedule = require('../models/WeeklySchedule');
 const NFLTeam = require('../models/nflTeam');
+const WeekStatus = require('../models/WeekStatus');
 const db = require('../config/database');
 const { validationResult } = require('express-validator');
 
@@ -71,9 +72,20 @@ exports.getLineupsForWeek = async (req, res) => {
     const teamId = req.query.team || userTeams[0].team_id;
     const selectedTeam = userTeams.find(t => t.team_id == teamId) || userTeams[0];
 
+    // Get head coach's NFL team information
+    if (selectedTeam.head_coach) {
+      const coachTeamRows = await db.query(
+        'SELECT team_name FROM nfl_teams WHERE head_coach = ?',
+        [selectedTeam.head_coach]
+      );
+      if (coachTeamRows.length > 0) {
+        selectedTeam.head_coach_team = coachTeamRows[0].team_name;
+      }
+    }
+
     // Get or create lineup submission
     let lineup = await LineupSubmission.getByTeamAndWeek(selectedTeam.team_id, weekNumber, gameType, seasonYear);
-    
+
     if (!lineup) {
       // Create new lineup if it doesn't exist
       const lineupId = await LineupSubmission.createLineup({
@@ -82,7 +94,7 @@ exports.getLineupsForWeek = async (req, res) => {
         game_type: gameType,
         season_year: seasonYear
       });
-      
+
       lineup = await LineupSubmission.getByTeamAndWeek(selectedTeam.team_id, weekNumber, gameType, seasonYear);
     }
 
@@ -177,6 +189,8 @@ exports.saveLineup = async (req, res) => {
     // Update positions
     await LineupPosition.updatePositions(lineup.lineup_id, positions);
 
+    // Save to historical_lineups for historical preservation
+    await saveToHistoricalLineups(lineup.lineup_id, req.body.season_year || 2025);
 
     // Update lineup status if specified
     if (status === 'submitted') {
@@ -679,6 +693,62 @@ exports.saveHeadCoach = async (req, res) => {
 };
 
 /**
+ * Save lineup to historical_lineups table for preservation
+ * @param {number} lineupId - The lineup ID
+ * @param {number} seasonYear - The season year
+ */
+async function saveToHistoricalLineups(lineupId, seasonYear) {
+  try {
+    // First, delete any existing historical entries for this lineup
+    await db.query(`
+      DELETE FROM historical_lineups
+      WHERE season_year = ? AND lineup_id = ?
+    `, [seasonYear, lineupId]);
+
+    // Insert current lineup state into historical_lineups
+    await db.query(`
+      INSERT INTO historical_lineups
+        (season_year, week_number, game_type, fantasy_team_id, team_name_at_time,
+         owner_name_at_time, player_id, espn_id, player_name_at_time, position,
+         lineup_position, acquisition_type, was_keeper, submitted_at, is_locked, lineup_id)
+      SELECT
+        ls.season_year,
+        ls.week_number,
+        ls.game_type,
+        ls.fantasy_team_id,
+        ft.team_name as team_name_at_time,
+        CONCAT(u.first_name, ' ', u.last_name) as owner_name_at_time,
+        lp.player_id,
+        np.espn_id,
+        np.display_name as player_name_at_time,
+        np.position,
+        CONCAT(lp.position_type, lp.sort_order) as lineup_position,
+        COALESCE(ftp.acquisition_type, 'Unknown') as acquisition_type,
+        COALESCE(ftp.is_keeper, 0) as was_keeper,
+        ls.submitted_at,
+        COALESCE(ll.is_locked, 0) as is_locked,
+        ls.lineup_id
+      FROM lineup_submissions ls
+      JOIN lineup_positions lp ON ls.lineup_id = lp.lineup_id
+      JOIN fantasy_teams ft ON ls.fantasy_team_id = ft.team_id
+      JOIN users u ON ft.user_id = u.user_id
+      JOIN nfl_players np ON lp.player_id = np.player_id
+      LEFT JOIN fantasy_team_players ftp ON lp.player_id = ftp.player_id
+        AND ls.fantasy_team_id = ftp.fantasy_team_id
+      LEFT JOIN lineup_locks ll ON ls.week_number = ll.week_number
+        AND ls.game_type = ll.game_type
+        AND ls.season_year = ll.season_year
+      WHERE ls.lineup_id = ?
+    `, [lineupId]);
+
+    console.log(`Saved lineup ${lineupId} to historical_lineups`);
+  } catch (error) {
+    console.error(`Error saving lineup ${lineupId} to historical_lineups:`, error);
+    // Don't throw - we don't want to break the lineup save if historical save fails
+  }
+}
+
+/**
  * Helper function to get current NFL week
  * @returns {number} Current week number
  */
@@ -716,6 +786,84 @@ async function getNextUnlockedWeek(seasonYear = 2025) {
     console.error('Error getting next unlocked week:', error);
     // Fallback to current week
     return getCurrentWeek();
+  }
+}
+
+/**
+ * Get historical lineup data organized by position
+ * @param {number} lineupId - The lineup ID to fetch
+ * @param {number} seasonYear - The season year
+ * @returns {Promise<Object>} Roster organized by position type
+ */
+async function getHistoricalLineupByPosition(lineupId, seasonYear) {
+  try {
+    // First, get the week and team info from the lineup_id
+    const lineupInfo = await db.query(`
+      SELECT week_number, game_type, fantasy_team_id
+      FROM lineup_submissions
+      WHERE lineup_id = ?
+    `, [lineupId]);
+
+    if (!lineupInfo || lineupInfo.length === 0) {
+      return null;
+    }
+
+    const { week_number, game_type, fantasy_team_id } = lineupInfo[0];
+
+    // Fetch historical lineup data using week, game_type, and team_id
+    const historicalData = await db.query(`
+      SELECT
+        hl.player_id,
+        hl.player_name_at_time as display_name,
+        hl.position,
+        hl.lineup_position,
+        hl.acquisition_type,
+        hl.was_keeper as is_keeper,
+        hl.espn_id
+      FROM historical_lineups hl
+      WHERE hl.season_year = ? AND hl.week_number = ? AND hl.game_type = ? AND hl.fantasy_team_id = ?
+      ORDER BY hl.lineup_position
+    `, [seasonYear, week_number, game_type, fantasy_team_id]);
+
+    if (!historicalData || historicalData.length === 0) {
+      return null;
+    }
+
+    // Organize by position type (matching the format expected by the view)
+    const organized = {
+      quarterback: { starters: [], backups: [] },
+      running_back: { starters: [], backups: [] },
+      receiver: { starters: [], backups: [] },
+      place_kicker: { starters: [], backups: [] },
+      defense: { starters: [], backups: [] }
+    };
+
+    // Position requirements
+    const requirements = {
+      QB: { position: 'quarterback', starters: 2 },
+      RB: { position: 'running_back', starters: 3 },
+      RC: { position: 'receiver', starters: 3 },
+      PK: { position: 'place_kicker', starters: 1 },
+      DU: { position: 'defense', starters: 1 }
+    };
+
+    // Map position codes and organize into starters/backups
+    historicalData.forEach(player => {
+      const posConfig = requirements[player.position];
+      if (posConfig) {
+        const positionGroup = organized[posConfig.position];
+        if (positionGroup.starters.length < posConfig.starters) {
+          positionGroup.starters.push(player);
+        } else {
+          positionGroup.backups.push(player);
+        }
+      }
+    });
+
+    return organized;
+  } catch (error) {
+    console.error('Error fetching historical lineup:', error);
+    return null;
   }
 }
 

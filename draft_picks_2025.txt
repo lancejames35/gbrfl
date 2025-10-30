@@ -1,0 +1,91 @@
+overall_pick	round	pick_number	fantasy_team_id	team_name	player_id	player_name	espn_id	position	pick_time
+1	1	1	4	Jeantymen's Club	307	Ashton Jeanty	4890973	RB	2025-08-31 13:04:06
+2	1	2	3	Hawk Tua on my Bi'Johnson	246	Omarion Hampton	4685382	RB	2025-08-31 13:16:23
+3	1	3	5	Nacua Matata	658	Cameron Ward	4688380	QB	2025-08-31 13:16:36
+4	1	4	6	Sekundeez	258	TreVeyon Henderson	4432710	RB	2025-08-31 13:26:00
+5	1	5	6	Sekundeez	252	RJ Harvey	4568490	RB	2025-08-31 13:27:47
+6	1	6	8	Sword of Morning	412	Tetairoa McMillan	4685472	RC	2025-08-31 13:31:21
+7	1	7	3	Hawk Tua on my Bi'Johnson	175	Emeka Egbuka	4567750	RC	2025-08-31 13:36:14
+8	1	8	10	Rough Rodgers Goes Riding	141	Jaxson Dart	4689114	QB	2025-08-31 13:47:00
+9	1	9	7	Malik My Judkins	318	Kaleb Johnson	4819231	RB	2025-08-31 13:49:36
+10	1	10	4	Jeantymen's Club	291	Travis Hunter	4685415	RC	2025-08-31 13:52:36
+11	2	1	9	Runnin' It Back	230	Matthew Golden	4701936	RC	2025-08-31 13:59:48
+12	2	2	7	Malik My Judkins	335	Quinshon Judkins	4685702	RB	2025-08-31 14:00:20
+13	2	3	5	Nacua Matata	134	Jacory Croskey-Merritt	4575131	RB	2025-08-31 14:08:39
+14	2	4	6	Sekundeez	496	George Pickens	4426354	RC	2025-08-31 14:10:22
+15	2	5	1	Dick Six	166	Josh Downs	4688813	RC	2025-08-31 14:12:18
+16	2	6	8	Sword of Morning	660	Tyler Warren	4431459	RC	2025-08-31 14:12:51
+17	2	7	3	Hawk Tua on my Bi'Johnson	388	Jordan Mason	4360569	RB	2025-08-31 14:14:38
+18	2	8	10	Rough Rodgers Goes Riding	395	Trey McBride	4361307	RC	2025-08-31 14:15:51
+19	2	9	7	Malik My Judkins	645	Bhayshul Tuten	4882093	RB	2025-08-31 14:16:42
+20	2	10	1	Dick Six	427	Jalen Milroe	4432734	QB	2025-08-31 14:16:54
+21	3	1	4	Jeantymen's Club	477	Green Bay Packers	NULL	DU	2025-08-31 14:20:19
+22	3	2	5	Nacua Matata	579	Cam Skattebo	4696981	RB	2025-08-31 14:21:04
+23	3	3	5	Nacua Matata	54	Buffalo Bills	NULL	DU	2025-08-31 14:21:10
+24	3	4	6	Sekundeez	90	Luther Burden III	4685278	RC	2025-08-31 14:22:14
+25	3	5	8	Sword of Morning	146	Ray Davis	4429501	RB	2025-08-31 14:33:01
+26	3	6	8	Sword of Morning	177	Austin Ekeler	3068267	RB	2025-08-31 14:38:45
+27	3	7	3	Hawk Tua on my Bi'Johnson	552	Dylan Sampson	5081397	RB	2025-08-31 14:39:51
+28	3	8	2	Tucker Carlson	559	Shedeur Sanders	4432762	QB	2025-08-31 14:44:50
+29	3	9	7	Malik My Judkins	56	Jaydon Blue	4685279	RB	2025-08-31 14:45:03
+30	3	10	9	Runnin' It Back	567	Seattle Seahawks	NULL	DU	2025-08-31 14:54:07
+31	4	1	4	Jeantymen's Club	519	Jayden Reed	4362249	RC	2025-08-31 14:54:33
+32	4	2	6	Sekundeez	501	Michael Pittman Jr.	4035687	RC	2025-08-31 14:55:26
+33	4	3	5	Nacua Matata	514	Spencer Rattler	4426339	QB	2025-08-31 14:57:16
+34	4	4	6	Sekundeez	104	Los Angeles Chargers	NULL	DU	2025-08-31 14:58:13
+35	4	5	1	Dick Six	266	Jayden Higgins	4877706	RC	2025-08-31 15:00:01
+36	4	6	5	Nacua Matata	152	Cameron Dicker	4362081	PK	2025-08-31 15:01:07
+37	4	7	3	Hawk Tua on my Bi'Johnson	25	Brandon Aubrey	3953687	PK	2025-08-31 15:03:29
+38	4	8	10	Rough Rodgers Goes Riding	344	George Kittle	3040151	RC	2025-08-31 15:05:13
+39	4	9	5	Nacua Matata	222	New York Giants	NULL	DU	2025-08-31 15:05:27
+40	4	10	1	Dick Six	575	Tyler Shough	4360689	QB	2025-08-31 15:05:52
+41	5	1	2	Tucker Carlson	110	Nick Chubb	3128720	RB	2025-08-31 15:09:09
+42	5	2	3	Hawk Tua on my Bi'Johnson	21	Tyler Allgeier	4373626	RB	2025-08-31 15:10:33
+43	5	3	2	Tucker Carlson	269	Justice Hill	4038441	RB	2025-08-31 15:18:32
+44	5	4	1	Dick Six	249	Tre' Harris	4686612	RC	2025-08-31 15:18:45
+45	5	5	1	Dick Six	233	Ollie Gordon II	4711533	RB	2025-08-31 15:18:53
+46	5	6	6	Sekundeez	310	Jauan Jennings	3886598	RC	2025-08-31 15:21:16
+47	5	7	3	Hawk Tua on my Bi'Johnson	248	Najee Harris	4241457	RB	2025-08-31 15:23:19
+48	5	8	10	Rough Rodgers Goes Riding	513	Los Angeles Rams	NULL	DU	2025-08-31 15:28:28
+49	5	9	7	Malik My Judkins	571	Khalil Shakir	4373678	RC	2025-08-31 15:28:42
+50	5	10	4	Jeantymen's Club	214	Dillon Gabriel	4427238	QB	2025-08-31 15:29:38
+51	6	1	4	Jeantymen's Club	128	Blake Corum	4429096	RB	2025-08-31 15:30:58
+52	6	2	2	Tucker Carlson	289	Kareem Hunt	3059915	RB	2025-08-31 15:34:40
+53	6	3	4	Jeantymen's Club	340	Travis Kelce	15847	RC	2025-08-31 15:35:18
+54	6	4	6	Sekundeez	422	Jakobi Meyers	3916433	RC	2025-08-31 15:37:54
+55	6	5	1	Dick Six	282	Will Howard	4429955	QB	2025-08-31 15:38:10
+56	6	6	8	Sword of Morning	61	Chris Boswell	17372	PK	2025-08-31 15:44:22
+57	6	7	3	Hawk Tua on my Bi'Johnson	539	Chris Rodriguez Jr.	4362619	RB	2025-08-31 15:44:34
+58	6	8	10	Rough Rodgers Goes Riding	225	DJ Giddens	4874509	RB	2025-08-31 15:48:35
+59	6	9	7	Malik My Judkins	97	Arizona Cardinals	NULL	DU	2025-08-31 15:48:48
+60	6	10	9	Runnin' It Back	597	Tyjae Spears	4428557	RB	2025-08-31 15:58:29
+61	7	1	4	Jeantymen's Club	38	Jake Bates	4689936	PK	2025-08-31 15:59:29
+62	7	2	2	Tucker Carlson	1	San Francisco 49ers	NULL	DU	2025-08-31 16:03:37
+63	7	3	2	Tucker Carlson	129	Kirk Cousins	14880	QB	2025-08-31 16:07:32
+64	7	4	6	Sekundeez	36	Tyler Bass	3917232	PK	2025-08-31 16:08:28
+65	7	5	1	Dick Six	369	MarShawn Lloyd	4429023	RB	2025-08-31 16:08:46
+66	7	6	8	Sword of Morning	618	Adam Thielen	16460	RC	2025-08-31 16:13:06
+67	7	7	3	Hawk Tua on my Bi'Johnson	160	Miami Dolphins	NULL	DU	2025-08-31 16:17:13
+68	7	8	10	Rough Rodgers Goes Riding	290	Jarquez Hunter	4710341	RB	2025-08-31 16:17:49
+69	7	9	8	Sword of Morning	2	Israel Abanikanda	4429202	RB	2025-08-31 16:27:17
+70	7	10	9	Runnin' It Back	436	Kyle Monangai	4608686	RB	2025-08-31 16:30:05
+71	8	1	4	Jeantymen's Club	216	Kenneth Gainwell	4371733	RB	2025-08-31 16:39:47
+72	8	2	2	Tucker Carlson	94	Harrison Butker	3055899	PK	2025-08-31 16:39:59
+73	8	3	8	Sword of Morning	574	Will Shipley	4431545	RB	2025-08-31 16:40:41
+74	8	4	2	Tucker Carlson	99	Daniel Carlson	3051909	PK	2025-08-31 16:42:25
+75	8	5	9	Runnin' It Back	407	Chase McLaughlin	3150744	PK	2025-08-31 16:44:12
+76	8	6	7	Malik My Judkins	587	Brashard Smith	4596602	RB	2025-08-31 16:44:22
+77	8	7	3	Hawk Tua on my Bi'Johnson	485	New England Patriots	NULL	DU	2025-08-31 16:47:32
+78	8	8	10	Rough Rodgers Goes Riding	439	Darnell Mooney	4040655	RC	2025-08-31 16:49:12
+79	8	9	7	Malik My Judkins	378	Wil Lutz	2985659	PK	2025-08-31 16:49:21
+80	8	10	9	Runnin' It Back	164	DeMario Douglas	4427095	RC	2025-08-31 16:51:05
+81	9	1	9	Runnin' It Back	8	Brandon Aiyuk	4360438	RC	2025-08-31 16:55:15
+82	9	2	10	Rough Rodgers Goes Riding	88	Pat Bryant	4600981	RC	2025-08-31 16:55:41
+83	9	3	2	Tucker Carlson	535	Wan'Dale Robinson	4569587	RC	2025-08-31 16:58:19
+84	9	4	8	Sword of Morning	383	Marcus Mariota	2576980	QB	2025-08-31 16:59:47
+85	9	5	9	Runnin' It Back	424	Kendre Miller	4599739	RB	2025-08-31 17:01:07
+86	9	6	1	Dick Six	118	Washington Commanders	NULL	DU	2025-08-31 17:01:18
+87	9	7	2	Tucker Carlson	640	Sean Tucker	4430871	RB	2025-08-31 17:02:44
+88	9	8	10	Rough Rodgers Goes Riding	628	Cedric Tillman	4369863	RC	2025-08-31 17:03:02
+89	9	9	10	Rough Rodgers Goes Riding	464	Jaylin Noel	4586312	RC	2025-08-31 17:03:06
+90	9	10	9	Runnin' It Back	699	Roman Wilson	4431492	RC	2025-08-31 17:03:46

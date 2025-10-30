@@ -11,6 +11,7 @@ const LineupPosition = require('../models/LineupPosition');
 const LineupLock = require('../models/LineupLock');
 const WeekStatus = require('../models/WeekStatus');
 const MatchupScore = require('../models/MatchupScore');
+const db = require('../config/database');
 
 /**
  * Get current week based on NFL game completion status
@@ -118,6 +119,10 @@ exports.getScheduleData = async (req, res) => {
 
       // Get week status once for all games in this week
       const weekStatus = await WeekStatus.getWeekStatus(parseInt(week), parseInt(seasonYear));
+      const isCompletedWeek = weekStatus.status === 'completed';
+
+      // Show lineups for completed weeks OR locked weeks
+      const shouldShowLineups = isCompletedWeek || isLocked;
 
       // Get manual scores for this week
       const manualScores = await MatchupScore.getScoresByWeek(parseInt(week), parseInt(seasonYear));
@@ -158,28 +163,58 @@ exports.getScheduleData = async (req, res) => {
             game.winner = null;
           }
           
-          // Add lineup data if lineups are locked
-          if (isLocked) {
+          // Add lineup data if lineups should be shown (completed or locked weeks)
+          if (shouldShowLineups) {
             // Get lineup data for both teams
             if (team1Lineup) {
+              // Always use LineupPosition data - it has the correct starter/backup positions
               const team1LineupPositions = await LineupPosition.getTeamRosterByPosition(game.team_1.team_id, team1Lineup.lineup_id);
+
+              // Get head coach's NFL team
+              let headCoachTeam = null;
+              if (team1Lineup.head_coach) {
+                const coachTeamRows = await db.query(
+                  'SELECT team_name FROM nfl_teams WHERE head_coach = ?',
+                  [team1Lineup.head_coach]
+                );
+                if (coachTeamRows.length > 0) {
+                  headCoachTeam = coachTeamRows[0].team_name;
+                }
+              }
+
               game.team_1_lineup = {
                 head_coach: team1Lineup.head_coach,
+                head_coach_team: headCoachTeam,
                 positions: team1LineupPositions
               };
             }
-            
+
             if (team2Lineup) {
+              // Always use LineupPosition data - it has the correct starter/backup positions
               const team2LineupPositions = await LineupPosition.getTeamRosterByPosition(game.team_2.team_id, team2Lineup.lineup_id);
+
+              // Get head coach's NFL team
+              let headCoachTeam = null;
+              if (team2Lineup.head_coach) {
+                const coachTeamRows = await db.query(
+                  'SELECT team_name FROM nfl_teams WHERE head_coach = ?',
+                  [team2Lineup.head_coach]
+                );
+                if (coachTeamRows.length > 0) {
+                  headCoachTeam = coachTeamRows[0].team_name;
+                }
+              }
+
               game.team_2_lineup = {
                 head_coach: team2Lineup.head_coach,
+                head_coach_team: headCoachTeam,
                 positions: team2LineupPositions
               };
             }
           }
-          
-          // Add lock status to game data
-          game.lineups_locked = isLocked;
+
+          // Add lock status to game data - show as locked for both completed and locked weeks
+          game.lineups_locked = shouldShowLineups;
         }
       }
     }
@@ -223,3 +258,73 @@ exports.getScheduleStats = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get historical lineup data organized by position for schedule display
+ * @param {number} lineupId - The lineup ID (we'll look it up to get week/team info)
+ * @param {number} seasonYear - The season year
+ * @returns {Promise<Object|null>} Lineup data organized by position, or null if not found
+ */
+async function getHistoricalLineupPositions(lineupId, seasonYear) {
+  try {
+    // First, get the week and team info from the lineup_id
+    const lineupInfo = await db.query(`
+      SELECT week_number, game_type, fantasy_team_id
+      FROM lineup_submissions
+      WHERE lineup_id = ?
+    `, [lineupId]);
+
+    if (!lineupInfo || lineupInfo.length === 0) {
+      return null;
+    }
+
+    const { week_number, game_type, fantasy_team_id } = lineupInfo[0];
+
+    // Now fetch historical lineup data using week, game_type, and team_id
+    const historicalData = await db.query(`
+      SELECT
+        player_id,
+        player_name_at_time as display_name,
+        position,
+        lineup_position,
+        espn_id
+      FROM historical_lineups
+      WHERE season_year = ? AND week_number = ? AND game_type = ? AND fantasy_team_id = ?
+      ORDER BY lineup_position
+    `, [seasonYear, week_number, game_type, fantasy_team_id]);
+
+    if (!historicalData || historicalData.length === 0) {
+      return null;
+    }
+
+    // Organize by position (matching format expected by schedule view)
+    const organized = {
+      quarterback: [],
+      running_back: [],
+      receiver: [],
+      place_kicker: [],
+      defense: []
+    };
+
+    // Position mapping
+    const positionMap = {
+      'QB': 'quarterback',
+      'RB': 'running_back',
+      'RC': 'receiver',
+      'PK': 'place_kicker',
+      'DU': 'defense'
+    };
+
+    historicalData.forEach(player => {
+      const positionKey = positionMap[player.position];
+      if (positionKey && organized[positionKey]) {
+        organized[positionKey].push(player);
+      }
+    });
+
+    return organized;
+  } catch (error) {
+    console.error('Error fetching historical lineup positions:', error);
+    return null;
+  }
+}

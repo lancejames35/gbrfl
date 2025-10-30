@@ -5,6 +5,7 @@
 
 const FantasyTeam = require('../models/FantasyTeam');
 const { validationResult } = require('express-validator');
+const db = require('../config/database');
 
 /**
  * Get all teams
@@ -14,12 +15,25 @@ const { validationResult } = require('express-validator');
 exports.getAllTeams = async (req, res) => {
   try {
     const teams = await FantasyTeam.getAll();
-    
+
+    // Add head coach team information for each team
+    for (let team of teams) {
+      if (team.head_coach) {
+        const coachTeamRows = await db.query(
+          'SELECT team_name FROM nfl_teams WHERE head_coach = ?',
+          [team.head_coach]
+        );
+        if (coachTeamRows.length > 0) {
+          team.head_coach_team = coachTeamRows[0].team_name;
+        }
+      }
+    }
+
     // For API requests, return JSON
     if (req.xhr || req.path.startsWith('/api/')) {
       return res.json({ teams });
     }
-    
+
     // For web requests, render the view
     res.render('teams/index', {
       title: 'Fantasy Teams',
@@ -97,13 +111,24 @@ exports.getTeamById = async (req, res) => {
       req.flash('error_msg', 'Team not found');
       return res.redirect('/teams');
     }
-    
+
     // Get players on the team
     const players = await FantasyTeam.getPlayers(teamId);
-    
+
+    // Get head coach's NFL team information
+    if (team.head_coach) {
+      const coachTeamRows = await db.query(
+        'SELECT team_name FROM nfl_teams WHERE head_coach = ?',
+        [team.head_coach]
+      );
+      if (coachTeamRows.length > 0) {
+        team.head_coach_team = coachTeamRows[0].team_name;
+      }
+    }
+
     // Get all teams for the dropdown selector
     let allTeams = await FantasyTeam.getAll();
-    
+
     // Determine if the current user can edit this team
     const canEdit = (parseInt(req.session.user.id) === parseInt(team.user_id));
     
