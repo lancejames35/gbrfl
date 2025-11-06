@@ -21,29 +21,34 @@ class LineupLock {
 
       const results = await db.query(query, [weekNumber, seasonYear]);
 
-      if (results.length === 0) {
-        return {
-          week_number: weekNumber,
-          game_type: gameType,
-          season_year: seasonYear,
-          lock_time: null,
-          is_locked: 0,
-          current_status: 'unlocked',
-          seconds_until_lock: null,
-          minutes_until_lock: null
-        };
-      }
+      let result = results.length > 0 ? results[0] : null;
+      let lockDatetime = result?.lock_datetime;
+      let isLocked = result?.is_locked === 1;
+      let lockSource = result?.lock_datetime ? 'manual' : 'nfl_schedule';
 
-      const result = results[0];
+      // If no manual lock time set, fall back to NFL game kickoff time
+      if (!lockDatetime && !isLocked) {
+        const nflGameQuery = `
+          SELECT MIN(kickoff_timestamp) as first_kickoff
+          FROM nfl_games
+          WHERE week = ? AND season_year = ? AND game_type = 'regular'
+        `;
+        const nflResults = await db.query(nflGameQuery, [weekNumber, seasonYear]);
+
+        if (nflResults.length > 0 && nflResults[0].first_kickoff) {
+          lockDatetime = nflResults[0].first_kickoff;
+          lockSource = 'nfl_schedule';
+        }
+      }
 
       // Calculate current_status and time until lock in JavaScript with proper timezone handling
       let current_status = 'unlocked';
       let seconds_until_lock = null;
       let minutes_until_lock = null;
 
-      if (result.is_locked === 1) {
+      if (isLocked) {
         current_status = 'locked';
-      } else if (result.lock_datetime) {
+      } else if (lockDatetime) {
         // Calculate DST boundaries for proper timezone handling
         const now = new Date();
         const year = seasonYear;
@@ -55,10 +60,10 @@ class LineupLock {
         novFirstSunday.setHours(2, 0, 0, 0);
 
         // Parse lock_datetime with proper Eastern timezone
-        const lockDate = new Date(result.lock_datetime);
+        const lockDate = new Date(lockDatetime);
         const isDST = lockDate >= marchSecondSunday && lockDate < novFirstSunday;
         const easternTZ = isDST ? 'EDT' : 'EST';
-        const lockTimeWithTZ = new Date(result.lock_datetime + ' ' + easternTZ);
+        const lockTimeWithTZ = new Date(lockDatetime + ' ' + easternTZ);
 
         // Compare with current time
         if (now >= lockTimeWithTZ) {
@@ -73,11 +78,15 @@ class LineupLock {
       }
 
       return {
-        ...result,
+        week_number: weekNumber,
+        season_year: seasonYear,
         game_type: gameType,
+        lock_time: lockDatetime,
+        is_locked: isLocked ? 1 : 0,
         current_status,
         seconds_until_lock,
-        minutes_until_lock
+        minutes_until_lock,
+        lock_source // 'manual' or 'nfl_schedule'
       };
     } catch (error) {
       // Error fetching lock status
@@ -156,6 +165,7 @@ class LineupLock {
    */
   static async getAllWeeksStatus(seasonYear = 2025) {
     try {
+      // Get manual lock times from lineup_locks table
       const query = `
         SELECT
           week_number,
@@ -168,6 +178,30 @@ class LineupLock {
 
       const results = await db.query(query, [seasonYear]);
 
+      // Get NFL game kickoff times for all weeks
+      const nflGamesQuery = `
+        SELECT
+          week,
+          MIN(kickoff_timestamp) as first_kickoff
+        FROM nfl_games
+        WHERE season_year = ? AND game_type = 'regular'
+        GROUP BY week
+        ORDER BY week
+      `;
+      const nflGames = await db.query(nflGamesQuery, [seasonYear]);
+
+      // Create a map of week -> kickoff time
+      const nflKickoffMap = {};
+      nflGames.forEach(game => {
+        nflKickoffMap[game.week] = game.first_kickoff;
+      });
+
+      // Create a map of manually set lock times
+      const manualLockMap = {};
+      results.forEach(lock => {
+        manualLockMap[lock.week_number] = lock;
+      });
+
       // Calculate DST boundaries for the season
       const year = seasonYear;
       const marchSecondSunday = new Date(year, 2, 1);
@@ -179,24 +213,32 @@ class LineupLock {
 
       const now = new Date();
 
-      return results.map(week => {
+      // Build result for all 18 weeks
+      const allWeeks = [];
+      for (let weekNum = 1; weekNum <= 18; weekNum++) {
+        const manualLock = manualLockMap[weekNum];
+        const nflKickoff = nflKickoffMap[weekNum];
+
+        let lockDatetime = manualLock?.lock_time || nflKickoff;
+        let isLocked = manualLock?.is_locked === 1;
+        let lockSource = manualLock?.lock_time ? 'manual' : 'nfl_schedule';
+
         // Calculate current_status and time until lock
         let current_status = 'unlocked';
         let minutes_until_lock = null;
         let seconds_until_lock = null;
         let lock_time_iso = null;
 
-        if (week.is_locked === 1) {
+        if (isLocked) {
           current_status = 'locked';
-        } else if (week.lock_time) {
-          // Database stores Eastern Time correctly now
+        } else if (lockDatetime) {
           // Parse the stored time and check if it was during DST
-          const storedDate = new Date(week.lock_time);
+          const storedDate = new Date(lockDatetime);
           const isDST = storedDate >= marchSecondSunday && storedDate < novFirstSunday;
           const easternTZ = isDST ? 'EDT' : 'EST';
 
           // Parse with proper Eastern timezone and convert to ISO
-          const lockTimeWithTZ = new Date(week.lock_time + ' ' + easternTZ);
+          const lockTimeWithTZ = new Date(lockDatetime + ' ' + easternTZ);
           lock_time_iso = lockTimeWithTZ.toISOString();
 
           // Compare with current time to determine status and calculate countdown
@@ -211,15 +253,18 @@ class LineupLock {
           }
         }
 
-        return {
-          week_number: week.week_number,
+        allWeeks.push({
+          week_number: weekNum,
           lock_time: lock_time_iso,
-          is_locked: week.is_locked,
+          is_locked: isLocked ? 1 : 0,
           current_status,
           minutes_until_lock,
-          seconds_until_lock
-        };
-      });
+          seconds_until_lock,
+          lock_source: lockSource // 'manual' or 'nfl_schedule'
+        });
+      }
+
+      return allWeeks;
     } catch (error) {
       // Error fetching all weeks status
       throw error;
