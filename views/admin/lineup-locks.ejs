@@ -70,13 +70,13 @@
                         <label for="lockDateTime" class="form-label">Lock Date & Time</label>
                         <input type="datetime-local" class="form-control" id="lockDateTime" name="lock_datetime" required>
                         <div class="form-text">
-                            Enter the local date/time when lineups should lock. The system will automatically handle timezone conversion.
+                            Enter the date/time in YOUR local timezone. The system will automatically convert to Eastern Time for storage.
                         </div>
                     </div>
                     <div class="mb-3">
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            <strong>Timezone Info:</strong> Times are entered in your browser's timezone and stored as UTC. 
+                            <strong>Timezone Info:</strong> Times are entered in your browser's timezone and converted to Eastern Time for storage.
                             The system will automatically lock lineups when this time is reached.
                         </div>
                     </div>
@@ -432,16 +432,25 @@ document.addEventListener('DOMContentLoaded', function() {
     function saveLockTime() {
         const form = document.getElementById('setLockTimeForm');
         const formData = new FormData(form);
-        
-        const data = {
-            week_number: parseInt(formData.get('week_number')),
-            lock_datetime: formData.get('lock_datetime')
-        };
-        
-        if (!data.lock_datetime) {
+
+        const localDatetime = formData.get('lock_datetime');
+
+        if (!localDatetime) {
             showAlert('error', 'Please select a date and time');
             return;
         }
+
+        // Convert datetime-local to ISO string with timezone
+        // datetime-local gives us "2025-10-30T20:16" (no timezone)
+        // We need to convert this to a full ISO string with timezone offset
+        const localDate = new Date(localDatetime);
+        const timezoneOffsetMinutes = localDate.getTimezoneOffset();
+
+        const data = {
+            week_number: parseInt(formData.get('week_number')),
+            lock_datetime: localDate.toISOString(), // Convert to UTC ISO format
+            browser_timezone_offset: timezoneOffsetMinutes // Send offset in minutes
+        };
         
         fetch('/admin/lineup-locks/set-lock-time', {
             method: 'POST',

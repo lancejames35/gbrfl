@@ -233,14 +233,25 @@ router.get('/next-lineup-lock', async (req, res) => {
     if (nextWeekGames && nextWeekGames[0]) {
       const week = nextWeekGames[0].week;
 
+      // Determine if we're in DST for Eastern Time
+      const now = new Date();
+      const year = now.getFullYear();
+      const marchSecondSunday = new Date(year, 2, 1);
+      marchSecondSunday.setDate(1 + (7 - marchSecondSunday.getDay()) % 7 + 7);
+      marchSecondSunday.setHours(2, 0, 0, 0);
+      const novFirstSunday = new Date(year, 10, 1);
+      novFirstSunday.setDate(1 + (7 - novFirstSunday.getDay()) % 7);
+      novFirstSunday.setHours(2, 0, 0, 0);
+      const isDST = now >= marchSecondSunday && now < novFirstSunday;
+      const easternTZ = isDST ? 'EDT' : 'EST';
+
       // Parse the stored Eastern Time timestamp properly
-      const firstKickoff = new Date(nextWeekGames[0].first_kickoff + ' EDT');
+      const firstKickoff = new Date(nextWeekGames[0].first_kickoff + ' ' + easternTZ);
 
       // Use the first game's kickoff time as the deadline
       const lockDatetime = new Date(firstKickoff);
-      
+
       // Check if this deadline has already passed
-      const now = new Date();
       const isLocked = now > lockDatetime;
 
       // Check if it's actually locked in the database (for manual locks or auto-locks)

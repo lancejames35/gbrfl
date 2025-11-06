@@ -12,7 +12,8 @@
       "Bash(grep:*)",
       "Bash(git log:*)",
       "Bash(python3:*)",
-      "Bash(mysql:*)"
+      "Bash(mysql:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

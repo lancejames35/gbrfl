@@ -30,9 +30,27 @@ class WeekStatus {
       
       const data = gameData[0];
       const now = new Date();
-      const weekStartTime = new Date(data.first_kickoff_time);
-      const weekEndTime = new Date(data.last_kickoff_time);
-      
+
+      // Calculate DST boundaries for proper timezone handling
+      const year = seasonYear;
+      const marchSecondSunday = new Date(year, 2, 1);
+      marchSecondSunday.setDate(1 + (7 - marchSecondSunday.getDay()) % 7 + 7);
+      marchSecondSunday.setHours(2, 0, 0, 0);
+      const novFirstSunday = new Date(year, 10, 1);
+      novFirstSunday.setDate(1 + (7 - novFirstSunday.getDay()) % 7);
+      novFirstSunday.setHours(2, 0, 0, 0);
+
+      // Parse kickoff times with proper Eastern timezone
+      const firstKickoffDate = new Date(data.first_kickoff_time);
+      const isDSTFirst = firstKickoffDate >= marchSecondSunday && firstKickoffDate < novFirstSunday;
+      const firstTZ = isDSTFirst ? 'EDT' : 'EST';
+      const weekStartTime = new Date(data.first_kickoff_time + ' ' + firstTZ);
+
+      const lastKickoffDate = new Date(data.last_kickoff_time);
+      const isDSTLast = lastKickoffDate >= marchSecondSunday && lastKickoffDate < novFirstSunday;
+      const lastTZ = isDSTLast ? 'EDT' : 'EST';
+      const weekEndTime = new Date(data.last_kickoff_time + ' ' + lastTZ);
+
       let status;
       if (now < weekStartTime) {
         status = 'upcoming';

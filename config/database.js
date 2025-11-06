@@ -7,7 +7,7 @@ let dbConfig;
 if (process.env.DATABASE_URL) {
   // Parse Railway's DATABASE_URL format: mysql://user:password@host:port/database
   const url = new URL(process.env.DATABASE_URL);
-  
+
   dbConfig = {
     host: url.hostname,
     port: url.port || 3306,

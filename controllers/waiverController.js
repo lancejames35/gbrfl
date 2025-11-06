@@ -550,36 +550,41 @@ exports.approveRequest = async (req, res) => {
     const dropRejectResult = await db.query(conflictingDropRequestsQuery, [admin_user_id, request.drop_player_id, request.drop_player_id, request_id]);
 
     // Remove lineup positions for rejected conflicting requests
+    // Get the request IDs that were just rejected
+    const rejectedPickupIds = [];
+    const rejectedDropIds = [];
+
     try {
-      const removeConflictingLineupsQuery = `
-        DELETE FROM lineup_positions 
-        WHERE waiver_request_id IN (
-          SELECT request_id FROM waiver_requests 
-          WHERE status = 'rejected' AND processed_by = ? AND processed_at >= NOW() - INTERVAL 1 MINUTE
-        )
+      const getPickupRejectedQuery = `
+        SELECT request_id FROM waiver_requests
+        WHERE pickup_player_id = ? AND status = 'rejected' AND request_id != ?
       `;
-      await db.query(removeConflictingLineupsQuery, [admin_user_id]);
+      const pickupRejected = await db.query(getPickupRejectedQuery, [request.pickup_player_id, request_id]);
+      rejectedPickupIds.push(...pickupRejected.map(r => r.request_id));
+
+      const getDropRejectedQuery = `
+        SELECT request_id FROM waiver_requests
+        WHERE (pickup_player_id = ? OR drop_player_id = ?) AND status = 'rejected' AND request_id != ?
+      `;
+      const dropRejected = await db.query(getDropRejectedQuery, [request.drop_player_id, request.drop_player_id, request_id]);
+      rejectedDropIds.push(...dropRejected.map(r => r.request_id));
+
+      const allRejectedIds = [...new Set([...rejectedPickupIds, ...rejectedDropIds])];
+
+      if (allRejectedIds.length > 0) {
+        const removeConflictingLineupsQuery = `
+          DELETE FROM lineup_positions
+          WHERE waiver_request_id IN (?)
+        `;
+        await db.query(removeConflictingLineupsQuery, [allRejectedIds]);
+        console.log(`Removed lineup positions for ${allRejectedIds.length} rejected waiver requests`);
+      }
     } catch (lineupCleanupError) {
       console.warn('Warning: Could not clean up conflicting lineup positions:', lineupCleanupError.message);
     }
 
-    // Get rejected requests for transaction recording
-    try {
-      const rejectedRequestsQuery = `
-        SELECT wr.*, ft.team_name
-        FROM waiver_requests wr
-        JOIN fantasy_teams ft ON wr.fantasy_team_id = ft.team_id
-        WHERE wr.status = 'rejected' AND wr.processed_by = ? AND wr.processed_at >= NOW() - INTERVAL 1 MINUTE
-      `;
-      const rejectedRequests = await db.query(rejectedRequestsQuery, [admin_user_id]);
-
-      if (rejectedRequests.length > 0) {
-        // Record rejected waiver attempts in transactions table
-        await recordRejectedWaiverAttempts(rejectedRequests, admin_user_id);
-      }
-    } catch (rejectedRecordError) {
-      console.warn('Warning: Could not record rejected waiver attempts:', rejectedRecordError.message);
-    }
+    // Don't record rejected waiver transactions - they clutter the transactions page
+    // Users can see their rejected requests on the waivers page instead
 
     // Execute the waiver: remove drop player, add pickup player
     // Remove drop player from team
@@ -604,16 +609,80 @@ exports.approveRequest = async (req, res) => {
     `;
     await db.query(updateRequestQuery, [admin_user_id, request_id]);
 
-    // Update lineup positions: convert pending waiver player to rostered player
+    // Update lineup positions: handle both locked and unlocked weeks
     try {
+      // First, try to update existing pending waiver positions (if week wasn't locked when waiver was submitted)
       const updateLineupQuery = `
-        UPDATE lineup_positions 
+        UPDATE lineup_positions
         SET player_status = 'rostered', waiver_request_id = NULL
         WHERE waiver_request_id = ? AND player_status = 'pending_waiver'
       `;
-      await db.query(updateLineupQuery, [request_id]);
+      const updateResult = await db.query(updateLineupQuery, [request_id]);
 
-      // Remove any lineup positions for the dropped player
+      // If no rows were updated, the player wasn't in a lineup (likely because week was locked when waiver submitted)
+      // Add the player to the waiver's week lineup (even if locked) - this is historical data
+      if (updateResult.affectedRows === 0) {
+        console.log(`No pending lineup found for request ${request_id}, adding to waiver week ${weekString}`);
+
+        // Extract week number from the week string (e.g., "Week 9" -> 9)
+        const weekNumber = parseInt(weekString.replace(/\D/g, ''));
+        const targetWeek = weekNumber;
+
+        console.log(`Adding approved waiver player to week ${targetWeek} lineup (waiver week)`);
+
+        // Get or create lineup for target week
+        const lineupQuery = `
+          SELECT lineup_id FROM lineup_submissions
+          WHERE fantasy_team_id = ? AND week_number = ? AND game_type = 'primary' AND season_year = ?
+        `;
+        const lineupResults = await db.query(lineupQuery, [request.fantasy_team_id, targetWeek, currentSeason]);
+
+        let lineupId;
+        if (lineupResults.length === 0) {
+          // Create new lineup submission
+          const createLineupQuery = `
+            INSERT INTO lineup_submissions (fantasy_team_id, week_number, game_type, season_year)
+            VALUES (?, ?, 'primary', ?)
+          `;
+          const createResult = await db.query(createLineupQuery, [request.fantasy_team_id, targetWeek, currentSeason]);
+          lineupId = createResult.insertId;
+        } else {
+          lineupId = lineupResults[0].lineup_id;
+        }
+
+        // Get player position type
+        const playerPosQuery = `SELECT position FROM nfl_players WHERE player_id = ?`;
+        const playerPosResult = await db.query(playerPosQuery, [request.pickup_player_id]);
+        const playerPosition = playerPosResult[0].position;
+
+        let positionType = 'other';
+        switch(playerPosition) {
+          case 'QB': positionType = 'quarterback'; break;
+          case 'RB': positionType = 'running_back'; break;
+          case 'RC': positionType = 'receiver'; break;
+          case 'PK': positionType = 'place_kicker'; break;
+          case 'DU': positionType = 'defense'; break;
+        }
+
+        // Get next sort order for this position
+        const sortOrderQuery = `
+          SELECT COALESCE(MAX(sort_order), 0) + 1 as next_sort_order
+          FROM lineup_positions
+          WHERE lineup_id = ? AND position_type = ?
+        `;
+        const sortResults = await db.query(sortOrderQuery, [lineupId, positionType]);
+        const nextSortOrder = sortResults[0].next_sort_order;
+
+        // Add player to lineup
+        const addToLineupQuery = `
+          INSERT INTO lineup_positions (lineup_id, position_type, player_id, sort_order, player_status)
+          VALUES (?, ?, ?, ?, 'rostered')
+        `;
+        await db.query(addToLineupQuery, [lineupId, positionType, request.pickup_player_id, nextSortOrder]);
+        console.log(`Added player ${request.pickup_player_id} to lineup ${lineupId} at position ${positionType}`);
+      }
+
+      // Remove any lineup positions for the dropped player from ALL future weeks
       const removeDroppedQuery = `
         DELETE FROM lineup_positions
         WHERE player_id = ?
@@ -621,6 +690,7 @@ exports.approveRequest = async (req, res) => {
       await db.query(removeDroppedQuery, [request.drop_player_id]);
     } catch (lineupError) {
       console.warn('Warning: Could not update lineup positions:', lineupError.message);
+      console.warn('Lineup error stack:', lineupError.stack);
     }
 
     // NOTE: waiver_order_position was already set earlier (before auto-rejection)
@@ -1022,52 +1092,5 @@ async function recordWaiverTransaction(request, admin_user_id, pickupPlayerName,
   }
 }
 
-/**
- * Record rejected waiver attempts in unified transactions table for visibility
- */
-async function recordRejectedWaiverAttempts(rejectedRequests, admin_user_id) {
-  try {
-    for (const request of rejectedRequests) {
-      // Get player names
-      const playersQuery = `
-        SELECT p1.display_name as pickup_name, p2.display_name as drop_name
-        FROM nfl_players p1, nfl_players p2
-        WHERE p1.player_id = ? AND p2.player_id = ?
-      `;
-      const playerResult = await db.query(playersQuery, [request.pickup_player_id, request.drop_player_id]);
-
-      if (playerResult.length === 0) continue;
-
-      const { pickup_name, drop_name } = playerResult[0];
-
-      // Create transaction record for rejected waiver
-      const transactionQuery = `
-        INSERT INTO transactions (transaction_type, season_year, week, transaction_date, notes, created_by)
-        VALUES ('Waiver', 2025, ?, NOW(), ?, ?)
-      `;
-
-      const notes = `Waiver REJECTED: ${pickup_name} (${request.notes || 'Player acquired by another team'})`;
-      const transactionResult = await db.query(transactionQuery, [request.week, notes, admin_user_id]);
-      const transaction_id = transactionResult.insertId;
-
-      // Add transaction relationship
-      await db.query(
-        'INSERT INTO transaction_relationships (transaction_id, team_id, is_primary) VALUES (?, ?, 1)',
-        [transaction_id, request.fantasy_team_id]
-      );
-
-      // Add transaction items to show what they tried to get (but mark as attempted)
-      await db.query(`
-        INSERT INTO transaction_items (
-          transaction_id, team_id, direction, item_type, player_id
-        ) VALUES (?, ?, 'Attempted', 'Player', ?)
-      `, [transaction_id, request.fantasy_team_id, request.pickup_player_id]);
-
-      console.log(`Recorded rejected waiver transaction ${transaction_id} for team ${request.fantasy_team_id}`);
-    }
-
-  } catch (error) {
-    console.error('Error recording rejected waiver attempts:', error);
-    // Don't throw - this is supplementary logging
-  }
-}
+// Removed recordRejectedWaiverAttempts function - rejected waivers are no longer recorded
+// in the transactions table to avoid clutter. Users can see rejected requests on the waivers page.

@@ -1465,33 +1465,63 @@ exports.setLineupLockTime = async (req, res) => {
     // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ 
-        success: false, 
-        errors: errors.array() 
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
       });
     }
 
     const { week_number, lock_datetime } = req.body;
     const seasonYear = 2025;
 
-    // Convert the datetime to UTC for storage
-    const lockTime = new Date(lock_datetime);
-    
-    if (isNaN(lockTime.getTime())) {
+    // Parse the UTC datetime from the frontend
+    const utcTime = new Date(lock_datetime);
+
+    if (isNaN(utcTime.getTime())) {
       return res.status(400).json({
         success: false,
         error: 'Invalid date/time format'
       });
     }
 
-    // Set the lock time
-    const success = await LineupLock.setLockTime(week_number, seasonYear, lockTime);
+    // Convert UTC to Eastern Time
+    // Eastern Time is UTC-5 (EST) or UTC-4 (EDT)
+    // Calculate DST boundaries
+    const year = utcTime.getFullYear();
+    const marchSecondSunday = new Date(Date.UTC(year, 2, 1));
+    marchSecondSunday.setUTCDate(1 + (7 - marchSecondSunday.getUTCDay()) % 7 + 7);
+    marchSecondSunday.setUTCHours(7, 0, 0, 0); // 2 AM EST = 7 AM UTC
+    const novFirstSunday = new Date(Date.UTC(year, 10, 1));
+    novFirstSunday.setUTCDate(1 + (7 - novFirstSunday.getUTCDay()) % 7);
+    novFirstSunday.setUTCHours(6, 0, 0, 0); // 2 AM EDT = 6 AM UTC
+
+    // Determine if the date is in DST
+    const isDST = utcTime >= marchSecondSunday && utcTime < novFirstSunday;
+    const easternOffsetHours = isDST ? -4 : -5; // EDT = UTC-4, EST = UTC-5
+
+    // Convert UTC to Eastern Time using UTC methods
+    // Get UTC timestamp and add Eastern offset in milliseconds
+    const easternTimeMs = utcTime.getTime() + (easternOffsetHours * 60 * 60 * 1000);
+    const easternDate = new Date(easternTimeMs);
+
+    // Format as YYYY-MM-DD HH:MM:SS for MySQL DATETIME storage
+    // Use UTC methods since we've already adjusted the timestamp
+    const year_et = easternDate.getUTCFullYear();
+    const month_et = String(easternDate.getUTCMonth() + 1).padStart(2, '0');
+    const day_et = String(easternDate.getUTCDate()).padStart(2, '0');
+    const hours_et = String(easternDate.getUTCHours()).padStart(2, '0');
+    const minutes_et = String(easternDate.getUTCMinutes()).padStart(2, '0');
+    const seconds_et = String(easternDate.getUTCSeconds()).padStart(2, '0');
+    const easternTimeString = `${year_et}-${month_et}-${day_et} ${hours_et}:${minutes_et}:${seconds_et}`;
+
+    // Set the lock time with Eastern Time string
+    const success = await LineupLock.setLockTime(week_number, seasonYear, easternTimeString);
 
     if (success) {
-      res.json({ 
-        success: true, 
-        message: `Lock time set for Week ${week_number}`,
-        lockTime: lockTime.toISOString()
+      res.json({
+        success: true,
+        message: `Lock time set for Week ${week_number} (${easternTimeString} ET)`,
+        lockTime: easternTimeString
       });
     } else {
       res.status(500).json({ 

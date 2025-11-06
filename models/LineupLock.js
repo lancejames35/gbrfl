@@ -11,28 +11,20 @@ class LineupLock {
   static async getLockStatus(weekNumber, gameType = 'primary', seasonYear = 2025) {
     try {
       const query = `
-        SELECT 
+        SELECT
           *,
-          lock_datetime as lock_time,
-          CASE 
-            WHEN is_locked = 1 THEN 'locked'
-            WHEN lock_datetime IS NULL THEN 'unlocked'
-            WHEN NOW() >= lock_datetime THEN 'auto_locked'
-            ELSE 'unlocked'
-          END as current_status,
-          null as seconds_until_lock,
-          null as minutes_until_lock
-        FROM lineup_locks 
+          lock_datetime as lock_time
+        FROM lineup_locks
         WHERE week_number = ? AND season_year = ?
         LIMIT 1
       `;
 
       const results = await db.query(query, [weekNumber, seasonYear]);
-      
+
       if (results.length === 0) {
         return {
           week_number: weekNumber,
-          game_type: gameType, // Return for compatibility
+          game_type: gameType,
           season_year: seasonYear,
           lock_time: null,
           is_locked: 0,
@@ -43,10 +35,49 @@ class LineupLock {
       }
 
       const result = results[0];
-      
+
+      // Calculate current_status and time until lock in JavaScript with proper timezone handling
+      let current_status = 'unlocked';
+      let seconds_until_lock = null;
+      let minutes_until_lock = null;
+
+      if (result.is_locked === 1) {
+        current_status = 'locked';
+      } else if (result.lock_datetime) {
+        // Calculate DST boundaries for proper timezone handling
+        const now = new Date();
+        const year = seasonYear;
+        const marchSecondSunday = new Date(year, 2, 1);
+        marchSecondSunday.setDate(1 + (7 - marchSecondSunday.getDay()) % 7 + 7);
+        marchSecondSunday.setHours(2, 0, 0, 0);
+        const novFirstSunday = new Date(year, 10, 1);
+        novFirstSunday.setDate(1 + (7 - novFirstSunday.getDay()) % 7);
+        novFirstSunday.setHours(2, 0, 0, 0);
+
+        // Parse lock_datetime with proper Eastern timezone
+        const lockDate = new Date(result.lock_datetime);
+        const isDST = lockDate >= marchSecondSunday && lockDate < novFirstSunday;
+        const easternTZ = isDST ? 'EDT' : 'EST';
+        const lockTimeWithTZ = new Date(result.lock_datetime + ' ' + easternTZ);
+
+        // Compare with current time
+        if (now >= lockTimeWithTZ) {
+          current_status = 'auto_locked';
+        } else {
+          current_status = 'unlocked';
+          // Calculate time until lock
+          const diffMs = lockTimeWithTZ - now;
+          seconds_until_lock = Math.floor(diffMs / 1000);
+          minutes_until_lock = Math.floor(diffMs / (1000 * 60));
+        }
+      }
+
       return {
         ...result,
-        game_type: gameType // Add for compatibility
+        game_type: gameType,
+        current_status,
+        seconds_until_lock,
+        minutes_until_lock
       };
     } catch (error) {
       // Error fetching lock status
@@ -126,24 +157,69 @@ class LineupLock {
   static async getAllWeeksStatus(seasonYear = 2025) {
     try {
       const query = `
-        SELECT 
+        SELECT
           week_number,
-          lock_datetime as lock_time,
-          is_locked,
-          CASE 
-            WHEN is_locked = 1 THEN 'locked'
-            WHEN lock_datetime IS NULL THEN 'unlocked'
-            WHEN NOW() >= lock_datetime THEN 'auto_locked'
-            ELSE 'unlocked'
-          END as current_status,
-          null as minutes_until_lock
-        FROM lineup_locks 
+          DATE_FORMAT(lock_datetime, '%Y-%m-%d %H:%i:%s') as lock_time,
+          is_locked
+        FROM lineup_locks
         WHERE season_year = ?
         ORDER BY week_number
       `;
 
       const results = await db.query(query, [seasonYear]);
-      return results;
+
+      // Calculate DST boundaries for the season
+      const year = seasonYear;
+      const marchSecondSunday = new Date(year, 2, 1);
+      marchSecondSunday.setDate(1 + (7 - marchSecondSunday.getDay()) % 7 + 7);
+      marchSecondSunday.setHours(2, 0, 0, 0);
+      const novFirstSunday = new Date(year, 10, 1);
+      novFirstSunday.setDate(1 + (7 - novFirstSunday.getDay()) % 7);
+      novFirstSunday.setHours(2, 0, 0, 0);
+
+      const now = new Date();
+
+      return results.map(week => {
+        // Calculate current_status and time until lock
+        let current_status = 'unlocked';
+        let minutes_until_lock = null;
+        let seconds_until_lock = null;
+        let lock_time_iso = null;
+
+        if (week.is_locked === 1) {
+          current_status = 'locked';
+        } else if (week.lock_time) {
+          // Database stores Eastern Time correctly now
+          // Parse the stored time and check if it was during DST
+          const storedDate = new Date(week.lock_time);
+          const isDST = storedDate >= marchSecondSunday && storedDate < novFirstSunday;
+          const easternTZ = isDST ? 'EDT' : 'EST';
+
+          // Parse with proper Eastern timezone and convert to ISO
+          const lockTimeWithTZ = new Date(week.lock_time + ' ' + easternTZ);
+          lock_time_iso = lockTimeWithTZ.toISOString();
+
+          // Compare with current time to determine status and calculate countdown
+          if (now >= lockTimeWithTZ) {
+            current_status = 'auto_locked';
+          } else {
+            current_status = 'unlocked';
+            // Calculate time until lock
+            const diffMs = lockTimeWithTZ - now;
+            seconds_until_lock = Math.floor(diffMs / 1000);
+            minutes_until_lock = Math.floor(diffMs / (1000 * 60));
+          }
+        }
+
+        return {
+          week_number: week.week_number,
+          lock_time: lock_time_iso,
+          is_locked: week.is_locked,
+          current_status,
+          minutes_until_lock,
+          seconds_until_lock
+        };
+      });
     } catch (error) {
       // Error fetching all weeks status
       throw error;
