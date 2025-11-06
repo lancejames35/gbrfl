@@ -86,7 +86,7 @@ class LineupLock {
         current_status,
         seconds_until_lock,
         minutes_until_lock,
-        lock_source // 'manual' or 'nfl_schedule'
+        lock_source: lockSource // 'manual' or 'nfl_schedule'
       };
     } catch (error) {
       // Error fetching lock status
