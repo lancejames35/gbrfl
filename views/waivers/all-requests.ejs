@@ -1,0 +1,208 @@
+<!-- All Waiver Requests History Page -->
+<div class="card border-0 shadow">
+  <!-- Page Header -->
+  <div class="card-header bg-primary text-white py-3">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h1 class="display-5 mb-0">Waiver Request History</h1>
+        <p class="mb-0 mt-2">View all processed waiver claims by week</p>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <a href="/transactions" class="btn btn-light">
+          <i class="bi bi-arrow-left"></i> Back to Transactions
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Week Filter -->
+  <div class="card-body bg-light border-bottom">
+    <div class="row">
+      <div class="col-md-4">
+        <label for="weekSelect" class="form-label fw-bold">Select Week:</label>
+        <select class="form-select" id="weekSelect" onchange="window.location.href='/waivers/all-requests?week=' + this.value">
+          <% availableWeeks.forEach(weekObj => { %>
+            <option value="<%= weekObj.week %>" <%= selectedWeek === weekObj.week ? 'selected' : '' %>>
+              <%= weekObj.week %>
+            </option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="col-md-8 d-flex align-items-end">
+        <div class="alert alert-info mb-0 flex-grow-1">
+          <i class="bi bi-info-circle"></i>
+          <strong>Note:</strong> Green badges indicate approved requests. Red badges indicate rejected requests.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Waiver Requests Content -->
+  <div class="card-body">
+    <% if (!selectedWeek) { %>
+      <div class="alert alert-warning text-center">
+        <i class="bi bi-exclamation-triangle"></i>
+        No waiver requests found.
+      </div>
+    <% } else { %>
+      <h3 class="mb-4"><%= selectedWeek %></h3>
+
+      <!-- 1st Round -->
+      <% if (Object.keys(groupedRequests['1st']).length > 0) { %>
+        <div class="round-section mb-5">
+          <h4 class="bg-light p-3 rounded mb-3">
+            <i class="bi bi-trophy-fill text-warning"></i> 1st Round
+          </h4>
+
+          <% Object.values(groupedRequests['1st']).forEach(teamData => { %>
+            <div class="team-section mb-4 border rounded p-3">
+              <div class="team-header mb-3">
+                <h5 class="mb-1">
+                  <strong><%= teamData.team_name %></strong>
+                  <span class="text-muted">(<%= teamData.first_name %> <%= teamData.last_name %>)</span>
+                </h5>
+                <span class="badge bg-secondary">
+                  Waiver Position: <%= teamData.waiver_order_position != null ? teamData.waiver_order_position : 'N/A' %>
+                </span>              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 50px;">#</th>
+                      <th>Status</th>
+                      <th>Pickup Player</th>
+                      <th>Drop Player</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% teamData.requests.forEach(request => { %>
+                      <tr>
+                        <td><strong><%= request.request_order %></strong></td>
+                        <td>
+                          <% if (request.status === 'approved') { %>
+                            <span class="badge bg-success">
+                              <i class="bi bi-check-circle"></i> Approved
+                            </span>
+                          <% } else { %>
+                            <span class="badge bg-danger">
+                              <i class="bi bi-x-circle"></i> Rejected
+                            </span>
+                          <% } %>
+                        </td>
+                        <td>
+                          <strong><%= request.pickup_name %></strong>
+                          <span class="text-muted">(<%= request.pickup_position %><% if (request.pickup_team) { %> - <%= request.pickup_team %><% } %>)</span>
+                        </td>
+                        <td>
+                          <%= request.drop_name %>
+                          <span class="text-muted">(<%= request.drop_position %><% if (request.drop_team) { %> - <%= request.drop_team %><% } %>)</span>
+                        </td>
+                        <td>
+                          <% if (request.notes) { %>
+                            <small class="text-muted"><%= request.notes %></small>
+                          <% } else { %>
+                            <span class="text-muted">-</span>
+                          <% } %>
+                        </td>
+                      </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <div class="alert alert-info">No 1st round requests for this week.</div>
+      <% } %>
+
+      <!-- 2nd Round -->
+      <% if (Object.keys(groupedRequests['2nd']).length > 0) { %>
+        <div class="round-section mb-5">
+          <h4 class="bg-light p-3 rounded mb-3">
+            <i class="bi bi-trophy text-secondary"></i> 2nd Round
+          </h4>
+
+          <% Object.values(groupedRequests['2nd']).forEach(teamData => { %>
+            <div class="team-section mb-4 border rounded p-3">
+              <div class="team-header mb-3">
+                <h5 class="mb-1">
+                  <strong><%= teamData.team_name %></strong>
+                  <span class="text-muted">(<%= teamData.first_name %> <%= teamData.last_name %>)</span>
+                </h5>
+                <span class="badge bg-secondary">
+                  Waiver Position: <%= teamData.waiver_order_position != null ? teamData.waiver_order_position : 'N/A' %>
+                </span>              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 50px;">#</th>
+                      <th>Status</th>
+                      <th>Pickup Player</th>
+                      <th>Drop Player</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% teamData.requests.forEach(request => { %>
+                      <tr>
+                        <td><strong><%= request.request_order %></strong></td>
+                        <td>
+                          <% if (request.status === 'approved') { %>
+                            <span class="badge bg-success">
+                              <i class="bi bi-check-circle"></i> Approved
+                            </span>
+                          <% } else { %>
+                            <span class="badge bg-danger">
+                              <i class="bi bi-x-circle"></i> Rejected
+                            </span>
+                          <% } %>
+                        </td>
+                        <td>
+                          <strong><%= request.pickup_name %></strong>
+                          <span class="text-muted">(<%= request.pickup_position %><% if (request.pickup_team) { %> - <%= request.pickup_team %><% } %>)</span>
+                        </td>
+                        <td>
+                          <%= request.drop_name %>
+                          <span class="text-muted">(<%= request.drop_position %><% if (request.drop_team) { %> - <%= request.drop_team %><% } %>)</span>
+                        </td>
+                        <td>
+                          <% if (request.notes) { %>
+                            <small class="text-muted"><%= request.notes %></small>
+                          <% } else { %>
+                            <span class="text-muted">-</span>
+                          <% } %>
+                        </td>
+                      </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <div class="alert alert-info">No 2nd round requests for this week.</div>
+      <% } %>
+    <% } %>
+  </div>
+</div>
+
+<style>
+  .team-section {
+    background-color: #f8f9fa;
+  }
+  .team-section:hover {
+    background-color: #e9ecef;
+  }
+  .round-section h4 {
+    border-left: 5px solid #0d6efd;
+  }
+  .table tbody tr:hover {
+    background-color: #fff;
+  }
+</style>

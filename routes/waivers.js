@@ -38,6 +38,13 @@ router.post('/request',
 router.get('/pending', ensureAuthenticated, waiverController.getPendingRequests);
 
 /**
+ * @route   GET /waivers/all-requests
+ * @desc    View all processed waiver requests (history)
+ * @access  Private
+ */
+router.get('/all-requests', ensureAuthenticated, waiverController.getAllProcessedRequests);
+
+/**
  * @route   PUT /waivers/order
  * @desc    Update waiver request order
  * @access  Private
