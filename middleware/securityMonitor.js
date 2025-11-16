@@ -3,7 +3,6 @@
  * Only logs suspicious activity, never blocks requests
  */
 
-const db = require('../config/database');
 const { processSecurityEvent } = require('./alertSystem');
 
 // In-memory tracking (won't affect functionality)
@@ -38,24 +37,6 @@ async function logSecurityEvent(eventType, req, additionalDetails = {}) {
       ...additionalDetails
     };
 
-    // Log to database (non-blocking)
-    setImmediate(async () => {
-      try {
-        await db.query(
-          `INSERT INTO activity_logs 
-           (user_id, action_type, entity_type, entity_id, details, created_at) 
-           VALUES (?, ?, 'SECURITY_MONITOR', NULL, ?, NOW())`,
-          [
-            details.userId,
-            eventType,
-            JSON.stringify(details)
-          ]
-        );
-      } catch (dbError) {
-        console.error('Security logging error:', dbError.message);
-      }
-    });
-
     // Console log for immediate visibility
     console.log(`[SECURITY MONITOR] ${eventType}: ${clientIP} - ${req.method} ${req.originalUrl}`);
 
@@ -67,7 +48,7 @@ async function logSecurityEvent(eventType, req, additionalDetails = {}) {
         console.error('Alert processing error:', alertError.message);
       }
     });
-    
+
   } catch (error) {
     console.error('Security monitoring error:', error.message);
   }
@@ -219,45 +200,20 @@ function trackLoginAttempt(req, success, username) {
 
 /**
  * Generate security summary for admins
+ * NOTE: Security events are no longer stored in database to prevent bloat.
+ * This function now only returns in-memory tracking data.
  */
 async function getSecuritySummary(timeframe = 24) {
   try {
-    const hours = Math.min(Math.max(timeframe, 1), 168); // 1 hour to 7 days
-    
-    const summary = await db.query(`
-      SELECT 
-        action_type,
-        COUNT(*) as event_count,
-        COUNT(DISTINCT entity_id) as unique_ips,
-        MAX(created_at) as last_occurrence
-      FROM activity_logs 
-      WHERE entity_type = 'SECURITY_MONITOR'
-        AND created_at >= NOW() - INTERVAL ? HOUR
-      GROUP BY action_type
-      ORDER BY event_count DESC
-    `, [hours]);
-
-    const recentEvents = await db.query(`
-      SELECT 
-        action_type,
-        entity_id as ip_address,
-        details,
-        created_at
-      FROM activity_logs 
-      WHERE entity_type = 'SECURITY_MONITOR'
-        AND created_at >= NOW() - INTERVAL ? HOUR
-      ORDER BY created_at DESC
-      LIMIT 100
-    `, [Math.min(hours, 24)]); // Recent events limited to 24 hours
-
     return {
-      summary,
-      recentEvents,
+      summary: [],
+      recentEvents: [],
       currentlyTracked: {
         activeIPs: requestTracker.size,
         suspiciousIPs: suspiciousPatterns.size
       },
-      timeframe: `${hours} hours`
+      timeframe: `${timeframe} hours`,
+      note: 'Security events are now logged to console only. Check server logs for historical security monitoring data.'
     };
   } catch (error) {
     console.error('Security summary error:', error.message);

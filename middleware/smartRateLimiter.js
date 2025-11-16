@@ -4,7 +4,7 @@
  */
 
 const rateLimit = require('express-rate-limit');
-const { logSecurityEvent, getClientIP } = require('./securityMonitor');
+const { getClientIP } = require('./securityMonitor');
 
 /**
  * Create a progressive rate limiter that gets stricter with repeated violations
@@ -51,8 +51,8 @@ function createProgressiveAuthLimiter() {
         }
       }, 60 * 60 * 1000);
 
-      // Log the rate limit event
-      await logSecurityEvent('RATE_LIMIT_EXCEEDED_AUTH', req, {
+      // Log the rate limit event to console (no longer stored in database)
+      console.log(`[SECURITY] RATE_LIMIT_EXCEEDED_AUTH: IP ${clientIP}`, {
         violations: violations + 1,
         windowMs: 5 * 60 * 1000,
         currentLimit: req.rateLimit?.limit || 'unknown'
@@ -95,7 +95,8 @@ function createGeneralAuthLimiter() {
     keyGenerator: (req) => getClientIP(req),
     
     handler: async (req, res) => {
-      await logSecurityEvent('RATE_LIMIT_EXCEEDED_AUTH_GENERAL', req, {
+      const clientIP = getClientIP(req);
+      console.log(`[SECURITY] RATE_LIMIT_EXCEEDED_AUTH_GENERAL: IP ${clientIP}`, {
         endpoint: req.originalUrl,
         windowMs: 10 * 60 * 1000
       });

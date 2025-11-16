@@ -41,39 +41,15 @@ router.get('/api/summary', ensureAuthenticated, isAdmin, async (req, res) => {
 });
 
 // Get recent suspicious events
+// NOTE: Security events are no longer stored in database to prevent bloat
 router.get('/api/events', ensureAuthenticated, isAdmin, async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
-    const hours = Math.min(parseInt(req.query.hours) || 24, 168);
-    
-    const events = await db.query(`
-      SELECT 
-        action_type,
-        entity_id as ip_address,
-        user_id,
-        details,
-        created_at,
-        CASE 
-          WHEN action_type IN ('POTENTIAL_BRUTE_FORCE', 'SQL_INJECTION_PATTERN', 'COMMAND_INJECTION_PATTERN') THEN 'HIGH'
-          WHEN action_type IN ('XSS_PATTERN', 'PATH_TRAVERSAL_ATTEMPT', 'POTENTIAL_SCANNING') THEN 'MEDIUM'
-          ELSE 'LOW'
-        END as severity
-      FROM activity_logs 
-      WHERE entity_type = 'SECURITY_MONITOR'
-        AND created_at >= NOW() - INTERVAL ? HOUR
-      ORDER BY 
-        FIELD(severity, 'HIGH', 'MEDIUM', 'LOW'),
-        created_at DESC
-      LIMIT ?
-    `, [hours, limit]);
-
-    // Parse details JSON for each event
-    const processedEvents = events.map(event => ({
-      ...event,
-      details: typeof event.details === 'string' ? JSON.parse(event.details) : event.details
-    }));
-
-    res.json(processedEvents);
+    // Security monitoring events are now only logged to console
+    // Check server logs for security event history
+    res.json({
+      events: [],
+      note: 'Security events are no longer stored in database to prevent bloat. Check server logs for security monitoring data.'
+    });
   } catch (error) {
     console.error('Security events API error:', error);
     res.status(500).json({ error: 'Failed to fetch security events' });
@@ -81,40 +57,44 @@ router.get('/api/events', ensureAuthenticated, isAdmin, async (req, res) => {
 });
 
 // Get IP analysis
+// NOTE: Security events are no longer stored in database
 router.get('/api/ip/:ip', ensureAuthenticated, isAdmin, async (req, res) => {
   try {
     const ip = req.params.ip;
-    
+
     // Validate IP format (basic check)
     if (!/^[\d\.]+$/.test(ip) && !/^[\da-fA-F:]+$/.test(ip)) {
       return res.status(400).json({ error: 'Invalid IP address format' });
     }
 
-    // Get all activity for this IP
+    // Only get user-related activity (not security monitoring events)
     const activity = await db.query(`
-      SELECT 
+      SELECT
         action_type,
         entity_type,
         details,
         created_at,
         user_id
-      FROM activity_logs 
+      FROM activity_logs
       WHERE entity_id = ?
+        AND entity_type != 'SECURITY_MONITOR'
+        AND entity_type != 'SECURITY'
         AND created_at >= NOW() - INTERVAL 7 DAY
       ORDER BY created_at DESC
       LIMIT 100
     `, [ip]);
 
-    // Get summary stats for this IP
+    // Get summary stats for this IP (excluding security monitoring events)
     const stats = await db.query(`
-      SELECT 
+      SELECT
         COUNT(*) as total_events,
         COUNT(DISTINCT action_type) as unique_event_types,
         MIN(created_at) as first_seen,
-        MAX(created_at) as last_seen,
-        COUNT(CASE WHEN entity_type = 'SECURITY_MONITOR' THEN 1 END) as security_events
-      FROM activity_logs 
+        MAX(created_at) as last_seen
+      FROM activity_logs
       WHERE entity_id = ?
+        AND entity_type != 'SECURITY_MONITOR'
+        AND entity_type != 'SECURITY'
         AND created_at >= NOW() - INTERVAL 30 DAY
     `, [ip]);
 
@@ -124,7 +104,8 @@ router.get('/api/ip/:ip', ensureAuthenticated, isAdmin, async (req, res) => {
       recentActivity: activity.map(event => ({
         ...event,
         details: typeof event.details === 'string' ? JSON.parse(event.details) : event.details
-      }))
+      })),
+      note: 'Security monitoring events are no longer stored in database. Check server logs for security data.'
     });
   } catch (error) {
     console.error('IP analysis error:', error);

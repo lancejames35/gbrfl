@@ -30,25 +30,12 @@ const SECURITY_EVENTS = {
 };
 
 /**
- * Log security event to database
+ * Log security event to console (no longer stored in database to prevent bloat)
  */
 async function logSecurityEvent(eventType, ipAddress, userId = null, details = {}) {
   try {
-    await db.query(
-      `INSERT INTO activity_logs 
-       (user_id, action_type, entity_type, entity_id, details, created_at) 
-       VALUES (?, ?, 'SECURITY', ?, ?, NOW())`,
-      [
-        userId,
-        eventType,
-        ipAddress,
-        JSON.stringify({
-          ...details,
-          timestamp: new Date().toISOString(),
-          userAgent: details.userAgent || 'unknown'
-        })
-      ]
-    );
+    // Log to console for monitoring
+    console.log(`[SECURITY] ${eventType}: IP ${ipAddress}${userId ? ` (User: ${userId})` : ''}`, details);
 
     // Check if IP should be blocked based on severity
     await evaluateIPThreat(ipAddress, eventType);
