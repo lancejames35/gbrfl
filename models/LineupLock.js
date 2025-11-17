@@ -304,26 +304,29 @@ class LineupLock {
 
   /**
    * Auto-lock weeks that have passed their lock time
+   * Uses the same timezone logic as the frontend to ensure consistency
    * @param {number} seasonYear - The season year
    * @returns {Promise<Array>} Array of weeks that were auto-locked
    */
   static async autoLockExpiredWeeks(seasonYear = 2025) {
     try {
-      // First, get weeks that should be auto-locked
-      const selectQuery = `
-        SELECT week_number, lock_datetime as lock_time
+      const expiredWeeks = [];
+
+      // Get all weeks with lock times set but not yet manually locked
+      const weeks = await db.query(`
+        SELECT week_number
         FROM lineup_locks
         WHERE season_year = ?
-        AND lock_datetime IS NOT NULL
-        AND NOW() >= lock_datetime
-        AND is_locked = 0
-      `;
+          AND lock_datetime IS NOT NULL
+          AND is_locked = 0
+      `, [seasonYear]);
 
-      const expiredWeeks = await db.query(selectQuery, [seasonYear]);
+      // Check each week using the SAME logic as the frontend
+      for (const week of weeks) {
+        const lockStatus = await this.getLockStatus(week.week_number, 'primary', seasonYear);
 
-      if (expiredWeeks.length > 0) {
-        // Auto-lock the expired weeks and populate empty lineups
-        for (const week of expiredWeeks) {
+        // If the frontend would show it as auto_locked, process it
+        if (lockStatus.current_status === 'auto_locked') {
           console.log(`Auto-locking Week ${week.week_number}, Season ${seasonYear}`);
 
           await db.query(`
@@ -334,6 +337,7 @@ class LineupLock {
 
           // Populate empty lineups from previous week
           await this.populateEmptyLineupsFromPrevious(week.week_number, seasonYear);
+          expiredWeeks.push(week);
         }
       }
 

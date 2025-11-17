@@ -63,6 +63,28 @@ const espnImportJob = new cron.CronJob(
 
 console.log('ESPN import scheduled for 3:00 AM daily (Chicago time)');
 
+// Auto-lock lineups when lock time passes
+const LineupLock = require('./models/LineupLock');
+
+const autoLockJob = new cron.CronJob(
+  '*/5 * * * *', // Every 5 minutes
+  async () => {
+    try {
+      const lockedWeeks = await LineupLock.autoLockExpiredWeeks(2025);
+      if (lockedWeeks.length > 0) {
+        console.log(`[AUTO-LOCK] Locked ${lockedWeeks.length} week(s): ${lockedWeeks.map(w => `Week ${w.week_number}`).join(', ')}`);
+      }
+    } catch (error) {
+      console.error('[AUTO-LOCK] Failed:', error);
+    }
+  },
+  null, // onComplete
+  true, // start immediately
+  'America/Chicago' // timezone
+);
+
+console.log('Auto-lock job scheduled (checks every 5 minutes)');
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
