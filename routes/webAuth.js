@@ -126,96 +126,24 @@ router.post('/login', [
 
 /**
  * @route   GET /register
- * @desc    Show registration page
+ * @desc    Show registration page (DISABLED)
  * @access  Public
  */
 router.get('/register', (req, res) => {
-  // If user is already logged in, redirect to dashboard
-  if (req.session.user) {
-    return res.redirect('/dashboard');
-  }
-  
-  res.render('auth/register', {
-    title: 'Register',
-    layout: 'layouts/auth-layout' // Add this line
-  });
+  // Registration is disabled - only admins can create users
+  req.flash('error_msg', 'Registration is currently closed. Please contact an administrator to create an account.');
+  return res.redirect('/login');
 });
 
 /**
  * @route   POST /register
- * @desc    Process registration
+ * @desc    Process registration (DISABLED)
  * @access  Public
  */
-router.post('/register', [
-  check('username', 'Username is required').not().isEmpty(),
-  check('username', 'Username must be between 3 and 20 characters').isLength({ min: 3, max: 20 }),
-  check('email', 'Email is required').not().isEmpty(),
-  check('email', 'Please include a valid email').isEmail(),
-  check('password', 'Password is required').not().isEmpty(),
-  check('password', 'Password must be at least 6 characters').isLength({ min: 6 }),
-  check('confirmPassword', 'Confirm password is required').not().isEmpty(),
-  check('confirmPassword', 'Passwords do not match').custom((value, { req }) => value === req.body.password)
-], async (req, res) => {
-  try {
-    const { username, email, password, firstName, lastName } = req.body;
-    
-    // Check for validation errors
-    const validationErrors = validationResult(req);
-    if (!validationErrors.isEmpty()) {
-      return res.render('auth/register', {
-        title: 'Register',
-        layout: 'layouts/auth-layout',
-        errors: validationErrors.array(),
-        username,
-        email,
-        firstName,
-        lastName
-      });
-    }
-    
-    // Check if username already exists
-    const existingUsername = await User.findByUsername(username);
-    if (existingUsername) {
-      return res.render('auth/register', {
-        title: 'Register',
-        layout: 'layouts/auth-layout',
-        errors: [{ msg: 'Username already taken' }],
-        email,
-        firstName,
-        lastName
-      });
-    }
-    
-    // Check if email already exists
-    const existingEmail = await User.findByEmail(email);
-    if (existingEmail) {
-      return res.render('auth/register', {
-        title: 'Register',
-        layout: 'layouts/auth-layout',
-        errors: [{ msg: 'Email already registered' }],
-        username,
-        firstName,
-        lastName
-      });
-    }
-    
-    // Create user
-    const userId = await User.create({
-      username,
-      email,
-      password,
-      firstName,
-      lastName
-    });
-    
-    // Success message
-    req.flash('success_msg', 'You are now registered and can log in');
-    res.redirect('/login');
-  } catch (error) {
-    console.error('Registration error:', error);
-    req.flash('error_msg', 'An error occurred during registration');
-    res.redirect('/register');
-  }
+router.post('/register', (req, res) => {
+  // Registration is disabled - only admins can create users
+  req.flash('error_msg', 'Registration is currently closed. Please contact an administrator to create an account.');
+  return res.redirect('/login');
 });
 
 /**
