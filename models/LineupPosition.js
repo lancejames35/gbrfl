@@ -20,8 +20,21 @@ class LineupPosition {
         const lockResult = await db.query(lockCheckQuery, [lineupId]);
 
         if (lockResult.length > 0 && lockResult[0].week_is_locked === 1) {
-          // Week is locked, use historical method
-          return await this.getHistoricalLineupByPosition(lineupId);
+          // Week is locked - check if lineup has positions
+          // Only use historical method as failsafe when lineup is truly empty
+          const positionCountQuery = `
+            SELECT COUNT(*) as position_count
+            FROM lineup_positions
+            WHERE lineup_id = ?
+          `;
+          const positionCountResult = await db.query(positionCountQuery, [lineupId]);
+          const positionCount = positionCountResult[0]?.position_count || 0;
+
+          // Use historical method only for empty lineups (failsafe)
+          // For lineups with positions, use normal method to show actual roster + pending waivers
+          if (positionCount === 0) {
+            return await this.getHistoricalLineupByPosition(lineupId);
+          }
         }
       }
 
