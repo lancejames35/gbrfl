@@ -157,8 +157,8 @@ class LineupPosition {
 
   /**
    * Get historical lineup by position (for locked weeks)
-   * This method only reads stored lineup_positions data to preserve historical accuracy
-   * NO waiver status checking - this is purely historical data
+   * This method reads stored lineup_positions data to preserve historical accuracy
+   * It preserves the actual player_status (e.g., 'pending_waiver') until waivers are processed
    * @param {number} lineupId - The lineup submission ID
    * @returns {Promise<Object>} Object with arrays of players by position
    */
@@ -178,8 +178,8 @@ class LineupPosition {
           COALESCE(nt.team_code, pt.team_code, 'UNK') as team_abbrev,
           lp.position_type,
           1 as in_lineup,
-          'rostered' as player_status,
-          NULL as waiver_request_id
+          COALESCE(lp.player_status, 'rostered') as player_status,
+          lp.waiver_request_id
         FROM lineup_positions lp
         LEFT JOIN nfl_players p ON lp.player_id = p.player_id
         LEFT JOIN nfl_teams nt ON lp.nfl_team_id = nt.nfl_team_id

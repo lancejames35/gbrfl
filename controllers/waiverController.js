@@ -870,14 +870,25 @@ exports.rejectRequest = async (req, res) => {
 
     // Update request status
     const updateRequestQuery = `
-      UPDATE waiver_requests 
+      UPDATE waiver_requests
       SET status = 'rejected', processed_at = NOW(), processed_by = ?, notes = ?
       WHERE request_id = ? AND status = 'pending'
     `;
     const result = await db.query(updateRequestQuery, [admin_user_id, notes || null, request_id]);
 
-    // Note: Pending players appear in lineup UI via UNION query but don't have 
-    // actual lineup_positions records, so no lineup cleanup needed
+    // Remove pending_waiver entry from lineup_positions
+    try {
+      const removeLineupQuery = `
+        DELETE FROM lineup_positions
+        WHERE waiver_request_id = ? AND player_status = 'pending_waiver'
+      `;
+      const removeResult = await db.query(removeLineupQuery, [request_id]);
+      if (removeResult.affectedRows > 0) {
+        console.log(`Removed ${removeResult.affectedRows} pending_waiver lineup position(s) for rejected request ${request_id}`);
+      }
+    } catch (lineupError) {
+      console.warn('Warning: Could not remove pending_waiver lineup position:', lineupError.message);
+    }
 
     // Log the activity
     try {
@@ -1046,6 +1057,20 @@ exports.cancelRequest = async (req, res) => {
         success: false,
         message: 'Request not found or cannot be cancelled'
       });
+    }
+
+    // Remove pending_waiver entry from lineup_positions
+    try {
+      const removeLineupQuery = `
+        DELETE FROM lineup_positions
+        WHERE waiver_request_id = ? AND player_status = 'pending_waiver'
+      `;
+      const removeResult = await db.query(removeLineupQuery, [request_id]);
+      if (removeResult.affectedRows > 0) {
+        console.log(`Removed ${removeResult.affectedRows} pending_waiver lineup position(s) for cancelled request ${request_id}`);
+      }
+    } catch (lineupError) {
+      console.warn('Warning: Could not remove pending_waiver lineup position:', lineupError.message);
     }
 
     // Log the activity (optional - don't fail if logging fails)
