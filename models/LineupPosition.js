@@ -20,80 +20,54 @@ class LineupPosition {
         const lockResult = await db.query(lockCheckQuery, [lineupId]);
 
         if (lockResult.length > 0 && lockResult[0].week_is_locked === 1) {
-          // Week is locked - check if lineup has positions
-          // Only use historical method as failsafe when lineup is truly empty
-          const positionCountQuery = `
-            SELECT COUNT(*) as position_count
-            FROM lineup_positions
-            WHERE lineup_id = ?
-          `;
-          const positionCountResult = await db.query(positionCountQuery, [lineupId]);
-          const positionCount = positionCountResult[0]?.position_count || 0;
-
-          // Use historical method only for empty lineups (failsafe)
-          // For lineups with positions, use normal method to show actual roster + pending waivers
-          if (positionCount === 0) {
-            return await this.getHistoricalLineupByPosition(lineupId);
-          }
+          // Week is locked - use historical method to show what was actually in the lineup
+          return await this.getHistoricalLineupByPosition(lineupId);
         }
       }
 
-      // Week is unlocked or no lineupId provided, use dynamic method
-      const query = `
+      // Build query - only include pending waivers for unlocked weeks
+      const rosterQuery = `
         SELECT
-          rostered_players.player_id,
-          rostered_players.player_name,
-          rostered_players.player_position,
-          rostered_players.first_name,
-          rostered_players.last_name,
-          rostered_players.player_team_name,
-          rostered_players.player_team_code,
-          rostered_players.team_abbrev,
-          rostered_players.position_type,
-          rostered_players.sort_order,
-          rostered_players.in_lineup,
-          rostered_players.player_status,
+          ftp.player_id,
+          p.display_name as player_name,
+          p.position as player_position,
+          p.first_name,
+          p.last_name,
+          pt.team_name as player_team_name,
+          pt.team_code as player_team_code,
+          pt.team_code as team_abbrev,
+          CASE
+            WHEN p.position IN ('QB') THEN 'quarterback'
+            WHEN p.position IN ('RB') THEN 'running_back'
+            WHEN p.position IN ('RC') THEN 'receiver'
+            WHEN p.position IN ('PK') THEN 'place_kicker'
+            WHEN p.position IN ('DU') THEN 'defense'
+            ELSE 'other'
+          END as position_type,
+          COALESCE(lp.sort_order, 999) as sort_order,
+          CASE WHEN lp.position_id IS NOT NULL THEN 1 ELSE 0 END as in_lineup,
+          'rostered' as player_status,
           NULL as waiver_request_id
-        FROM (
-          SELECT
-            ftp.player_id,
-            p.display_name as player_name,
-            p.position as player_position,
-            p.first_name,
-            p.last_name,
-            pt.team_name as player_team_name,
-            pt.team_code as player_team_code,
-            pt.team_code as team_abbrev,
-            CASE
-              WHEN p.position IN ('QB') THEN 'quarterback'
-              WHEN p.position IN ('RB') THEN 'running_back'
-              WHEN p.position IN ('RC') THEN 'receiver'
-              WHEN p.position IN ('PK') THEN 'place_kicker'
-              WHEN p.position IN ('DU') THEN 'defense'
-              ELSE 'other'
-            END as position_type,
-            COALESCE(lp.sort_order, 999) as sort_order,
-            CASE WHEN lp.position_id IS NOT NULL THEN 1 ELSE 0 END as in_lineup,
-            'rostered' as player_status
-          FROM fantasy_team_players ftp
-          JOIN nfl_players p ON ftp.player_id = p.player_id
-          LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
-          LEFT JOIN lineup_positions lp ON (
-            ftp.player_id = lp.player_id
-            AND lp.lineup_id = ?
-            AND lp.position_type = CASE
-              WHEN p.position IN ('QB') THEN 'quarterback'
-              WHEN p.position IN ('RB') THEN 'running_back'
-              WHEN p.position IN ('RC') THEN 'receiver'
-              WHEN p.position IN ('PK') THEN 'place_kicker'
-              WHEN p.position IN ('DU') THEN 'defense'
-              ELSE 'other'
-            END
-          )
-          WHERE ftp.fantasy_team_id = ?
-          AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
-        ) as rostered_players
-        
+        FROM fantasy_team_players ftp
+        JOIN nfl_players p ON ftp.player_id = p.player_id
+        LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
+        LEFT JOIN lineup_positions lp ON (
+          ftp.player_id = lp.player_id
+          AND lp.lineup_id = ?
+          AND lp.position_type = CASE
+            WHEN p.position IN ('QB') THEN 'quarterback'
+            WHEN p.position IN ('RB') THEN 'running_back'
+            WHEN p.position IN ('RC') THEN 'receiver'
+            WHEN p.position IN ('PK') THEN 'place_kicker'
+            WHEN p.position IN ('DU') THEN 'defense'
+            ELSE 'other'
+          END
+        )
+        WHERE ftp.fantasy_team_id = ?
+        AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
+      `;
+
+      const pendingWaiversQuery = `
         UNION ALL
 
         SELECT
@@ -132,24 +106,29 @@ class LineupPosition {
             ELSE 'other'
           END
         )
-        LEFT JOIN lineup_submissions ls ON lp.lineup_id = ls.lineup_id
         WHERE wr.fantasy_team_id = ?
         AND wr.status = 'pending'
         AND p.position IN ('QB', 'RB', 'RC', 'PK', 'DU')
         GROUP BY p.player_id, p.display_name, p.position, p.first_name, p.last_name,
                  pt.team_name, pt.team_code, lp.sort_order, lp.position_id
-        
+      `;
+
+      const orderByClause = `
         ORDER BY position_type,
-                 CASE 
+                 CASE
                    WHEN sort_order IS NOT NULL THEN sort_order
                    WHEN player_status = 'rostered' THEN 1000
                    ELSE 1001
                  END,
-                 last_name, 
+                 last_name,
                  first_name
       `;
 
-      const results = await db.query(query, [lineupId, teamId, lineupId, teamId]);
+      // Unlocked weeks include pending waivers (locked weeks return early via getHistoricalLineupByPosition)
+      const query = rosterQuery + pendingWaiversQuery + orderByClause;
+      const queryParams = [lineupId, teamId, lineupId, teamId];
+
+      const results = await db.query(query, queryParams);
       
       
       // Group by position
