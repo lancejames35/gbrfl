@@ -601,8 +601,27 @@ exports.approveRequest = async (req, res) => {
     `;
     await db.query(updateRequestQuery, [admin_user_id, request_id]);
 
-    // Update lineup positions: convert pending waiver player to rostered player
+    // Update lineup positions: swap dropped player with pickup player
     try {
+      const weekNumber = parseInt(weekString.replace(/\D/g, ''));
+
+      // Get the pickup player's position type
+      const pickupPlayerQuery = `
+        SELECT position,
+          CASE
+            WHEN position = 'QB' THEN 'quarterback'
+            WHEN position = 'RB' THEN 'running_back'
+            WHEN position = 'RC' THEN 'receiver'
+            WHEN position = 'PK' THEN 'place_kicker'
+            WHEN position = 'DU' THEN 'defense'
+            ELSE 'other'
+          END as position_type
+        FROM nfl_players WHERE player_id = ?
+      `;
+      const pickupPlayerResult = await db.query(pickupPlayerQuery, [request.pickup_player_id]);
+      const pickupPositionType = pickupPlayerResult.length > 0 ? pickupPlayerResult[0].position_type : null;
+
+      // First, convert any pending_waiver entries for this request to rostered
       const updateLineupQuery = `
         UPDATE lineup_positions
         SET player_status = 'rostered', waiver_request_id = NULL
@@ -610,19 +629,100 @@ exports.approveRequest = async (req, res) => {
       `;
       await db.query(updateLineupQuery, [request_id]);
 
-      // Remove the dropped player from ONLY the current week's lineup (preserve historical lineups)
-      const weekNumber = parseInt(weekString.replace(/\D/g, ''));
-      const removeDroppedQuery = `
-        DELETE lp FROM lineup_positions lp
+      // Get all lineup_positions entries for the dropped player in current and future weeks
+      const getDroppedPositionsQuery = `
+        SELECT lp.position_id, lp.lineup_id, lp.position_type, lp.sort_order, ls.week_number
+        FROM lineup_positions lp
         JOIN lineup_submissions ls ON lp.lineup_id = ls.lineup_id
         WHERE lp.player_id = ?
           AND ls.fantasy_team_id = ?
-          AND ls.week_number = ?
+          AND ls.week_number >= ?
           AND ls.season_year = ?
       `;
-      await db.query(removeDroppedQuery, [request.drop_player_id, request.fantasy_team_id, weekNumber, currentSeason]);
+      const droppedPositions = await db.query(getDroppedPositionsQuery, [
+        request.drop_player_id, request.fantasy_team_id, weekNumber, currentSeason
+      ]);
+
+      // For each dropped player position, replace with pickup player (if same position type and not already in lineup)
+      for (const pos of droppedPositions) {
+        // Check if pickup player is already in this lineup
+        const existsQuery = `
+          SELECT position_id FROM lineup_positions
+          WHERE lineup_id = ? AND player_id = ?
+        `;
+        const existsResult = await db.query(existsQuery, [pos.lineup_id, request.pickup_player_id]);
+
+        if (existsResult.length === 0 && pickupPositionType === pos.position_type) {
+          // Replace dropped player with pickup player (same sort_order to maintain position)
+          const replaceQuery = `
+            UPDATE lineup_positions
+            SET player_id = ?, player_status = NULL, waiver_request_id = NULL
+            WHERE position_id = ?
+          `;
+          await db.query(replaceQuery, [request.pickup_player_id, pos.position_id]);
+          console.log(`Replaced player ${request.drop_player_id} with ${request.pickup_player_id} in lineup ${pos.lineup_id} (week ${pos.week_number})`);
+        } else {
+          // Different position type or pickup already exists - just remove the dropped player
+          const deleteQuery = `DELETE FROM lineup_positions WHERE position_id = ?`;
+          await db.query(deleteQuery, [pos.position_id]);
+          console.log(`Removed dropped player ${request.drop_player_id} from lineup ${pos.lineup_id} (week ${pos.week_number})`);
+
+          // If pickup player not in lineup and same position type, add at end
+          if (existsResult.length === 0 && pickupPositionType) {
+            const maxSortQuery = `
+              SELECT COALESCE(MAX(sort_order), 0) + 1 as next_sort
+              FROM lineup_positions WHERE lineup_id = ? AND position_type = ?
+            `;
+            const sortResult = await db.query(maxSortQuery, [pos.lineup_id, pickupPositionType]);
+            const nextSort = sortResult[0].next_sort;
+
+            const insertQuery = `
+              INSERT INTO lineup_positions (lineup_id, position_type, player_id, sort_order, created_at)
+              VALUES (?, ?, ?, ?, NOW())
+            `;
+            await db.query(insertQuery, [pos.lineup_id, pickupPositionType, request.pickup_player_id, nextSort]);
+            console.log(`Added pickup player ${request.pickup_player_id} to lineup ${pos.lineup_id} (week ${pos.week_number})`);
+          }
+        }
+      }
+
+      // If dropped player wasn't in any lineups but pickup player needs to be added to current week
+      if (droppedPositions.length === 0 && pickupPositionType) {
+        // Get all lineups for this team for current and future weeks
+        const lineupsQuery = `
+          SELECT lineup_id, week_number FROM lineup_submissions
+          WHERE fantasy_team_id = ? AND week_number >= ? AND season_year = ?
+        `;
+        const lineups = await db.query(lineupsQuery, [request.fantasy_team_id, weekNumber, currentSeason]);
+
+        for (const lineup of lineups) {
+          // Check if pickup player already in this lineup
+          const existsQuery = `
+            SELECT position_id FROM lineup_positions
+            WHERE lineup_id = ? AND player_id = ?
+          `;
+          const existsResult = await db.query(existsQuery, [lineup.lineup_id, request.pickup_player_id]);
+
+          if (existsResult.length === 0) {
+            const maxSortQuery = `
+              SELECT COALESCE(MAX(sort_order), 0) + 1 as next_sort
+              FROM lineup_positions WHERE lineup_id = ? AND position_type = ?
+            `;
+            const sortResult = await db.query(maxSortQuery, [lineup.lineup_id, pickupPositionType]);
+            const nextSort = sortResult[0].next_sort;
+
+            const insertQuery = `
+              INSERT INTO lineup_positions (lineup_id, position_type, player_id, sort_order, created_at)
+              VALUES (?, ?, ?, ?, NOW())
+            `;
+            await db.query(insertQuery, [lineup.lineup_id, pickupPositionType, request.pickup_player_id, nextSort]);
+            console.log(`Added pickup player ${request.pickup_player_id} to lineup ${lineup.lineup_id} (week ${lineup.week_number})`);
+          }
+        }
+      }
     } catch (lineupError) {
       console.warn('Warning: Could not update lineup positions:', lineupError.message);
+      console.warn('Lineup error stack:', lineupError.stack);
     }
 
     // NOTE: waiver_order_position was already set earlier (before auto-rejection)
