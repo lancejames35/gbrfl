@@ -642,6 +642,16 @@ exports.approveRequest = async (req, res) => {
         )
       `;
       await db.query(removeConflictingLineupsQuery, [admin_user_id]);
+
+      // Also remove playoff lineup positions for rejected requests
+      const removeConflictingPlayoffLineupsQuery = `
+        DELETE FROM playoff_lineup_positions
+        WHERE waiver_request_id IN (
+          SELECT request_id FROM waiver_requests
+          WHERE status = 'rejected' AND processed_by = ? AND processed_at >= NOW() - INTERVAL 1 MINUTE
+        )
+      `;
+      await db.query(removeConflictingPlayoffLineupsQuery, [admin_user_id]);
     } catch (lineupCleanupError) {
       console.warn('Warning: Could not clean up conflicting lineup positions:', lineupCleanupError.message);
     }
@@ -699,6 +709,14 @@ exports.approveRequest = async (req, res) => {
       `;
       await db.query(updateLineupQuery, [request_id]);
 
+      // Also update playoff lineup positions for pending waivers
+      const updatePlayoffLineupQuery = `
+        UPDATE playoff_lineup_positions
+        SET player_status = 'rostered', waiver_request_id = NULL
+        WHERE waiver_request_id = ? AND player_status = 'pending_waiver'
+      `;
+      await db.query(updatePlayoffLineupQuery, [request_id]);
+
       // Get all lineup_positions entries for the dropped player in current and future weeks
       const getDroppedPositionsQuery = `
         SELECT lp.position_id, lp.lineup_id, lp.position_type, lp.sort_order, ls.week_number
@@ -711,6 +729,19 @@ exports.approveRequest = async (req, res) => {
       `;
       const droppedPositions = await db.query(getDroppedPositionsQuery, [
         request.drop_player_id, request.fantasy_team_id, weekNumber, currentSeason
+      ]);
+
+      // Also get playoff lineup positions for the dropped player
+      const getDroppedPlayoffPositionsQuery = `
+        SELECT plp.playoff_position_id, plp.playoff_lineup_id, plp.position_type, plp.playoff_round, plp.sort_order
+        FROM playoff_lineup_positions plp
+        JOIN playoff_lineup_submissions pls ON plp.playoff_lineup_id = pls.playoff_lineup_id
+        WHERE plp.player_id = ?
+          AND pls.fantasy_team_id = ?
+          AND pls.season_year = ?
+      `;
+      const droppedPlayoffPositions = await db.query(getDroppedPlayoffPositionsQuery, [
+        request.drop_player_id, request.fantasy_team_id, currentSeason
       ]);
 
       // For each dropped player position, replace with pickup player (if same position type and not already in lineup)
@@ -788,6 +819,32 @@ exports.approveRequest = async (req, res) => {
             await db.query(insertQuery, [lineup.lineup_id, pickupPositionType, request.pickup_player_id, nextSort]);
             console.log(`Added pickup player ${request.pickup_player_id} to lineup ${lineup.lineup_id} (week ${lineup.week_number})`);
           }
+        }
+      }
+
+      // Handle playoff lineup positions for dropped player
+      for (const pos of droppedPlayoffPositions) {
+        // Check if pickup player is already in this playoff lineup for this round
+        const existsQuery = `
+          SELECT playoff_position_id FROM playoff_lineup_positions
+          WHERE playoff_lineup_id = ? AND player_id = ? AND playoff_round = ?
+        `;
+        const existsResult = await db.query(existsQuery, [pos.playoff_lineup_id, request.pickup_player_id, pos.playoff_round]);
+
+        if (existsResult.length === 0 && pickupPositionType === pos.position_type) {
+          // Replace dropped player with pickup player (same sort_order and playoff_round)
+          const replaceQuery = `
+            UPDATE playoff_lineup_positions
+            SET player_id = ?, player_status = 'rostered', waiver_request_id = NULL
+            WHERE playoff_position_id = ?
+          `;
+          await db.query(replaceQuery, [request.pickup_player_id, pos.playoff_position_id]);
+          console.log(`Replaced player ${request.drop_player_id} with ${request.pickup_player_id} in playoff lineup ${pos.playoff_lineup_id} (${pos.playoff_round})`);
+        } else {
+          // Different position type or pickup already exists - just remove the dropped player
+          const deleteQuery = `DELETE FROM playoff_lineup_positions WHERE playoff_position_id = ?`;
+          await db.query(deleteQuery, [pos.playoff_position_id]);
+          console.log(`Removed dropped player ${request.drop_player_id} from playoff lineup ${pos.playoff_lineup_id} (${pos.playoff_round})`);
         }
       }
     } catch (lineupError) {

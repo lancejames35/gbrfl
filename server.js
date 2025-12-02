@@ -392,6 +392,7 @@ app.use('/standings', require('./routes/standings'));
 app.use('/transactions', require('./routes/transactions'));
 app.use('/message-board', require('./routes/messageBoard'));
 app.use('/lineups', require('./routes/lineups'));
+app.use('/playoff-lineups', require('./routes/playoffLineups'));
 app.use('/scoreboard', require('./routes/scoreboard'));
 app.use('/scoreboard-results', require('./routes/scoreboard-manual'));
 app.use('/notifications', require('./routes/notifications'));

@@ -1,0 +1,959 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.css">
+<style>
+    /* Container */
+    .playoff-lineup-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    /* Header */
+    .playoff-header {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .playoff-header h1 {
+        margin: 0 0 10px 0;
+        font-size: 1.8rem;
+        color: #2c3e50;
+    }
+
+    .playoff-header p {
+        margin: 0;
+        color: #7f8c8d;
+        font-size: 0.95rem;
+    }
+
+    .lock-status-bar {
+        margin-top: 15px;
+        padding: 12px 15px;
+        background: #f8f9fa;
+        border-radius: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .lock-status-bar.locked {
+        background: #fee;
+        border: 1px solid #fcc;
+    }
+
+    .lock-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+    }
+
+    .lock-info.locked {
+        color: #dc3545;
+        font-weight: 600;
+    }
+
+    /* Two column layout */
+    .playoff-content {
+        display: grid;
+        grid-template-columns: 420px 1fr;
+        gap: 25px;
+    }
+
+    /* Roster panel (left side) */
+    .roster-panel {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border: 1px solid #e0e0e0;
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+
+    .roster-panel-header {
+        background: #f8f9fa;
+        padding: 15px 20px;
+        border-bottom: 2px solid #e9ecef;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .roster-panel-title {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #333;
+        margin: 0;
+    }
+
+    .roster-panel-body {
+        padding: 15px;
+        max-height: calc(100vh - 250px);
+        overflow-y: auto;
+    }
+
+    .roster-position-group {
+        margin-bottom: 20px;
+    }
+
+    .roster-position-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .roster-position-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        letter-spacing: 0.5px;
+        display: block;
+    }
+
+    .roster-player-item {
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        background: #fafafa;
+        border-radius: 5px;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 8px;
+    }
+
+    .roster-player-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .roster-player-name {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9rem;
+    }
+
+    .roster-player-team {
+        color: #666;
+        font-size: 0.85rem;
+        margin-left: 5px;
+    }
+
+    .pending-badge {
+        background: #ff9800;
+        color: white;
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 500;
+        margin-left: 6px;
+        text-transform: uppercase;
+    }
+
+    .add-player-controls {
+        display: flex;
+        gap: 6px;
+    }
+
+    .playoff-round-select {
+        flex: 1;
+        padding: 6px 8px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        background: white;
+        cursor: pointer;
+    }
+
+    .add-player-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .add-player-btn:hover {
+        background: #218838;
+    }
+
+    /* Lineup panel (right side) */
+    .lineup-panel {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border: 1px solid #e0e0e0;
+    }
+
+    .lineup-panel-header {
+        background: #f8f9fa;
+        padding: 15px 20px;
+        border-bottom: 2px solid #e9ecef;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .lineup-panel-title {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #333;
+        margin: 0;
+    }
+
+    .lineup-panel-body {
+        padding: 15px;
+    }
+
+    /* Position sections in lineup */
+    .lineup-position-section {
+        margin-bottom: 20px;
+    }
+
+    .lineup-position-section:last-child {
+        margin-bottom: 0;
+    }
+
+    .lineup-position-header {
+        background: #f8f9fa;
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .lineup-position-title {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #333;
+        margin: 0;
+    }
+
+    .lineup-position-requirement {
+        font-size: 0.85rem;
+        color: #666;
+        background: #e9ecef;
+        padding: 3px 8px;
+        border-radius: 12px;
+    }
+
+    .lineup-players-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .lineup-player-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 12px;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        cursor: grab;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+
+    .lineup-player-item:active {
+        cursor: grabbing;
+    }
+
+    .lineup-player-item:hover {
+        background: #f5f5f5;
+        transform: translateX(3px);
+    }
+
+    /* Starter highlighting */
+    .starter-player {
+        background: #f8fff8;
+        border-left: 4px solid #28a745;
+    }
+
+    .starter-player:hover {
+        background: #f0f8f0;
+    }
+
+    .backup-player {
+        background: white;
+        border-left: 4px solid transparent;
+    }
+
+    /* Pending waiver players */
+    .pending-player {
+        background: #fff8e1;
+        border-left: 4px solid #ff9800;
+    }
+
+    .pending-player:hover {
+        background: #fff3c4;
+    }
+
+    .drag-handle {
+        font-size: 1.1rem;
+        color: #999;
+        margin-right: 10px;
+        cursor: grab;
+        padding: 5px;
+    }
+
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+
+    .position-number {
+        font-weight: bold;
+        color: #666;
+        min-width: 25px;
+        text-align: center;
+        margin-right: 10px;
+    }
+
+    .lineup-player-info {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .lineup-player-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .lineup-player-team {
+        color: #666;
+        font-size: 0.85rem;
+    }
+
+    .playoff-round-badge {
+        background: #007bff;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .role-indicator {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-weight: 500;
+    }
+
+    .role-starter {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .role-backup {
+        background: #e2e3e5;
+        color: #495057;
+    }
+
+    .remove-player-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+
+    .remove-player-btn:hover {
+        background: #c82333;
+    }
+
+    .empty-lineup {
+        padding: 30px;
+        text-align: center;
+        color: #999;
+        font-style: italic;
+        border: 2px dashed #ddd;
+        border-radius: 5px;
+    }
+
+    /* Head coach special styling */
+    .head-coach-section {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    /* Sortable.js styles */
+    .sortable-ghost {
+        opacity: 0.4;
+        background: #f8f9fa;
+        border: 2px dashed #007bff;
+    }
+
+    .sortable-chosen {
+        box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+        transform: scale(1.02);
+    }
+
+    .sortable-drag {
+        opacity: 0.8;
+        background: white;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        transform: rotate(2deg);
+    }
+
+    /* Locked styles */
+    .lineup-locked .lineup-player-item {
+        cursor: default !important;
+    }
+
+    .lineup-locked .drag-handle {
+        cursor: default !important;
+        opacity: 0.3;
+        pointer-events: none;
+    }
+
+    .lineup-locked .add-player-btn,
+    .lineup-locked .remove-player-btn,
+    .lineup-locked .playoff-round-select {
+        display: none;
+    }
+
+    /* Auto-save indicator */
+    .auto-save-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 10px 15px;
+        background: #28a745;
+        color: white;
+        border-radius: 5px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 1000;
+    }
+
+    .auto-save-indicator.show {
+        opacity: 1;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 1024px) {
+        .playoff-content {
+            grid-template-columns: 1fr;
+        }
+
+        .roster-panel {
+            position: static;
+        }
+
+        .roster-panel-body {
+            max-height: 400px;
+        }
+    }
+</style>
+
+<!-- Playoff Lineup Container -->
+<div class="playoff-lineup-container<%= lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked' ? ' lineup-locked' : '' %>">
+    <% if (typeof isGuest !== 'undefined' && isGuest) { %>
+    <!-- Guest mode banner -->
+    <div class="alert alert-info mb-3 d-flex align-items-center">
+        <i class="bi bi-eye me-2"></i>
+        <span><strong>Guest Mode:</strong> You are viewing in read-only mode. Log in to make changes.</span>
+    </div>
+    <% } %>
+
+    <!-- Auto-save indicator -->
+    <div id="autoSaveIndicator" class="auto-save-indicator">
+        <i class="bi bi-check-circle"></i> Lineup saved
+    </div>
+
+    <!-- Header -->
+    <div class="playoff-header">
+        <h1><i class="bi bi-trophy"></i> Week 18 Playoff Lineups</h1>
+        <p>Submit your lineup for Week 18 and the NFL Playoffs through the Super Bowl. Each player can be used once per playoff round.</p>
+
+        <div class="lock-status-bar <%= lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked' ? 'locked' : '' %>">
+            <% if (lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked') { %>
+                <div class="lock-info locked">
+                    <i class="bi bi-lock-fill"></i> Playoff Lineups Locked
+                </div>
+            <% } else if (lockStatus.lock_datetime) { %>
+                <div class="lock-info">
+                    <i class="bi bi-clock"></i> Locks: <span id="lockTime"><%= lockStatus.minutes_until_lock %> minutes</span>
+                </div>
+            <% } else { %>
+                <div class="lock-info">
+                    <i class="bi bi-unlock"></i> No deadline set
+                </div>
+            <% } %>
+
+            <a href="/lineups" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> Back to Lineups
+            </a>
+        </div>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="playoff-content">
+        <!-- Left: Roster Panel -->
+        <div class="roster-panel">
+            <div class="roster-panel-header">
+                <h3 class="roster-panel-title"><i class="bi bi-people"></i> Your Roster</h3>
+            </div>
+            <div class="roster-panel-body">
+                <%
+                const positions = [
+                    { type: 'quarterback', label: 'QB' },
+                    { type: 'running_back', label: 'RB' },
+                    { type: 'receiver', label: 'RC' },
+                    { type: 'place_kicker', label: 'PK' },
+                    { type: 'defense', label: 'DU' }
+                ];
+
+                positions.forEach(position => {
+                    const rosterPlayers = rosterByPosition[position.type] || [];
+                    if (rosterPlayers.length > 0) {
+                %>
+                <div class="roster-position-group">
+                    <span class="roster-position-label"><%= position.label %></span>
+                    <% rosterPlayers.forEach(player => { %>
+                    <div class="roster-player-item">
+                        <div class="roster-player-info">
+                            <div>
+                                <span class="roster-player-name"><%= player.first_name %> <%= player.last_name %></span>
+                                <span class="roster-player-team">(<%= player.team_abbrev || 'FA' %>)</span>
+                                <% if (player.player_status === 'pending_waiver') { %>
+                                    <span class="pending-badge">PENDING</span>
+                                <% } %>
+                            </div>
+                        </div>
+                        <div class="add-player-controls">
+                            <select class="playoff-round-select" data-player-id="<%= player.player_id %>">
+                                <option value="">Select Round...</option>
+                                <% playoffRounds.forEach(round => { %>
+                                <option value="<%= round.value %>"><%= round.label %></option>
+                                <% }); %>
+                            </select>
+                            <button class="add-player-btn"
+                                    data-player-id="<%= player.player_id %>"
+                                    data-position-type="<%= position.type %>"
+                                    data-player-status="<%= player.player_status || 'rostered' %>"
+                                    data-waiver-request-id="<%= player.waiver_request_id || '' %>">
+                                <i class="bi bi-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                    <% }); %>
+                </div>
+                <% }
+                }); %>
+            </div>
+        </div>
+
+        <!-- Right: Full Lineup Panel -->
+        <div class="lineup-panel">
+            <div class="lineup-panel-header">
+                <h3 class="lineup-panel-title"><i class="bi bi-list-ol"></i> Playoff Lineup</h3>
+            </div>
+            <div class="lineup-panel-body">
+                <!-- Head Coach -->
+                <div class="head-coach-section">
+                    <div class="lineup-position-header">
+                        <h4 class="lineup-position-title">Head Coach</h4>
+                    </div>
+                    <div class="lineup-player-item starter-player">
+                        <div class="position-number">HC</div>
+                        <div class="lineup-player-info">
+                            <span class="lineup-player-name">
+                                <%= selectedTeam.head_coach || 'No Head Coach Assigned' %>
+                            </span>
+                            <span class="lineup-player-team">(<%= selectedTeam.head_coach_team || 'Coach' %>)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <%
+                // Combine all lineup positions and sort by position type
+                const allLineupPlayers = [];
+                const positionOrder = ['quarterback', 'running_back', 'receiver', 'place_kicker', 'defense'];
+                const positionLabels = {
+                    quarterback: 'QB',
+                    running_back: 'RB',
+                    receiver: 'RC',
+                    place_kicker: 'PK',
+                    defense: 'DU'
+                };
+                const positionRequirements = {
+                    quarterback: 2,
+                    running_back: 3,
+                    receiver: 3,
+                    place_kicker: 1,
+                    defense: 1
+                };
+
+                positionOrder.forEach(posType => {
+                    const players = lineupByPosition[posType] || [];
+                    if (players.length > 0 || true) { // Always show sections
+                %>
+                <!-- <%= positionLabels[posType] %> Section -->
+                <div class="lineup-position-section">
+                    <div class="lineup-position-header">
+                        <h4 class="lineup-position-title"><%= positionLabels[posType] %></h4>
+                        <span class="lineup-position-requirement"><%= positionRequirements[posType] %> Required</span>
+                    </div>
+                    <div class="lineup-players-list" id="<%= posType %>-lineup" data-position="<%= posType %>">
+                        <% if (players.length > 0) {
+                            players.forEach((player, index) => {
+                                const isStarter = index < positionRequirements[posType];
+                                const isPending = player.player_status === 'pending_waiver';
+                                const roundLabel = playoffRounds.find(r => r.value === player.playoff_round);
+                        %>
+                        <div class="lineup-player-item <%= isStarter ? 'starter-player' : 'backup-player' %> <%= isPending ? 'pending-player' : '' %>"
+                             data-playoff-position-id="<%= player.playoff_position_id %>"
+                             data-player-id="<%= player.player_id %>"
+                             data-playoff-round="<%= player.playoff_round %>"
+                             data-position="<%= posType %>">
+                            <div class="drag-handle"><i class="bi bi-grip-vertical"></i></div>
+                            <div class="position-number"><%= index + 1 %>.</div>
+                            <div class="lineup-player-info">
+                                <span class="lineup-player-name">
+                                    <%= player.first_name %> <%= player.last_name %>
+                                    <% if (isPending) { %>
+                                        <span class="pending-badge">PENDING</span>
+                                    <% } %>
+                                </span>
+                                <span class="lineup-player-team">(<%= player.team_abbrev || 'FA' %>)</span>
+                                <span class="playoff-round-badge">
+                                    <%= roundLabel ? roundLabel.label : player.playoff_round %>
+                                </span>
+                                <span class="role-indicator <%= isStarter ? 'role-starter' : 'role-backup' %>">
+                                    <%= isStarter ? 'Starter' : 'Backup' %>
+                                </span>
+                            </div>
+                            <button class="remove-player-btn"
+                                    data-player-id="<%= player.player_id %>"
+                                    data-playoff-round="<%= player.playoff_round %>">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                        <% });
+                        } else { %>
+                        <div class="empty-lineup">
+                            <i class="bi bi-clipboard-x"></i> No players assigned yet
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+                <% }
+                }); %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+// Global playoff lineup manager
+const PlayoffLineupManager = {
+    playoffLineupId: <%= playoffLineup.playoff_lineup_id %>,
+    teamId: <%= selectedTeam.team_id %>,
+    seasonYear: <%= seasonYear %>,
+    isLocked: <%= lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked' ? 'true' : 'false' %>,
+    isGuest: <%= typeof isGuest !== 'undefined' && isGuest ? 'true' : 'false' %>,
+    lockTime: '<%= lockStatus.lock_datetime %>',
+    saveTimeout: null,
+    sortableInstances: [],
+
+    positionRequirements: {
+        quarterback: 2,
+        running_back: 3,
+        receiver: 3,
+        place_kicker: 1,
+        defense: 1
+    },
+
+    init() {
+        this.initDragAndDrop();
+        this.initAddPlayerButtons();
+        this.initRemovePlayerButtons();
+        this.initLockCountdown();
+    },
+
+    initDragAndDrop() {
+        const self = this;
+        const positions = ['quarterback', 'running_back', 'receiver', 'place_kicker', 'defense'];
+
+        this.sortableInstances.forEach(instance => {
+            if (instance && instance.destroy) {
+                instance.destroy();
+            }
+        });
+        this.sortableInstances = [];
+
+        positions.forEach(position => {
+            const lineupEl = document.getElementById(`${position}-lineup`);
+
+            if (lineupEl) {
+                const sortableConfig = {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    dragClass: 'sortable-drag',
+                    filter: '.empty-lineup',
+                    preventOnFilter: false,
+                    onEnd: (evt) => {
+                        if (evt.oldIndex !== evt.newIndex) {
+                            self.updateStarterHighlighting(position);
+                            self.updatePositionNumbers(position);
+                            self.debouncedSave();
+                        }
+                    }
+                };
+
+                if (this.isLocked || this.isGuest) {
+                    sortableConfig.disabled = true;
+                }
+
+                const sortable = new Sortable(lineupEl, sortableConfig);
+                this.sortableInstances.push(sortable);
+            }
+        });
+    },
+
+    initAddPlayerButtons() {
+        const self = this;
+        const addButtons = document.querySelectorAll('.add-player-btn');
+
+        addButtons.forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const playerId = this.getAttribute('data-player-id');
+                const positionType = this.getAttribute('data-position-type');
+                const playerStatus = this.getAttribute('data-player-status');
+                const waiverRequestId = this.getAttribute('data-waiver-request-id');
+
+                const selector = document.querySelector(`.playoff-round-select[data-player-id="${playerId}"]`);
+                const playoffRound = selector.value;
+
+                if (!playoffRound) {
+                    alert('Please select a playoff round first');
+                    return;
+                }
+
+                await self.addPlayerToLineup(playerId, playoffRound, positionType, playerStatus, waiverRequestId);
+            });
+        });
+    },
+
+    initRemovePlayerButtons() {
+        const self = this;
+
+        document.addEventListener('click', async function(e) {
+            if (e.target.closest('.remove-player-btn')) {
+                const btn = e.target.closest('.remove-player-btn');
+                const playerId = btn.getAttribute('data-player-id');
+                const playoffRound = btn.getAttribute('data-playoff-round');
+
+                await self.removePlayerFromLineup(playerId, playoffRound);
+            }
+        });
+    },
+
+    async addPlayerToLineup(playerId, playoffRound, positionType, playerStatus, waiverRequestId) {
+        try {
+            const response = await fetch('/playoff-lineups/add-player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playoff_lineup_id: this.playoffLineupId,
+                    fantasy_team_id: this.teamId,
+                    player_id: playerId,
+                    playoff_round: playoffRound,
+                    position_type: positionType,
+                    player_status: playerStatus || 'rostered',
+                    waiver_request_id: waiverRequestId || null
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                this.showSuccess('Player added to lineup');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                this.showError(result.message);
+            }
+        } catch (error) {
+            this.showError('Error adding player to lineup');
+        }
+    },
+
+    async removePlayerFromLineup(playerId, playoffRound) {
+        try {
+            const response = await fetch('/playoff-lineups/remove-player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playoff_lineup_id: this.playoffLineupId,
+                    fantasy_team_id: this.teamId,
+                    player_id: playerId,
+                    playoff_round: playoffRound
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                this.showSuccess('Player removed from lineup');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                this.showError(result.message);
+            }
+        } catch (error) {
+            this.showError('Error removing player from lineup');
+        }
+    },
+
+    debouncedSave() {
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+        }
+
+        this.saveTimeout = setTimeout(() => {
+            this.saveLineup();
+        }, 1000);
+    },
+
+    async saveLineup() {
+        try {
+            const positions = this.collectAllPositions();
+
+            const response = await fetch('/playoff-lineups/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    playoff_lineup_id: this.playoffLineupId,
+                    fantasy_team_id: this.teamId,
+                    positions: positions
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                this.showSuccess('Lineup saved');
+            } else {
+                this.showError(result.message);
+            }
+        } catch (error) {
+            this.showError('Error saving lineup');
+        }
+    },
+
+    collectAllPositions() {
+        const positions = [];
+        const positionTypes = ['quarterback', 'running_back', 'receiver', 'place_kicker', 'defense'];
+
+        positionTypes.forEach(positionType => {
+            const lineupEl = document.getElementById(`${positionType}-lineup`);
+            if (lineupEl) {
+                const items = lineupEl.querySelectorAll('.lineup-player-item:not(.empty-lineup)');
+                items.forEach((item, index) => {
+                    positions.push({
+                        position_type: positionType,
+                        player_id: parseInt(item.getAttribute('data-player-id')),
+                        playoff_round: item.getAttribute('data-playoff-round'),
+                        sort_order: index + 1,
+                        player_status: item.classList.contains('pending-player') ? 'pending_waiver' : 'rostered',
+                        waiver_request_id: null
+                    });
+                });
+            }
+        });
+
+        return positions;
+    },
+
+    updateStarterHighlighting(positionType) {
+        const lineupEl = document.getElementById(`${positionType}-lineup`);
+        const starterCount = this.positionRequirements[positionType];
+
+        if (lineupEl) {
+            const items = lineupEl.querySelectorAll('.lineup-player-item:not(.empty-lineup)');
+            items.forEach((item, index) => {
+                const isStarter = index < starterCount;
+                const roleIndicator = item.querySelector('.role-indicator');
+
+                item.classList.toggle('starter-player', isStarter);
+                item.classList.toggle('backup-player', !isStarter);
+
+                if (roleIndicator) {
+                    roleIndicator.textContent = isStarter ? 'Starter' : 'Backup';
+                    roleIndicator.className = `role-indicator ${isStarter ? 'role-starter' : 'role-backup'}`;
+                }
+            });
+        }
+    },
+
+    updatePositionNumbers(positionType) {
+        const lineupEl = document.getElementById(`${positionType}-lineup`);
+        if (lineupEl) {
+            const numbers = lineupEl.querySelectorAll('.lineup-player-item:not(.empty-lineup) .position-number');
+            numbers.forEach((numEl, index) => {
+                numEl.textContent = (index + 1) + '.';
+            });
+        }
+    },
+
+    initLockCountdown() {
+        if (this.lockTime && this.lockTime !== 'null' && !this.isLocked) {
+            this.updateLockCountdown();
+            setInterval(() => {
+                this.updateLockCountdown();
+            }, 1000);
+        }
+    },
+
+    updateLockCountdown() {
+        const lockTimeEl = document.getElementById('lockTime');
+        if (!lockTimeEl) return;
+
+        const now = new Date();
+        const lockTime = new Date(this.lockTime);
+        const timeDiff = lockTime - now;
+
+        if (timeDiff <= 0) {
+            lockTimeEl.textContent = 'Locked';
+            this.isLocked = true;
+            return;
+        }
+
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+        lockTimeEl.textContent = `${hours}h ${minutes}m ${seconds}s`;
+    },
+
+    showSuccess(message) {
+        const indicator = document.getElementById('autoSaveIndicator');
+        indicator.innerHTML = `<i class="bi bi-check-circle"></i> ${message}`;
+        indicator.classList.add('show');
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 2000);
+    },
+
+    showError(message) {
+        alert(message);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    PlayoffLineupManager.init();
+});
+</script>
