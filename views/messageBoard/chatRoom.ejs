@@ -301,7 +301,7 @@
                     <small class="text-muted">(<%= pollData.totalVotes %> vote<%= pollData.totalVotes !== 1 ? 's' : '' %>)</small>
                 </h6>
                 
-                <% if (!pollData.userHasVoted) { %>
+                <% if (!pollData.userHasVoted && !locals.isGuest) { %>
                     <!-- Voting Form -->
                     <form id="pollVoteForm">
                         <div class="poll-options">
@@ -346,15 +346,21 @@
                                 </div>
                             </div>
                         <% }); %>
+                        <% if (pollData.userVote) { %>
                         <p class="text-muted small mt-3 mb-0">
                             <i class="bi bi-info-circle"></i> You voted for: <strong><%= pollData.userVote.option_text %></strong>
                         </p>
+                        <% } else if (locals.isGuest) { %>
+                        <p class="text-muted small mt-3 mb-0">
+                            <i class="bi bi-eye"></i> Guest mode - log in to vote
+                        </p>
+                        <% } %>
                     </div>
                 <% } %>
             </div>
             
             <script>
-                <% if (!pollData.userHasVoted) { %>
+                <% if (!pollData.userHasVoted && !locals.isGuest) { %>
                 // Handle poll voting
                 document.getElementById('pollVoteForm').addEventListener('submit', async function(e) {
                     e.preventDefault();
@@ -403,7 +409,7 @@
                                     </div>
                                 </div>
                             <% } else { %>
-                                <% const isOwnMessage = message.user_id === user.id; %>
+                                <% const isOwnMessage = user && message.user_id === user.id; %>
                                 <div class="chat-message <%= isOwnMessage ? 'own-message' : 'other-message' %>" data-message-id="<%= message.message_id %>">
                                     <div class="message-header">
                                         <div class="message-header-info">
@@ -435,19 +441,26 @@
 
                 <!-- Chat Input -->
                 <div class="chat-input-section">
+                    <% if (locals.isGuest) { %>
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-eye me-2"></i>
+                        <strong>Guest Mode:</strong> You are viewing this chat in read-only mode. Log in to send messages.
+                    </div>
+                    <% } else { %>
                     <form id="chatForm">
                         <div class="input-group">
-                            <input type="text" class="form-control" id="messageInput" 
+                            <input type="text" class="form-control" id="messageInput"
                                    placeholder="Type your message..." maxlength="500" autocomplete="off">
                             <button class="btn btn-primary" type="submit" id="sendBtn">
                                 <i class="bi bi-send"></i> Send
                             </button>
                         </div>
                         <small class="text-muted">
-                            <i class="bi bi-info-circle"></i> 
+                            <i class="bi bi-info-circle"></i>
                             Press Enter to send. Maximum 500 characters.
                         </small>
                     </form>
+                    <% } %>
                 </div>
             </div>
         </div>
@@ -466,7 +479,8 @@
         const typingIndicator = document.getElementById('typingIndicator');
         const typingUsers = document.getElementById('typingUsers');
         const roomId = <%= chatRoom.room_id %>;
-        const currentUser = '<%= user.first_name %> <%= user.last_name %>';
+        const isGuest = <%= locals.isGuest ? 'true' : 'false' %>;
+        const currentUser = isGuest ? 'Guest' : '<%= user ? user.first_name + " " + user.last_name : "Guest" %>';
 
         // Initialize Socket.IO connection for message board
         const socket = io('/message-board');
@@ -565,7 +579,8 @@
                     </div>
                 `;
             } else {
-                const isOwnMessage = message.user_id === <%= user.id %>;
+                const currentUserId = <%= user ? user.id : 'null' %>;
+                const isOwnMessage = currentUserId && message.user_id === currentUserId;
                 const messageClass = isOwnMessage ? 'own-message' : 'other-message';
                 messageDiv.classList.add(messageClass);
                 

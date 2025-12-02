@@ -125,6 +125,47 @@ router.post('/login', [
 });
 
 /**
+ * @route   GET /guest
+ * @desc    Enter guest mode (read-only access)
+ * @access  Public
+ */
+router.get('/guest', (req, res) => {
+  // If user is already logged in, redirect to dashboard
+  if (req.session.user) {
+    return res.redirect('/dashboard');
+  }
+
+  // Set up guest session
+  req.session.guest = true;
+  req.session.guestTeamId = 2; // Tucker Carlson's team
+
+  // Save session and redirect
+  req.session.save((err) => {
+    if (err) {
+      console.error('Guest session save error:', err);
+      req.flash('error_msg', 'An error occurred entering guest mode');
+      return res.redirect('/login');
+    }
+    console.log('Guest session created, redirecting to dashboard');
+    res.redirect('/dashboard');
+  });
+});
+
+/**
+ * @route   GET /guest/exit
+ * @desc    Exit guest mode
+ * @access  Public
+ */
+router.get('/guest/exit', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      console.error('Guest exit error:', err);
+    }
+    res.redirect('/login');
+  });
+});
+
+/**
  * @route   GET /register
  * @desc    Show registration page (DISABLED)
  * @access  Public

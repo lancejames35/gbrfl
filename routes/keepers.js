@@ -16,13 +16,19 @@ const teamController = require('../controllers/teamController');
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
     const FantasyTeam = require('../models/FantasyTeam');
+
+    // For guests, redirect to their default team
+    if (req.session.guest) {
+      return res.redirect(`/keepers/${req.session.guestTeamId}`);
+    }
+
     const userTeams = await FantasyTeam.findByUserId(req.session.user.id);
-    
+
     if (userTeams.length === 0) {
       req.flash('error_msg', 'You do not have any fantasy teams.');
       return res.redirect('/teams');
     }
-    
+
     // Redirect to first team's keepers
     res.redirect(`/keepers/${userTeams[0].team_id}`);
   } catch (error) {

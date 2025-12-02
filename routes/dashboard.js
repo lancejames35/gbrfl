@@ -18,48 +18,84 @@ const { parseDateInTimezone, createEndOfDayDate } = require('../utils/timezoneFi
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
     const db = require('../config/database');
-    
+
     // Check current dates for conditional content
     const now = new Date();
     const draftDate = new Date('2025-08-31');
     const seasonStart = new Date('2025-09-04');
-    
+
     // Determine current phase using timezone-aware keeper deadline check
     const isKeeperPeriodActive = !(await FantasyTeam.isKeeperDeadlinePassed());
     const isDraftDay = now.toDateString() === draftDate.toDateString();
     const isPostDraft = now > draftDate;
-    
+
     let userTeam = null;
-    
-    // Get user's team information with keeper and protection spot data
-    const teamRows = await db.query(`
-      SELECT 
-        ft.team_id, 
-        ft.team_name, 
-        ft.user_id,
-        u.first_name, 
-        u.last_name,
-        COALESCE(player_count.total_players, 0) as player_count,
-        COALESCE(keeper_count.keepers_filled, 0) as keepers_filled,
-        COALESCE(tks.base_slots + tks.additional_slots, 12) as protection_spots,
-        do.pick_number as draft_position
-      FROM fantasy_teams ft
-      JOIN users u ON ft.user_id = u.user_id
-      LEFT JOIN (
-        SELECT fantasy_team_id, COUNT(*) as total_players
-        FROM fantasy_team_players
-        GROUP BY fantasy_team_id
-      ) player_count ON ft.team_id = player_count.fantasy_team_id
-      LEFT JOIN (
-        SELECT fantasy_team_id, COUNT(*) as keepers_filled
-        FROM fantasy_team_players 
-        WHERE is_keeper = 1
-        GROUP BY fantasy_team_id
-      ) keeper_count ON ft.team_id = keeper_count.fantasy_team_id
-      LEFT JOIN team_keeper_slots tks ON ft.team_id = tks.fantasy_team_id
-      LEFT JOIN draft_order do ON ft.team_id = do.fantasy_team_id AND do.round = 1
-      WHERE ft.user_id = ?
-    `, [req.session.user.id]);
+
+    // For guests, use guestTeamId; for logged-in users, use their user_id
+    const isGuest = req.session.guest;
+    let teamRows;
+
+    if (isGuest) {
+      // Guest mode: get team by team_id
+      teamRows = await db.query(`
+        SELECT
+          ft.team_id,
+          ft.team_name,
+          ft.user_id,
+          u.first_name,
+          u.last_name,
+          COALESCE(player_count.total_players, 0) as player_count,
+          COALESCE(keeper_count.keepers_filled, 0) as keepers_filled,
+          COALESCE(tks.base_slots + tks.additional_slots, 12) as protection_spots,
+          do.pick_number as draft_position
+        FROM fantasy_teams ft
+        JOIN users u ON ft.user_id = u.user_id
+        LEFT JOIN (
+          SELECT fantasy_team_id, COUNT(*) as total_players
+          FROM fantasy_team_players
+          GROUP BY fantasy_team_id
+        ) player_count ON ft.team_id = player_count.fantasy_team_id
+        LEFT JOIN (
+          SELECT fantasy_team_id, COUNT(*) as keepers_filled
+          FROM fantasy_team_players
+          WHERE is_keeper = 1
+          GROUP BY fantasy_team_id
+        ) keeper_count ON ft.team_id = keeper_count.fantasy_team_id
+        LEFT JOIN team_keeper_slots tks ON ft.team_id = tks.fantasy_team_id
+        LEFT JOIN draft_order do ON ft.team_id = do.fantasy_team_id AND do.round = 1
+        WHERE ft.team_id = ?
+      `, [req.session.guestTeamId]);
+    } else {
+      // Logged-in user: get team by user_id
+      teamRows = await db.query(`
+        SELECT
+          ft.team_id,
+          ft.team_name,
+          ft.user_id,
+          u.first_name,
+          u.last_name,
+          COALESCE(player_count.total_players, 0) as player_count,
+          COALESCE(keeper_count.keepers_filled, 0) as keepers_filled,
+          COALESCE(tks.base_slots + tks.additional_slots, 12) as protection_spots,
+          do.pick_number as draft_position
+        FROM fantasy_teams ft
+        JOIN users u ON ft.user_id = u.user_id
+        LEFT JOIN (
+          SELECT fantasy_team_id, COUNT(*) as total_players
+          FROM fantasy_team_players
+          GROUP BY fantasy_team_id
+        ) player_count ON ft.team_id = player_count.fantasy_team_id
+        LEFT JOIN (
+          SELECT fantasy_team_id, COUNT(*) as keepers_filled
+          FROM fantasy_team_players
+          WHERE is_keeper = 1
+          GROUP BY fantasy_team_id
+        ) keeper_count ON ft.team_id = keeper_count.fantasy_team_id
+        LEFT JOIN team_keeper_slots tks ON ft.team_id = tks.fantasy_team_id
+        LEFT JOIN draft_order do ON ft.team_id = do.fantasy_team_id AND do.round = 1
+        WHERE ft.user_id = ?
+      `, [req.session.user.id]);
+    }
     
     if (teamRows.length > 0) {
       userTeam = teamRows[0];

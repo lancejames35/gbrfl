@@ -100,6 +100,7 @@ const isAdmin = (req, res, next) => {
 
 /**
  * Middleware to ensure user is authenticated for web routes
+ * Also allows guest sessions with read-only access
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
@@ -110,15 +111,44 @@ const ensureAuthenticated = (req, res, next) => {
     req.user = req.session.user;
     return next();
   }
-  
+
+  // Allow guest sessions for read-only access
+  if (req.session.guest) {
+    req.user = null; // No user, but guest is allowed
+    return next();
+  }
+
   // Store the requested URL to redirect after login
   req.session.returnTo = req.originalUrl;
-  
+
   // Flash a message
   req.flash('error_msg', 'Please log in to access this page');
-  
+
   // Redirect to login page
   res.redirect('/login');
+};
+
+/**
+ * Middleware to block write operations for guests
+ * Use this on POST/PUT/DELETE routes that modify data
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+const blockGuests = (req, res, next) => {
+  if (req.session.guest) {
+    // Check if this is an API request or web request
+    if (req.xhr || req.headers.accept?.includes('application/json')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Guest mode is read-only. Please log in to make changes.'
+      });
+    }
+    // For web requests, flash message and redirect back
+    req.flash('error_msg', 'Guest mode is read-only. Please log in to make changes.');
+    return res.redirect('back');
+  }
+  next();
 };
 
 /**
@@ -183,4 +213,4 @@ const authenticateHybrid = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate, isAdmin, ensureAuthenticated, authenticateHybrid };
+module.exports = { authenticate, isAdmin, ensureAuthenticated, authenticateHybrid, blockGuests };

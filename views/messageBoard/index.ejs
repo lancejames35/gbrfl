@@ -3,9 +3,11 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="bi bi-chat-dots"></i> Message Board</h2>
+                <% if (!locals.isGuest) { %>
                 <a href="/message-board/create" class="btn btn-primary">
                     <i class="bi bi-plus-circle"></i> Create New Discussion
                 </a>
+                <% } %>
             </div>
 
             <!-- External Message Board Link -->
@@ -103,10 +105,14 @@
                         <div class="text-center py-5">
                             <i class="bi bi-chat-dots display-1 text-muted"></i>
                             <h4 class="text-muted mt-3">No discussions yet</h4>
+                            <% if (!locals.isGuest) { %>
                             <p class="text-muted">Be the first to start a conversation!</p>
                             <a href="/message-board/create" class="btn btn-primary">
                                 <i class="bi bi-plus-circle"></i> Create First Discussion
                             </a>
+                            <% } else { %>
+                            <p class="text-muted">Check back later for discussions.</p>
+                            <% } %>
                         </div>
                     <% } %>
                 </div>

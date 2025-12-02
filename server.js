@@ -274,7 +274,11 @@ app.use(async (req, res, next) => {
   res.locals.error_msg = req.flash('error_msg');
   res.locals.error = req.flash('error');
   res.locals.user = req.session.user || null;
-  
+
+  // Guest mode variables
+  res.locals.isGuest = req.session.guest || false;
+  res.locals.guestTeamId = req.session.guestTeamId || null;
+
   // Make originalAdmin available for impersonation tracking
   res.locals.originalAdmin = req.session.originalAdmin || null;
   
@@ -311,6 +315,34 @@ app.set('layout', 'layouts/layout');
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/downloads', express.static(path.join(__dirname, 'downloads')));
+
+// Block all write operations for guests (global middleware)
+app.use((req, res, next) => {
+  // Only apply to guest sessions
+  if (!req.session.guest) {
+    return next();
+  }
+
+  // Allow GET and HEAD requests (read-only)
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    return next();
+  }
+
+  // Block all other methods (POST, PUT, DELETE, PATCH)
+  console.log(`Guest blocked from ${req.method} ${req.originalUrl}`);
+
+  // Check if this is an API/AJAX request
+  if (req.xhr || req.headers.accept?.includes('application/json')) {
+    return res.status(403).json({
+      success: false,
+      message: 'Guest mode is read-only. Please log in to make changes.'
+    });
+  }
+
+  // For web requests, flash message and redirect back
+  req.flash('error_msg', 'Guest mode is read-only. Please log in to make changes.');
+  return res.redirect('back');
+});
 
 // API routes
 app.use('/api/auth', require('./routes/auth'));

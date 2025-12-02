@@ -11,10 +11,13 @@ const db = require('../config/database');
 router.get('/', ensureAuthenticated, async (req, res) => {
   try {
     const seasonYear = 2025;
-    
+    const isGuest = req.session.guest;
+    // For guests, use null for user_id comparison (no team will be highlighted)
+    const userId = isGuest ? null : req.session.user.id;
+
     // Get standings with team and user information
     const standings = await db.query(`
-      SELECT 
+      SELECT
         ls.*,
         ft.team_name,
         u.first_name,
@@ -24,19 +27,19 @@ router.get('/', ensureAuthenticated, async (req, res) => {
       JOIN fantasy_teams ft ON ls.fantasy_team_id = ft.team_id
       JOIN users u ON ft.user_id = u.user_id
       WHERE ls.season_year = ?
-      ORDER BY 
+      ORDER BY
         ls.position ASC
-    `, [req.session.user.id, seasonYear]);
-    
+    `, [userId, seasonYear]);
+
     // Get last updated time
     const lastUpdatedResult = await db.query(`
       SELECT MAX(updated_at) as last_updated
-      FROM league_standings 
+      FROM league_standings
       WHERE season_year = ?
     `, [seasonYear]);
-    
+
     const lastUpdated = lastUpdatedResult[0]?.last_updated;
-    
+
     res.render('standings', {
       title: 'League Standings | GBRFL',
       activePage: 'standings',

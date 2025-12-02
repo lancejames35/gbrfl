@@ -19,13 +19,13 @@
     <!-- Include header partial -->
     <%- include('../partials/header') %>
         
-    <!-- Include sidebar partial only if user is logged in -->
-    <% if (locals.user && user) { %>
+    <!-- Include sidebar partial if user is logged in OR in guest mode -->
+    <% if ((locals.user && user) || locals.isGuest) { %>
     <%- include('../partials/sidebar', { activePage: typeof activePage !== 'undefined' ? activePage : '' }) %>
     <% } %>
-    
+
     <!-- Main content with margin for sidebar -->
-    <main class="main-content <%= locals.user && user ? '' : 'no-sidebar' %>">
+    <main class="main-content <%= (locals.user && user) || locals.isGuest ? '' : 'no-sidebar' %>">
         <div class="container my-4">
             <!-- Flash Messages -->
             <% if(typeof success_msg !== 'undefined' && success_msg.length > 0) { %>

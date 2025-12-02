@@ -998,6 +998,14 @@
 
 <!-- Lineup Container -->
 <div class="lineup-container<%= lockStatus.current_status === 'locked' || lockStatus.current_status === 'auto_locked' ? ' lineup-locked' : '' %>">
+    <% if (typeof isGuest !== 'undefined' && isGuest) { %>
+    <!-- Guest mode banner -->
+    <div class="alert alert-info mb-3 d-flex align-items-center">
+        <i class="bi bi-eye me-2"></i>
+        <span><strong>Guest Mode:</strong> You are viewing lineups in read-only mode. Log in to make changes.</span>
+    </div>
+    <% } %>
+
     <!-- Auto-save indicator -->
     <div id="autoSaveIndicator" class="auto-save-indicator">
         <i class="bi bi-check-circle"></i> Lineup saved
@@ -1444,6 +1452,7 @@ const LineupManager = {
     autoSaveTimer: null,
     lockTime: '<%= lockStatus.lock_time %>',
     isLocked: <%= lockStatus.current_status === 'locked' ? 'true' : 'false' %>,
+    isGuest: <%= typeof isGuest !== 'undefined' && isGuest ? 'true' : 'false' %>,
     sortableInstances: [],
 
     // Position requirements
@@ -1631,8 +1640,8 @@ const LineupManager = {
                     sortableConfig.handle = '.drag-handle';
                 }
                 
-                // Disable drag and drop if lineups are locked
-                if (this.isLocked) {
+                // Disable drag and drop if lineups are locked or in guest mode
+                if (this.isLocked || this.isGuest) {
                     sortableConfig.disabled = true;
                 }
                 
@@ -1756,16 +1765,20 @@ const LineupManager = {
             if (result.success) {
                 // Lineup auto-saved
                 this.showSuccess('Lineup saved');
-                
+
                 // If in shared mode, sync with the other lineup
                 this.syncSharedLineup(positions);
             } else {
                 // Error auto-saving lineup
-                this.showError('Error saving lineup: ' + result.message);
+                this.showError(result.message || 'Error saving lineup');
             }
         } catch (error) {
             // Error auto-saving lineup
-            this.showError('Network error saving lineup');
+            if (this.isGuest) {
+                this.showError('Guest mode is read-only. Please log in to save changes.');
+            } else {
+                this.showError('Network error saving lineup');
+            }
         }
     },
 

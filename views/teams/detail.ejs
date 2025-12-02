@@ -34,9 +34,11 @@
                     <i class="bi bi-pencil"></i> Edit Team
                 </a>
             <% } %>
+            <% if (!locals.isGuest) { %>
             <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#tradeProposalModal" data-team-id="<%= team.team_id %>">
                 <i class="bi bi-arrow-left-right"></i> Propose Trade
             </button>
+            <% } %>
         </div>
     </div>
 </div>
@@ -324,6 +326,7 @@ function loadWaiverRequestCount() {
 <% } %>
 </script>
 
+<% if (!locals.isGuest) { %>
 <!-- Trade Proposal Modal -->
 <div class="modal fade" id="tradeProposalModal" tabindex="-1" aria-labelledby="tradeProposalModalLabel" aria-hidden="true" data-bs-backdrop="false" data-bs-keyboard="true">
     <div class="modal-dialog modal-xl">
@@ -1201,6 +1204,7 @@ function showAlert(type, message) {
     }
 }
 </script>
+<% } %>
 
 <style>
 .min-height-50 {

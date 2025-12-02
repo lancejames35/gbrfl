@@ -68,12 +68,16 @@ exports.getChatRoom = async (req, res) => {
         option.vote_count = voteCount[0].count;
       }
       
-      // Check if current user has voted
-      const userVote = await db.query(
-        'SELECT pv.*, po.option_text FROM poll_votes pv JOIN poll_options po ON pv.option_id = po.option_id WHERE po.topic_id = ? AND pv.user_id = ?',
-        [chatRoom.topic_id, req.session.user.id]
-      );
-      
+      // Check if current user has voted (skip for guests)
+      let userVote = [];
+      const isGuest = req.session.guest;
+      if (!isGuest && req.session.user) {
+        userVote = await db.query(
+          'SELECT pv.*, po.option_text FROM poll_votes pv JOIN poll_options po ON pv.option_id = po.option_id WHERE po.topic_id = ? AND pv.user_id = ?',
+          [chatRoom.topic_id, req.session.user.id]
+        );
+      }
+
       pollData = {
         options: options,
         userHasVoted: userVote.length > 0,

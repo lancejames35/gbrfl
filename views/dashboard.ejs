@@ -418,28 +418,35 @@ const deadlineInterval = setInterval(updateWeeklyDeadline, 1000); // Update ever
                 <div class="d-grid gap-2">
                     <!-- Conditional keeper management button -->
                     <% if (userTeam && isKeeperPeriodActive) { %>
-                        <a href="/keepers/<%= userTeam.team_id %>" 
+                        <a href="/keepers/<%= userTeam.team_id %>"
                            class="btn btn-success">
-                            <i class="bi bi-shield-check"></i> Manage Keepers
+                            <i class="bi bi-shield-check"></i> <%= locals.isGuest ? 'View' : 'Manage' %> Keepers
                         </a>
                     <% } %>
-                    
-                    <!-- Draft room button (only on draft day) -->
-                    <% if (isDraftDay) { %>
+
+                    <!-- Draft room button (only on draft day, not for guests) -->
+                    <% if (isDraftDay && !locals.isGuest) { %>
                         <a href="/draft" class="btn btn-primary">
                             <i class="bi bi-calendar-event"></i> Join Draft Room
                         </a>
                     <% } %>
-                    
+
                     <a href="/players" class="btn btn-outline-primary">
                         <i class="bi bi-person-plus"></i> Browse Available Players
                     </a>
+
+                    <% if (!locals.isGuest) { %>
                     <a href="/trades/new" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left-right"></i> Propose a Trade
                     </a>
                     <a href="/message-board" class="btn btn-outline-dark">
                         <i class="bi bi-chat-square-text"></i> Create Forum Post
                     </a>
+                    <% } else { %>
+                    <a href="/message-board" class="btn btn-outline-dark">
+                        <i class="bi bi-chat-square-text"></i> View Message Board
+                    </a>
+                    <% } %>
                 </div>
             </div>
         </div>

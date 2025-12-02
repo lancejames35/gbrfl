@@ -20,18 +20,29 @@ const { validationResult } = require('express-validator');
  */
 exports.getLineups = async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const isGuest = req.session.guest;
     const nextUnlockedWeek = await getNextUnlockedWeek();
-    
-    // Get user's fantasy teams
-    const userTeams = await FantasyTeam.findByUserId(userId);
+
+    let userTeams;
+    let teamId;
+
+    if (isGuest) {
+      // For guests, use the guest team
+      teamId = req.query.team || req.session.guestTeamId;
+      const guestTeam = await FantasyTeam.findById(teamId);
+      userTeams = guestTeam ? [guestTeam] : [];
+    } else {
+      const userId = req.session.user.id;
+      userTeams = await FantasyTeam.findByUserId(userId);
+    }
+
     if (userTeams.length === 0) {
       req.flash('error_msg', 'You do not have any fantasy teams.');
       return res.redirect('/teams');
     }
 
     // Use first team or specified team
-    const teamId = req.query.team || userTeams[0].team_id;
+    teamId = req.query.team || userTeams[0].team_id;
     const selectedTeam = userTeams.find(t => t.team_id == teamId) || userTeams[0];
 
     // Redirect to next unlocked week with default game type
@@ -50,7 +61,7 @@ exports.getLineups = async (req, res) => {
  */
 exports.getLineupsForWeek = async (req, res) => {
   try {
-    const userId = req.session.user.id;
+    const isGuest = req.session.guest;
     const weekNumber = parseInt(req.params.week);
     const gameType = req.params.gameType || 'primary';
     const seasonYear = 2025;
@@ -61,8 +72,17 @@ exports.getLineupsForWeek = async (req, res) => {
       return res.redirect('/lineups');
     }
 
-    // Get user's fantasy teams
-    const userTeams = await FantasyTeam.findByUserId(userId);
+    // Get user's fantasy teams (or guest team)
+    let userTeams;
+    if (isGuest) {
+      const guestTeamId = req.query.team || req.session.guestTeamId;
+      const guestTeam = await FantasyTeam.findById(guestTeamId);
+      userTeams = guestTeam ? [guestTeam] : [];
+    } else {
+      const userId = req.session.user.id;
+      userTeams = await FantasyTeam.findByUserId(userId);
+    }
+
     if (userTeams.length === 0) {
       req.flash('error_msg', 'You do not have any fantasy teams.');
       return res.redirect('/teams');
@@ -137,7 +157,8 @@ exports.getLineupsForWeek = async (req, res) => {
       allWeeks,
       currentWeek: getCurrentWeek(),
       hasBonusGames,
-      nflTeams
+      nflTeams,
+      isGuest: isGuest
     });
   } catch (error) {
     console.error('Error displaying week lineups:', error.message);

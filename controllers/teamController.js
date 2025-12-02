@@ -100,13 +100,15 @@ exports.getTeamById = async (req, res) => {
   try {
     const teamId = req.params.id;
     const team = await FantasyTeam.findById(teamId);
-    
+    const isGuest = req.session.guest;
+    const userId = isGuest ? null : req.session.user?.id;
+
     if (!team) {
       // For API requests, return JSON error
       if (req.xhr || req.path.startsWith('/api/')) {
         return res.status(404).json({ message: 'Team not found' });
       }
-      
+
       // For web requests, render with error
       req.flash('error_msg', 'Team not found');
       return res.redirect('/teams');
@@ -129,27 +131,30 @@ exports.getTeamById = async (req, res) => {
     // Get all teams for the dropdown selector
     let allTeams = await FantasyTeam.getAll();
 
-    // Determine if the current user can edit this team
-    const canEdit = (parseInt(req.session.user.id) === parseInt(team.user_id));
-    
-    // Sort teams: user's teams first, then alphabetical
-    allTeams = allTeams.sort((a, b) => {
-      // User's teams come first
-      if (a.user_id === req.session.user.id && b.user_id !== req.session.user.id) return -1;
-      if (a.user_id !== req.session.user.id && b.user_id === req.session.user.id) return 1;
-      
-      // Alphabetical sort for the rest
-      return a.team_name.localeCompare(b.team_name);
-    });
-    
+    // Determine if the current user can edit this team (guests cannot edit)
+    const canEdit = !isGuest && userId && (parseInt(userId) === parseInt(team.user_id));
+
+    // Sort teams: user's teams first (if logged in), then alphabetical
+    if (!isGuest && userId) {
+      allTeams = allTeams.sort((a, b) => {
+        // User's teams come first
+        if (a.user_id === userId && b.user_id !== userId) return -1;
+        if (a.user_id !== userId && b.user_id === userId) return 1;
+        // Alphabetical sort for the rest
+        return a.team_name.localeCompare(b.team_name);
+      });
+    } else {
+      allTeams = allTeams.sort((a, b) => a.team_name.localeCompare(b.team_name));
+    }
+
     // For API requests, return JSON
     if (req.xhr || req.path.startsWith('/api/')) {
-      return res.json({ 
+      return res.json({
         team,
         players
       });
     }
-    
+
     // Get keeper information for the view
     const keeperCount = await FantasyTeam.getKeeperCount(teamId);
     const keeperLimit = await FantasyTeam.getKeeperLimit(teamId);
@@ -172,12 +177,12 @@ exports.getTeamById = async (req, res) => {
     });
   } catch (error) {
     console.error('Error getting team:', error.message);
-    
+
     // For API requests, return JSON error
     if (req.xhr || req.path.startsWith('/api/')) {
       return res.status(500).json({ message: 'Error retrieving team' });
     }
-    
+
     // For web requests, render with error
     req.flash('error_msg', 'Error retrieving team');
     res.redirect('/teams');
@@ -549,33 +554,36 @@ exports.getTeamKeepers = async (req, res) => {
   try {
     const teamId = req.params.teamId;
     const team = await FantasyTeam.findById(teamId);
-    
+    const isGuest = req.session.guest;
+
     if (!team) {
       req.flash('error_msg', 'Team not found');
       return res.redirect('/teams');
     }
-    
-    // Check if user owns the team or is admin
-    const canEdit = (parseInt(req.session.user.id) === parseInt(team.user_id)) || req.session.user.isAdmin;
-    
-    if (!canEdit) {
-      req.flash('error_msg', 'You do not have permission to manage keepers for this team');
-      return res.redirect(`/teams/${teamId}`);
+
+    // Check if user owns the team or is admin (guests can view but not edit)
+    let canEdit = false;
+    if (!isGuest && req.session.user) {
+      canEdit = (parseInt(req.session.user.id) === parseInt(team.user_id)) || req.session.user.isAdmin;
     }
-    
+
     // Get players on the team
     const players = await FantasyTeam.getPlayers(teamId);
-    
+
     // Get all teams for the dropdown selector
     let allTeams = await FantasyTeam.getAll();
-    
-    // Sort teams: user's teams first, then alphabetical
-    allTeams = allTeams.sort((a, b) => {
-      if (a.user_id === req.session.user.id && b.user_id !== req.session.user.id) return -1;
-      if (a.user_id !== req.session.user.id && b.user_id === req.session.user.id) return 1;
-      return a.team_name.localeCompare(b.team_name);
-    });
-    
+
+    // Sort teams: user's teams first (if logged in), then alphabetical
+    if (!isGuest && req.session.user) {
+      allTeams = allTeams.sort((a, b) => {
+        if (a.user_id === req.session.user.id && b.user_id !== req.session.user.id) return -1;
+        if (a.user_id !== req.session.user.id && b.user_id === req.session.user.id) return 1;
+        return a.team_name.localeCompare(b.team_name);
+      });
+    } else {
+      allTeams = allTeams.sort((a, b) => a.team_name.localeCompare(b.team_name));
+    }
+
     // Get keeper information
     const keeperCount = await FantasyTeam.getKeeperCount(teamId);
     const keeperLimit = await FantasyTeam.getKeeperLimit(teamId);
@@ -701,11 +709,16 @@ exports.getMyRoster = async (req, res) => {
  */
 exports.redirectToUserTeam = async (req, res) => {
   try {
+    // For guests, redirect to the guest team
+    if (req.session.guest) {
+      return res.redirect(`/teams/${req.session.guestTeamId}`);
+    }
+
     const userId = req.session.user.id;
-    
+
     // Get all teams owned by the user
     const userTeams = await FantasyTeam.findByUserId(userId);
-    
+
     if (userTeams.length === 0) {
       // If user has no teams, redirect to create team page
       return res.redirect('/teams/create');
@@ -717,7 +730,7 @@ exports.redirectToUserTeam = async (req, res) => {
       // Later we could change this to go to the first team instead
       return res.redirect('/teams/my-teams');
     }
-    
+
   } catch (error) {
     console.error('Error in redirectToUserTeam:', error.message);
     req.flash('error_msg', 'An error occurred while retrieving your teams');
