@@ -590,6 +590,217 @@ class LineupPosition {
       throw error;
     }
   }
+
+  /**
+   * Propagate lineup positions to all future unlocked weeks that haven't been user-modified
+   * Copies the current week's primary lineup to all future weeks (both primary and bonus)
+   * Only includes rostered players (excludes pending_waiver)
+   * Only updates weeks where user_modified = 0 (user hasn't manually set that week's lineup)
+   * @param {number} fantasyTeamId - The fantasy team ID
+   * @param {number} currentWeek - The current week number
+   * @param {number} seasonYear - The season year (default: 2025)
+   * @returns {Promise<Object>} Result with weeks updated count
+   */
+  static async propagateToFutureWeeks(fantasyTeamId, currentWeek, seasonYear = 2025) {
+    const connection = await db.pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      // Get the current week's primary lineup
+      const [sourceLineups] = await connection.execute(`
+        SELECT lineup_id
+        FROM lineup_submissions
+        WHERE fantasy_team_id = ?
+          AND week_number = ?
+          AND game_type = 'primary'
+          AND season_year = ?
+      `, [fantasyTeamId, currentWeek, seasonYear]);
+
+      if (sourceLineups.length === 0) {
+        await connection.rollback();
+        return { success: false, message: 'No source lineup found' };
+      }
+
+      const sourceLineupId = sourceLineups[0].lineup_id;
+
+      // Get all future unlocked weeks (both primary and bonus) that haven't been user-modified
+      // Only get weeks GREATER than current week, not locked, and not user-modified
+      const [futureLineups] = await connection.execute(`
+        SELECT ls.lineup_id, ls.week_number, ls.game_type
+        FROM lineup_submissions ls
+        LEFT JOIN lineup_locks ll ON ls.week_number = ll.week_number AND ls.season_year = ll.season_year
+        WHERE ls.fantasy_team_id = ?
+          AND ls.week_number > ?
+          AND ls.week_number <= 17
+          AND ls.season_year = ?
+          AND (ll.is_locked IS NULL OR ll.is_locked = 0)
+          AND (ls.user_modified IS NULL OR ls.user_modified = 0)
+        ORDER BY ls.week_number, ls.game_type
+      `, [fantasyTeamId, currentWeek, seasonYear]);
+
+      if (futureLineups.length === 0) {
+        await connection.commit();
+        return { success: true, weeksUpdated: 0, message: 'No future unlocked/unmodified weeks to update' };
+      }
+
+      let weeksUpdated = 0;
+
+      for (const targetLineup of futureLineups) {
+        // Delete existing positions for the target lineup
+        await connection.execute(
+          'DELETE FROM lineup_positions WHERE lineup_id = ?',
+          [targetLineup.lineup_id]
+        );
+
+        // Copy positions from source, only including rostered players
+        await connection.execute(`
+          INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
+          SELECT
+            ?,
+            lp.position_type,
+            lp.player_id,
+            lp.nfl_team_id,
+            lp.sort_order,
+            NOW()
+          FROM lineup_positions lp
+          JOIN fantasy_team_players ftp ON lp.player_id = ftp.player_id AND ftp.fantasy_team_id = ?
+          WHERE lp.lineup_id = ?
+            AND (lp.player_status IS NULL OR lp.player_status != 'pending_waiver')
+        `, [targetLineup.lineup_id, fantasyTeamId, sourceLineupId]);
+
+        weeksUpdated++;
+      }
+
+      await connection.commit();
+      console.log(`Propagated lineup for team ${fantasyTeamId} from week ${currentWeek} to ${weeksUpdated} future lineups (skipped user-modified weeks)`);
+      return { success: true, weeksUpdated };
+
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error propagating lineup to future weeks:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Sync roster changes to all future unlocked weeks
+   * Adds new players to the bottom of their position, removes dropped players
+   * @param {number} fantasyTeamId - The fantasy team ID
+   * @param {number} currentWeek - The current week number
+   * @param {number} addedPlayerId - Player ID that was added (optional)
+   * @param {number} droppedPlayerId - Player ID that was dropped (optional)
+   * @param {number} seasonYear - The season year (default: 2025)
+   * @returns {Promise<Object>} Result with weeks updated count
+   */
+  static async syncRosterChangeToFutureWeeks(fantasyTeamId, currentWeek, addedPlayerId = null, droppedPlayerId = null, seasonYear = 2025) {
+    const connection = await db.pool.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      // Get all future unlocked weeks (both primary and bonus)
+      const [futureLineups] = await connection.execute(`
+        SELECT ls.lineup_id, ls.week_number, ls.game_type
+        FROM lineup_submissions ls
+        LEFT JOIN lineup_locks ll ON ls.week_number = ll.week_number AND ls.season_year = ll.season_year
+        WHERE ls.fantasy_team_id = ?
+          AND ls.week_number > ?
+          AND ls.week_number <= 17
+          AND ls.season_year = ?
+          AND (ll.is_locked IS NULL OR ll.is_locked = 0)
+        ORDER BY ls.week_number, ls.game_type
+      `, [fantasyTeamId, currentWeek, seasonYear]);
+
+      if (futureLineups.length === 0) {
+        await connection.commit();
+        return { success: true, weeksUpdated: 0 };
+      }
+
+      // Get position type for added player if applicable
+      let addedPlayerPositionType = null;
+      if (addedPlayerId) {
+        const [playerInfo] = await connection.execute(`
+          SELECT
+            CASE
+              WHEN position = 'QB' THEN 'quarterback'
+              WHEN position = 'RB' THEN 'running_back'
+              WHEN position = 'RC' THEN 'receiver'
+              WHEN position = 'PK' THEN 'place_kicker'
+              WHEN position = 'DU' THEN 'defense'
+              ELSE 'other'
+            END as position_type,
+            nfl_team_id
+          FROM nfl_players
+          WHERE player_id = ?
+        `, [addedPlayerId]);
+
+        if (playerInfo.length > 0) {
+          addedPlayerPositionType = playerInfo[0].position_type;
+        }
+      }
+
+      let weeksUpdated = 0;
+
+      for (const targetLineup of futureLineups) {
+        // Remove dropped player from this lineup
+        if (droppedPlayerId) {
+          await connection.execute(
+            'DELETE FROM lineup_positions WHERE lineup_id = ? AND player_id = ?',
+            [targetLineup.lineup_id, droppedPlayerId]
+          );
+        }
+
+        // Add new player to bottom of their position group (if not already in lineup)
+        if (addedPlayerId && addedPlayerPositionType) {
+          // Check if player already exists in this lineup
+          const [existingPlayer] = await connection.execute(
+            'SELECT position_id FROM lineup_positions WHERE lineup_id = ? AND player_id = ?',
+            [targetLineup.lineup_id, addedPlayerId]
+          );
+
+          if (existingPlayer.length === 0) {
+            // Get the next sort order for this position
+            const [maxSortResult] = await connection.execute(`
+              SELECT COALESCE(MAX(sort_order), 0) + 1 as next_sort
+              FROM lineup_positions
+              WHERE lineup_id = ? AND position_type = ?
+            `, [targetLineup.lineup_id, addedPlayerPositionType]);
+
+            const nextSort = maxSortResult[0].next_sort;
+
+            // Get player's nfl_team_id
+            const [playerTeam] = await connection.execute(
+              'SELECT nfl_team_id FROM nfl_players WHERE player_id = ?',
+              [addedPlayerId]
+            );
+            const nflTeamId = playerTeam.length > 0 ? playerTeam[0].nfl_team_id : null;
+
+            // Insert the new player
+            await connection.execute(`
+              INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
+              VALUES (?, ?, ?, ?, ?, NOW())
+            `, [targetLineup.lineup_id, addedPlayerPositionType, addedPlayerId, nflTeamId, nextSort]);
+          }
+        }
+
+        weeksUpdated++;
+      }
+
+      await connection.commit();
+      console.log(`Synced roster changes for team ${fantasyTeamId} to ${weeksUpdated} future lineups (added: ${addedPlayerId}, dropped: ${droppedPlayerId})`);
+      return { success: true, weeksUpdated };
+
+    } catch (error) {
+      await connection.rollback();
+      console.error('Error syncing roster change to future weeks:', error);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
 }
 
 module.exports = LineupPosition;

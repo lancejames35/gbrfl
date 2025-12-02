@@ -189,8 +189,34 @@ exports.saveLineup = async (req, res) => {
     // Update positions
     await LineupPosition.updatePositions(lineup.lineup_id, positions);
 
+    // Mark this lineup as user-modified so future propagations won't overwrite it
+    try {
+      await db.query(
+        'UPDATE lineup_submissions SET user_modified = 1 WHERE lineup_id = ?',
+        [lineup.lineup_id]
+      );
+    } catch (modifiedError) {
+      console.warn('Warning: Could not set user_modified flag:', modifiedError.message);
+    }
+
     // Save to historical_lineups for historical preservation
     await saveToHistoricalLineups(lineup.lineup_id, req.body.season_year || 2025);
+
+    // Propagate primary lineup changes to future weeks (both primary and bonus)
+    // Only do this for primary game type to avoid duplicate propagation
+    // Only propagates to weeks where user_modified = 0
+    if (req.body.game_type === 'primary') {
+      try {
+        await LineupPosition.propagateToFutureWeeks(
+          req.body.fantasy_team_id,
+          req.body.week_number,
+          req.body.season_year || 2025
+        );
+      } catch (propagateError) {
+        // Log but don't fail the main save operation
+        console.warn('Warning: Could not propagate lineup to future weeks:', propagateError.message);
+      }
+    }
 
     // Update lineup status if specified
     if (status === 'submitted') {
