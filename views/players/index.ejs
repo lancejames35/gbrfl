@@ -390,6 +390,13 @@
         position: relative;
         pointer-events: auto !important;
     }
+
+    /* Override modal-dialog-centered to position modal at top */
+    .modal-dialog-centered {
+        min-height: auto !important;
+        margin-top: 3rem !important;
+        margin-bottom: auto !important;
+    }
     
     .modal-content {
         z-index: 10001 !important;
@@ -403,6 +410,20 @@
     /* Hide Bootstrap's problematic backdrop */
     .modal-backdrop {
         display: none !important;
+    }
+
+    /* Ensure select dropdowns open correctly within modal */
+    .modal-body {
+        overflow: visible !important;
+    }
+
+    .modal-content {
+        overflow: visible !important;
+    }
+
+    /* Fix select dropdown positioning */
+    #dropPlayerSelect {
+        position: relative !important;
     }
 </style>
 
@@ -448,13 +469,13 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <label for="dropPlayerSelect" class="form-label">Select a player from your roster to drop</label>
+                                <label for="dropPlayerSelect" class="form-label">Select a player from your roster to drop (or choose "No drop" if available)</label>
                                 <select class="form-select form-select-lg" id="dropPlayerSelect" name="drop_player_id" required>
                                     <option value="">-- Loading your roster --</option>
                                 </select>
-                                <div class="form-text">
-                                    <i class="bi bi-info-circle"></i> 
-                                    Both players will be swapped when the waiver processes.
+                                <div class="form-text" id="dropPlayerHelpText">
+                                    <i class="bi bi-info-circle"></i>
+                                    Select a player to drop, or choose "No drop" to fill an open roster spot (max 21 players).
                                 </div>
                             </div>
                         </div>
@@ -919,12 +940,14 @@
             // Submit waiver request
             submitWaiverRequest.addEventListener('click', function() {
                 const formData = new FormData(document.getElementById('waiverRequestForm'));
-                
-                if (!formData.get('drop_player_id')) {
-                    alert('Please select a player to drop.');
+
+                const dropPlayerId = formData.get('drop_player_id');
+
+                if (!dropPlayerId) {
+                    alert('Please select a player to drop or choose the "No drop" option.');
                     return;
                 }
-                
+
                 if (!formData.get('waiver_round')) {
                     alert('Please select a waiver round.');
                     return;
@@ -934,6 +957,9 @@
                 this.disabled = true;
                 this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Submitting...';
 
+                // Handle "NO_DROP" option by sending null
+                const dropPlayerValue = dropPlayerId === 'NO_DROP' ? null : parseInt(dropPlayerId);
+
                 fetch('/waivers/request', {
                     method: 'POST',
                     headers: {
@@ -941,7 +967,7 @@
                     },
                     body: JSON.stringify({
                         pickup_player_id: parseInt(formData.get('pickup_player_id')),
-                        drop_player_id: parseInt(formData.get('drop_player_id')),
+                        drop_player_id: dropPlayerValue,
                         waiver_round: formData.get('waiver_round')
                     })
                 })
@@ -980,42 +1006,67 @@
         function loadUserRoster() {
             dropPlayerSelect.innerHTML = '<option value="">-- Loading your roster --</option>';
             submitWaiverRequest.disabled = true;
-            
-            fetch('/api/teams/my-roster')
+
+            // Check available roster spots first
+            fetch('/waivers/api/available-roster-spots')
                 .then(response => response.json())
-                .then(data => {
+                .then(spotsData => {
+                    // Then load the roster
+                    return fetch('/api/teams/my-roster')
+                        .then(response => response.json())
+                        .then(rosterData => ({spotsData, rosterData}));
+                })
+                .then(({spotsData, rosterData}) => {
                     dropPlayerSelect.innerHTML = '<option value="">-- Select a player to drop --</option>';
-                    
-                    if (data.success && data.players && data.players.length > 0) {
+
+                    // Add "No drop" option if roster spots available
+                    if (spotsData.success && spotsData.canAddWithoutDrop) {
+                        const noDropOption = document.createElement('option');
+                        noDropOption.value = 'NO_DROP';
+                        noDropOption.textContent = `✓ No drop - Fill open roster spot (${spotsData.availableSpots} ${spotsData.availableSpots === 1 ? 'spot' : 'spots'} available)`;
+                        noDropOption.style.fontWeight = 'bold';
+                        noDropOption.style.color = '#198754'; // Bootstrap success color
+                        dropPlayerSelect.appendChild(noDropOption);
+
+                        // Add separator
+                        const separator = document.createElement('option');
+                        separator.disabled = true;
+                        separator.textContent = '────────────────────';
+                        dropPlayerSelect.appendChild(separator);
+                    }
+
+                    if (rosterData.success && rosterData.players && rosterData.players.length > 0) {
                         // Group players by position
                         const playersByPosition = {};
-                        data.players.forEach(player => {
+                        rosterData.players.forEach(player => {
                             if (!playersByPosition[player.position]) {
                                 playersByPosition[player.position] = [];
                             }
                             playersByPosition[player.position].push(player);
                         });
-                        
+
                         // Add players grouped by position
                         const positions = ['QB', 'RB', 'RC', 'PK', 'DU'];
                         positions.forEach(position => {
                             if (playersByPosition[position] && playersByPosition[position].length > 0) {
                                 const optgroup = document.createElement('optgroup');
                                 optgroup.label = position;
-                                
+
                                 playersByPosition[position].forEach(player => {
                                     const option = document.createElement('option');
                                     option.value = player.player_id;
                                     option.textContent = `${player.display_name} (${player.team_code || 'FA'})`;
                                     optgroup.appendChild(option);
                                 });
-                                
+
                                 dropPlayerSelect.appendChild(optgroup);
                             }
                         });
                     } else {
-                        dropPlayerSelect.innerHTML = '<option value="">No players on your roster</option>';
-                        submitWaiverRequest.disabled = true;
+                        if (!spotsData.canAddWithoutDrop) {
+                            dropPlayerSelect.innerHTML = '<option value="">No players on your roster</option>';
+                            submitWaiverRequest.disabled = true;
+                        }
                     }
                 })
                 .catch(error => {

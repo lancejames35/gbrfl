@@ -41,13 +41,13 @@ exports.submitWaiverRequest = async (req, res) => {
 
     // Get user's team
     const userTeamQuery = `
-      SELECT team_id, team_name 
-      FROM fantasy_teams 
+      SELECT team_id, team_name
+      FROM fantasy_teams
       WHERE user_id = ?
       LIMIT 1
     `;
     const userTeams = await db.query(userTeamQuery, [user_id]);
-    
+
     if (!userTeams || userTeams.length === 0) {
       return res.status(400).json({
         success: false,
@@ -67,7 +67,7 @@ exports.submitWaiverRequest = async (req, res) => {
       WHERE p.player_id = ?
     `;
     const pickupPlayers = await db.query(playerAvailabilityQuery, [pickup_player_id]);
-    
+
     if (pickupPlayers.length === 0) {
       return res.status(400).json({
         success: false,
@@ -82,20 +82,58 @@ exports.submitWaiverRequest = async (req, res) => {
       });
     }
 
-    // Check if drop player is on user's team
-    const dropPlayerQuery = `
-      SELECT p.display_name, p.position
-      FROM nfl_players p
-      JOIN fantasy_team_players ftp ON p.player_id = ftp.player_id
-      WHERE p.player_id = ? AND ftp.fantasy_team_id = ?
-    `;
-    const dropPlayers = await db.query(dropPlayerQuery, [drop_player_id, fantasy_team_id]);
-    
-    if (dropPlayers.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Drop player not found on your team'
-      });
+    // Handle "no drop" scenario (when drop_player_id is null/undefined)
+    let dropPlayers = [];
+    const isNoDrop = !drop_player_id;
+
+    if (isNoDrop) {
+      // Validate that team has available roster spots
+      const rosterCountQuery = `
+        SELECT COUNT(*) as current_roster_count
+        FROM fantasy_team_players
+        WHERE fantasy_team_id = ?
+      `;
+      const rosterResult = await db.query(rosterCountQuery, [fantasy_team_id]);
+      const currentRosterCount = rosterResult[0].current_roster_count || 0;
+
+      const pendingNoDropQuery = `
+        SELECT COUNT(*) as pending_no_drop_count
+        FROM waiver_requests
+        WHERE fantasy_team_id = ?
+          AND status = 'pending'
+          AND drop_player_id IS NULL
+      `;
+      const pendingResult = await db.query(pendingNoDropQuery, [fantasy_team_id]);
+      const pendingNoDropCount = pendingResult[0].pending_no_drop_count || 0;
+
+      const maxRosterSize = 21;
+      const availableSpots = maxRosterSize - currentRosterCount - pendingNoDropCount;
+
+      if (availableSpots <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No available roster spots. You must drop a player to add a new one.',
+          currentRosterCount,
+          pendingNoDropCount,
+          maxRosterSize
+        });
+      }
+    } else {
+      // Check if drop player is on user's team
+      const dropPlayerQuery = `
+        SELECT p.display_name, p.position
+        FROM nfl_players p
+        JOIN fantasy_team_players ftp ON p.player_id = ftp.player_id
+        WHERE p.player_id = ? AND ftp.fantasy_team_id = ?
+      `;
+      dropPlayers = await db.query(dropPlayerQuery, [drop_player_id, fantasy_team_id]);
+
+      if (dropPlayers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Drop player not found on your team'
+        });
+      }
     }
 
     // Allow multiple requests for the same player - conflicts will be resolved when approved
@@ -103,31 +141,55 @@ exports.submitWaiverRequest = async (req, res) => {
     // Get the next request order for this team and round
     const orderQuery = `
       SELECT COALESCE(MAX(request_order), 0) + 1 as next_order
-      FROM waiver_requests 
+      FROM waiver_requests
       WHERE fantasy_team_id = ? AND status = 'pending' AND waiver_round = ?
     `;
     const orderResult = await db.query(orderQuery, [fantasy_team_id, waiver_round]);
     const request_order = orderResult[0].next_order;
 
-    // Insert waiver request
-    const insertQuery = `
-      INSERT INTO waiver_requests (
-        fantasy_team_id, 
-        pickup_player_id, 
-        drop_player_id, 
+    // Insert waiver request - handle NULL drop_player_id properly
+    let insertQuery, insertParams;
+
+    if (isNoDrop) {
+      // For no-drop requests, explicitly set drop_player_id to NULL
+      insertQuery = `
+        INSERT INTO waiver_requests (
+          fantasy_team_id,
+          pickup_player_id,
+          drop_player_id,
+          request_order,
+          waiver_round,
+          status
+        ) VALUES (?, ?, NULL, ?, ?, 'pending')
+      `;
+      insertParams = [
+        fantasy_team_id,
+        pickup_player_id,
         request_order,
-        waiver_round,
-        status
-      ) VALUES (?, ?, ?, ?, ?, 'pending')
-    `;
-    
-    const result = await db.query(insertQuery, [
-      fantasy_team_id,
-      pickup_player_id,
-      drop_player_id,
-      request_order,
-      waiver_round
-    ]);
+        waiver_round
+      ];
+    } else {
+      // For regular drop requests
+      insertQuery = `
+        INSERT INTO waiver_requests (
+          fantasy_team_id,
+          pickup_player_id,
+          drop_player_id,
+          request_order,
+          waiver_round,
+          status
+        ) VALUES (?, ?, ?, ?, ?, 'pending')
+      `;
+      insertParams = [
+        fantasy_team_id,
+        pickup_player_id,
+        drop_player_id,
+        request_order,
+        waiver_round
+      ];
+    }
+
+    const result = await db.query(insertQuery, insertParams);
 
     // Auto-add pending player to current week's lineup (at bottom of their position)
     try {
@@ -136,7 +198,7 @@ exports.submitWaiverRequest = async (req, res) => {
       
       // Get player's position type for lineup
       const playerPosition = pickupPlayers[0].position;
-      const dropPlayerPosition = dropPlayers[0].position;
+      const dropPlayerPosition = dropPlayers.length > 0 ? dropPlayers[0].position : 'N/A';
       let positionType = 'other';
       switch(playerPosition) {
         case 'QB': positionType = 'quarterback'; break;
@@ -145,8 +207,9 @@ exports.submitWaiverRequest = async (req, res) => {
         case 'PK': positionType = 'place_kicker'; break;
         case 'DU': positionType = 'defense'; break;
       }
-      
-      console.log(`Waiver request: Pickup ${pickupPlayers[0].display_name} (${playerPosition} -> ${positionType}), Drop ${dropPlayers[0].display_name} (${dropPlayerPosition})`);
+
+      const dropInfo = dropPlayers.length > 0 ? `Drop ${dropPlayers[0].display_name} (${dropPlayerPosition})` : 'No drop (roster fill)';
+      console.log(`Waiver request: Pickup ${pickupPlayers[0].display_name} (${playerPosition} -> ${positionType}), ${dropInfo}`);
       
       // Get or create lineup submission for current week
       const lineupQuery = `
@@ -215,18 +278,23 @@ exports.submitWaiverRequest = async (req, res) => {
       `;
       const activityDetails = JSON.stringify({
         pickup_player: pickupPlayers[0].display_name,
-        drop_player: dropPlayers[0].display_name,
-        request_id: result.insertId
+        drop_player: dropPlayers.length > 0 ? dropPlayers[0].display_name : 'No drop (roster fill)',
+        request_id: result.insertId,
+        is_no_drop: isNoDrop
       });
-      
+
       await db.query(activityQuery, [user_id, pickup_player_id, activityDetails]);
     } catch (logError) {
       console.warn('Warning: Could not log waiver request activity:', logError.message);
     }
 
+    const successMessage = isNoDrop
+      ? `Waiver request submitted: Pick up ${pickupPlayers[0].display_name} (no drop - filling roster spot)`
+      : `Waiver request submitted: Pick up ${pickupPlayers[0].display_name}, drop ${dropPlayers[0].display_name}`;
+
     res.json({
       success: true,
-      message: `Waiver request submitted: Pick up ${pickupPlayers[0].display_name}, drop ${dropPlayers[0].display_name}`,
+      message: successMessage,
       request_id: result.insertId
     });
 
@@ -269,7 +337,7 @@ exports.getPendingRequests = async (req, res) => {
 
     // Get pending requests with player details
     const requestsQuery = `
-      SELECT 
+      SELECT
         wr.request_id,
         wr.request_order,
         wr.waiver_round,
@@ -277,13 +345,13 @@ exports.getPendingRequests = async (req, res) => {
         pickup.display_name as pickup_name,
         pickup.position as pickup_position,
         pickup_team.team_code as pickup_team,
-        drop_player.display_name as drop_name,
+        COALESCE(drop_player.display_name, '--') as drop_name,
         drop_player.position as drop_position,
         drop_team.team_code as drop_team
       FROM waiver_requests wr
       JOIN nfl_players pickup ON wr.pickup_player_id = pickup.player_id
       LEFT JOIN nfl_teams pickup_team ON pickup.nfl_team_id = pickup_team.nfl_team_id
-      JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
+      LEFT JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
       LEFT JOIN nfl_teams drop_team ON drop_player.nfl_team_id = drop_team.nfl_team_id
       WHERE wr.fantasy_team_id = ? AND wr.status = 'pending'
       ORDER BY wr.waiver_round ASC, wr.request_order ASC
@@ -385,7 +453,7 @@ exports.getAdminPendingRequests = async (req, res) => {
 
     // Get all pending requests with team and player details
     const requestsQuery = `
-      SELECT 
+      SELECT
         wr.request_id,
         wr.request_order,
         wr.waiver_round,
@@ -397,7 +465,7 @@ exports.getAdminPendingRequests = async (req, res) => {
         pickup.display_name as pickup_name,
         pickup.position as pickup_position,
         pickup_team.team_code as pickup_team,
-        drop_player.display_name as drop_name,
+        COALESCE(drop_player.display_name, '--') as drop_name,
         drop_player.position as drop_position,
         drop_team.team_code as drop_team
       FROM waiver_requests wr
@@ -405,7 +473,7 @@ exports.getAdminPendingRequests = async (req, res) => {
       JOIN users u ON ft.user_id = u.user_id
       JOIN nfl_players pickup ON wr.pickup_player_id = pickup.player_id
       LEFT JOIN nfl_teams pickup_team ON pickup.nfl_team_id = pickup_team.nfl_team_id
-      JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
+      LEFT JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
       LEFT JOIN nfl_teams drop_team ON drop_player.nfl_team_id = drop_team.nfl_team_id
       WHERE wr.status = 'pending'
       ORDER BY wr.waiver_round ASC, ft.team_name ASC, wr.request_order ASC
@@ -578,13 +646,15 @@ exports.approveRequest = async (req, res) => {
       console.warn('Warning: Could not clean up conflicting lineup positions:', lineupCleanupError.message);
     }
 
-    // Execute the waiver: remove drop player, add pickup player
-    // Remove drop player from team
-    const removePlayerQuery = `
-      DELETE FROM fantasy_team_players 
-      WHERE fantasy_team_id = ? AND player_id = ?
-    `;
-    await db.query(removePlayerQuery, [request.fantasy_team_id, request.drop_player_id]);
+    // Execute the waiver: remove drop player (if exists), add pickup player
+    // Remove drop player from team (only if this is not a no-drop request)
+    if (request.drop_player_id) {
+      const removePlayerQuery = `
+        DELETE FROM fantasy_team_players
+        WHERE fantasy_team_id = ? AND player_id = ?
+      `;
+      await db.query(removePlayerQuery, [request.fantasy_team_id, request.drop_player_id]);
+    }
 
     // Add pickup player to team
     const addPlayerQuery = `
@@ -730,17 +800,20 @@ exports.approveRequest = async (req, res) => {
 
     // Record in unified transactions table
     try {
-      // Get player names for the transaction
+      // Get player names for the transaction (LEFT JOIN for drop_player to handle no-drop waivers)
       const playerQuery = `
-        SELECT p1.display_name as pickup_name, p2.display_name as drop_name
-        FROM nfl_players p1, nfl_players p2
-        WHERE p1.player_id = ? AND p2.player_id = ?
+        SELECT
+          p1.display_name as pickup_name,
+          p2.display_name as drop_name
+        FROM nfl_players p1
+        LEFT JOIN nfl_players p2 ON p2.player_id = ?
+        WHERE p1.player_id = ?
       `;
-      const playerResult = await db.query(playerQuery, [request.pickup_player_id, request.drop_player_id]);
+      const playerResult = await db.query(playerQuery, [request.drop_player_id, request.pickup_player_id]);
 
       if (playerResult.length > 0) {
         const { pickup_name, drop_name } = playerResult[0];
-        await recordWaiverTransaction(request, admin_user_id, pickup_name, drop_name);
+        await recordWaiverTransaction(request, admin_user_id, pickup_name, drop_name || null);
         console.log(`Successfully recorded waiver transaction for request ${request_id}`);
       }
     } catch (transactionError) {
@@ -767,13 +840,16 @@ exports.approveRequest = async (req, res) => {
 
     // Send notification to the user
     try {
-      // Get player names for the notification
+      // Get player names for the notification (LEFT JOIN for drop_player to handle no-drop waivers)
       const playerQuery = `
-        SELECT p1.display_name as pickup_name, p2.display_name as drop_name
-        FROM nfl_players p1, nfl_players p2
-        WHERE p1.player_id = ? AND p2.player_id = ?
+        SELECT
+          p1.display_name as pickup_name,
+          p2.display_name as drop_name
+        FROM nfl_players p1
+        LEFT JOIN nfl_players p2 ON p2.player_id = ?
+        WHERE p1.player_id = ?
       `;
-      const playerResult = await db.query(playerQuery, [request.pickup_player_id, request.drop_player_id]);
+      const playerResult = await db.query(playerQuery, [request.drop_player_id, request.pickup_player_id]);
 
       if (playerResult.length > 0) {
         const { pickup_name, drop_name } = playerResult[0];
@@ -1132,12 +1208,14 @@ async function recordWaiverTransaction(request, admin_user_id, pickupPlayerName,
       ) VALUES (?, ?, 'Acquired', 'Player', ?)
     `, [transaction_id, request.fantasy_team_id, request.pickup_player_id]);
 
-    // Add transaction items - player lost
-    await db.query(`
-      INSERT INTO transaction_items (
-        transaction_id, team_id, direction, item_type, player_id
-      ) VALUES (?, ?, 'Lost', 'Player', ?)
-    `, [transaction_id, request.fantasy_team_id, request.drop_player_id]);
+    // Add transaction items - player lost (only if there was a drop)
+    if (request.drop_player_id) {
+      await db.query(`
+        INSERT INTO transaction_items (
+          transaction_id, team_id, direction, item_type, player_id
+        ) VALUES (?, ?, 'Lost', 'Player', ?)
+      `, [transaction_id, request.fantasy_team_id, request.drop_player_id]);
+    }
 
     console.log(`Successfully recorded waiver transaction ${transaction_id} for team ${request.fantasy_team_id}: ${notes}`);
     return transaction_id;
@@ -1194,7 +1272,7 @@ exports.getAllProcessedRequests = async (req, res) => {
         pickup.display_name as pickup_name,
         pickup.position as pickup_position,
         pickup_team.team_code as pickup_team,
-        drop_player.display_name as drop_name,
+        COALESCE(drop_player.display_name, '--') as drop_name,
         drop_player.position as drop_position,
         drop_team.team_code as drop_team
       FROM waiver_requests wr
@@ -1202,7 +1280,7 @@ exports.getAllProcessedRequests = async (req, res) => {
       JOIN users u ON ft.user_id = u.user_id
       JOIN nfl_players pickup ON wr.pickup_player_id = pickup.player_id
       LEFT JOIN nfl_teams pickup_team ON pickup.nfl_team_id = pickup_team.nfl_team_id
-      JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
+      LEFT JOIN nfl_players drop_player ON wr.drop_player_id = drop_player.player_id
       LEFT JOIN nfl_teams drop_team ON drop_player.nfl_team_id = drop_team.nfl_team_id
       WHERE wr.status IN ('approved', 'rejected')
         AND wr.week = ?
@@ -1252,5 +1330,77 @@ exports.getAllProcessedRequests = async (req, res) => {
     console.error('Error getting all processed requests:', error);
     req.flash('error_msg', 'Error loading waiver requests');
     res.redirect('/transactions');
+  }
+};
+
+/**
+ * Check available roster spots for a team
+ * Returns how many spots are available for no-drop waiver adds
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.checkAvailableRosterSpots = async (req, res) => {
+  try {
+    const user_id = req.session.user.id;
+
+    // Get user's team
+    const userTeamQuery = `
+      SELECT team_id
+      FROM fantasy_teams
+      WHERE user_id = ?
+      LIMIT 1
+    `;
+    const userTeams = await db.query(userTeamQuery, [user_id]);
+
+    if (!userTeams || userTeams.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'You do not have a fantasy team'
+      });
+    }
+
+    const fantasy_team_id = userTeams[0].team_id;
+
+    // Get current roster count (active players only)
+    const rosterCountQuery = `
+      SELECT COUNT(*) as current_roster_count
+      FROM fantasy_team_players
+      WHERE fantasy_team_id = ?
+    `;
+    const rosterResult = await db.query(rosterCountQuery, [fantasy_team_id]);
+    const currentRosterCount = rosterResult[0].current_roster_count || 0;
+
+    // Get pending "no drop" waiver requests count (where drop_player_id IS NULL)
+    const pendingNoDropQuery = `
+      SELECT COUNT(*) as pending_no_drop_count
+      FROM waiver_requests
+      WHERE fantasy_team_id = ?
+        AND status = 'pending'
+        AND drop_player_id IS NULL
+    `;
+    const pendingResult = await db.query(pendingNoDropQuery, [fantasy_team_id]);
+    const pendingNoDropCount = pendingResult[0].pending_no_drop_count || 0;
+
+    // Calculate available spots: 21 - current_roster - pending_no_drops
+    const maxRosterSize = 21;
+    const availableSpots = maxRosterSize - currentRosterCount - pendingNoDropCount;
+    const canAddWithoutDrop = availableSpots > 0;
+
+    res.json({
+      success: true,
+      currentRosterCount,
+      pendingNoDropCount,
+      maxRosterSize,
+      availableSpots: Math.max(0, availableSpots),
+      canAddWithoutDrop
+    });
+
+  } catch (error) {
+    console.error('Error checking available roster spots:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error checking roster availability',
+      error: error.message
+    });
   }
 };

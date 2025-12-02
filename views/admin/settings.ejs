@@ -194,17 +194,17 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Keepers Allowed</label>
-                            <input type="number" class="form-control" value="12" min="0" max="16">
+                            <input type="number" class="form-control" value="<%= settings.default_keeper_slots || 12 %>" min="0" max="16">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Keeper Deadline</label>
-                            <input type="date" class="form-control" value="2024-08-24">
+                            <input type="date" class="form-control" value="<%= settings.keeper_deadline_date ? settings.keeper_deadline_date.toISOString().split('T')[0] : '' %>">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Trade Deadline</label>
-                            <input type="date" class="form-control" value="2024-11-15">
+                            <input type="date" class="form-control" value="<%= settings.trade_deadline_date ? settings.trade_deadline_date.toISOString().split('T')[0] : '' %>">
                         </div>
                     </div>
                 </div>

@@ -14,15 +14,16 @@ const waiverController = require('../controllers/waiverController');
  * @desc    Submit a waiver wire request
  * @access  Private
  */
-router.post('/request', 
+router.post('/request',
   ensureAuthenticated,
   [
     body('pickup_player_id')
       .isInt({ min: 1 })
       .withMessage('Valid pickup player ID is required'),
     body('drop_player_id')
+      .optional({ nullable: true, checkFalsy: true })
       .isInt({ min: 1 })
-      .withMessage('Valid drop player ID is required'),
+      .withMessage('Valid drop player ID is required when provided'),
     body('waiver_round')
       .isIn(['1st', '2nd'])
       .withMessage('Valid waiver round is required')
@@ -62,6 +63,7 @@ router.delete('/request/:id', ensureAuthenticated, waiverController.cancelReques
  * API routes
  */
 router.get('/api/pending/count', ensureAuthenticated, waiverController.getPendingRequestCount);
+router.get('/api/available-roster-spots', ensureAuthenticated, waiverController.checkAvailableRosterSpots);
 router.get('/debug', ensureAuthenticated, waiverController.debugWaiverData);
 
 /**

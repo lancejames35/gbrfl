@@ -103,18 +103,26 @@ router.get('/', ensureAuthenticated, async (req, res) => {
     
     // Calculate league stats (for potential future use)
     const leagueStats = await db.query(`
-      SELECT 
+      SELECT
         COUNT(DISTINCT ft.team_id) as total_teams,
         COUNT(DISTINCT CASE WHEN keeper_count.total > 0 THEN ft.team_id END) as teams_with_keepers
       FROM fantasy_teams ft
       LEFT JOIN (
         SELECT fantasy_team_id, COUNT(*) as total
-        FROM fantasy_team_players 
+        FROM fantasy_team_players
         WHERE is_keeper = 1
         GROUP BY fantasy_team_id
       ) keeper_count ON ft.team_id = keeper_count.fantasy_team_id
     `);
-    
+
+    // Get league settings including trade deadline
+    const leagueSettings = await db.query(`
+      SELECT trade_deadline_date
+      FROM league_settings
+      WHERE season_year = 2025
+      LIMIT 1
+    `);
+
     res.render('dashboard', {
       title: 'Dashboard',
       user: req.session.user,
@@ -124,7 +132,8 @@ router.get('/', ensureAuthenticated, async (req, res) => {
       isDraftDay: isDraftDay,
       isPostDraft: isPostDraft,
       daysUntilDraft: Math.ceil((draftDate - now) / (1000 * 60 * 60 * 24)),
-      leagueStats: leagueStats[0] || { total_teams: 10, teams_with_keepers: 0 }
+      leagueStats: leagueStats[0] || { total_teams: 10, teams_with_keepers: 0 },
+      tradeDeadline: leagueSettings[0]?.trade_deadline_date || null
     });
   } catch (error) {
     console.error('Dashboard error:', error);
@@ -137,7 +146,8 @@ router.get('/', ensureAuthenticated, async (req, res) => {
       isDraftDay: false,
       isPostDraft: false,
       daysUntilDraft: 16,
-      leagueStats: { total_teams: 10, teams_with_keepers: 0 }
+      leagueStats: { total_teams: 10, teams_with_keepers: 0 },
+      tradeDeadline: null
     });
   }
 });

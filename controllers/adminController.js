@@ -944,10 +944,19 @@ exports.updateUserProfile = async (req, res) => {
  */
 exports.getLeagueSettings = async (req, res) => {
   try {
+    // Get current league settings from database
+    const leagueSettings = await db.query(`
+      SELECT *
+      FROM league_settings
+      WHERE season_year = 2025
+      LIMIT 1
+    `);
+
     res.render('admin/settings', {
       title: 'League Settings',
       user: req.session.user,
-      activePage: 'admin'
+      activePage: 'admin',
+      settings: leagueSettings[0] || {}
     });
   } catch (error) {
     console.error('Error displaying league settings:', error.message);
