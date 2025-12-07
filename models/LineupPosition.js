@@ -257,21 +257,46 @@ class LineupPosition {
    */
   static async updatePositions(lineupId, positions) {
     const connection = await db.pool.getConnection();
-    
+
     try {
       await connection.beginTransaction();
+
+      // Get the fantasy_team_id for this lineup
+      const [lineupInfo] = await connection.query(
+        'SELECT fantasy_team_id FROM lineup_submissions WHERE lineup_id = ?',
+        [lineupId]
+      );
+      const fantasyTeamId = lineupInfo[0]?.fantasy_team_id;
 
       // First, get all pending waiver players to preserve them
       const pendingWaiverQuery = `
         SELECT position_id, player_id, position_type, waiver_request_id, player_status
-        FROM lineup_positions 
+        FROM lineup_positions
         WHERE lineup_id = ? AND player_status = 'pending_waiver'
       `;
-      const pendingWaivers = await connection.query(pendingWaiverQuery, [lineupId]);
+      const [pendingWaivers] = await connection.query(pendingWaiverQuery, [lineupId]);
+
+      // Also get pending waiver player IDs from waiver_requests table
+      // (in case they're not yet in lineup_positions with pending_waiver status)
+      const [pendingWaiverRequests] = await connection.query(`
+        SELECT DISTINCT pickup_player_id
+        FROM waiver_requests
+        WHERE fantasy_team_id = ? AND status = 'pending'
+      `, [fantasyTeamId]);
+      const pendingWaiverPlayerIds = new Set([
+        ...pendingWaivers.map(pw => pw.player_id),
+        ...pendingWaiverRequests.map(pwr => pwr.pickup_player_id)
+      ]);
+
+      // Get rostered players for this team
+      const [rosteredPlayers] = await connection.query(`
+        SELECT player_id FROM fantasy_team_players WHERE fantasy_team_id = ?
+      `, [fantasyTeamId]);
+      const rosteredPlayerIds = new Set(rosteredPlayers.map(rp => rp.player_id));
 
       // Delete existing positions for this lineup EXCEPT pending waivers
       await connection.query(
-        'DELETE FROM lineup_positions WHERE lineup_id = ? AND (player_status != "pending_waiver" OR player_status IS NULL)', 
+        'DELETE FROM lineup_positions WHERE lineup_id = ? AND (player_status != "pending_waiver" OR player_status IS NULL)',
         [lineupId]
       );
 
@@ -284,17 +309,21 @@ class LineupPosition {
           sort_order
         } = position;
 
-        // Skip if this player_id is already in lineup as pending waiver
-        const isPendingWaiver = pendingWaivers.some(pw => pw.player_id === player_id);
+        // Skip if this player_id is a pending waiver (either in lineup_positions or waiver_requests)
+        const isPendingWaiver = pendingWaiverPlayerIds.has(player_id);
         if (isPendingWaiver) {
-          // Update the sort_order for the pending waiver player instead
-          await connection.query(`
-            UPDATE lineup_positions 
-            SET sort_order = ?, nfl_team_id = ?
-            WHERE lineup_id = ? AND player_id = ? AND player_status = 'pending_waiver'
-          `, [sort_order, nfl_team_id, lineupId, player_id]);
-        } else {
-          // Insert new regular position with duplicate key handling
+          // Update the sort_order for the pending waiver player if it exists in lineup_positions
+          const existsInLineup = pendingWaivers.some(pw => pw.player_id === player_id);
+          if (existsInLineup) {
+            await connection.query(`
+              UPDATE lineup_positions
+              SET sort_order = ?, nfl_team_id = ?
+              WHERE lineup_id = ? AND player_id = ? AND player_status = 'pending_waiver'
+            `, [sort_order, nfl_team_id, lineupId, player_id]);
+          }
+          // If not in lineup_positions yet, skip - it will be added when the waiver is approved
+        } else if (rosteredPlayerIds.has(player_id)) {
+          // Only insert if player is actually on the roster
           await connection.query(`
             INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, created_at)
             VALUES (?, ?, ?, ?, ?, NOW())
@@ -302,6 +331,9 @@ class LineupPosition {
             sort_order = VALUES(sort_order),
             nfl_team_id = VALUES(nfl_team_id)
           `, [lineupId, position_type, player_id, nfl_team_id, sort_order]);
+        } else {
+          // Player is neither rostered nor a pending waiver - skip with warning
+          console.warn(`Skipping player ${player_id} - not on roster and not a pending waiver for team ${fantasyTeamId}`);
         }
       }
 

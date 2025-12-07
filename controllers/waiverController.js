@@ -986,18 +986,35 @@ exports.rejectRequest = async (req, res) => {
     `;
     const result = await db.query(updateRequestQuery, [admin_user_id, notes || null, request_id]);
 
-    // Remove pending_waiver entry from lineup_positions
+    // Remove ALL lineup entries for this player from this team's future lineups
+    // This catches both pending_waiver entries AND any duplicate entries created when user reordered lineup
     try {
-      const removeLineupQuery = `
+      // First remove entries with waiver_request_id (original pending_waiver entries)
+      const removeByRequestQuery = `
         DELETE FROM lineup_positions
-        WHERE waiver_request_id = ? AND player_status = 'pending_waiver'
+        WHERE waiver_request_id = ?
       `;
-      const removeResult = await db.query(removeLineupQuery, [request_id]);
-      if (removeResult.affectedRows > 0) {
-        console.log(`Removed ${removeResult.affectedRows} pending_waiver lineup position(s) for rejected request ${request_id}`);
+      const removeByRequestResult = await db.query(removeByRequestQuery, [request_id]);
+
+      // Then remove any other entries for this player from unlocked future lineups for this team
+      // (catches duplicates created when user saved lineup with pending waiver player)
+      const removeOrphanedQuery = `
+        DELETE lp FROM lineup_positions lp
+        JOIN lineup_submissions ls ON lp.lineup_id = ls.lineup_id
+        LEFT JOIN lineup_locks ll ON ls.week_number = ll.week_number AND ls.season_year = ll.season_year
+        WHERE lp.player_id = ?
+          AND ls.fantasy_team_id = ?
+          AND ls.season_year = 2025
+          AND (ll.is_locked IS NULL OR ll.is_locked = 0)
+      `;
+      const removeOrphanedResult = await db.query(removeOrphanedQuery, [request.pickup_player_id, request.fantasy_team_id]);
+
+      const totalRemoved = (removeByRequestResult.affectedRows || 0) + (removeOrphanedResult.affectedRows || 0);
+      if (totalRemoved > 0) {
+        console.log(`Removed ${totalRemoved} lineup position(s) for rejected waiver request ${request_id} (player ${request.pickup_player_id})`);
       }
     } catch (lineupError) {
-      console.warn('Warning: Could not remove pending_waiver lineup position:', lineupError.message);
+      console.warn('Warning: Could not remove lineup positions for rejected waiver:', lineupError.message);
     }
 
     // Log the activity
