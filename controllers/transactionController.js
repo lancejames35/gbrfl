@@ -94,7 +94,7 @@ transactionController.getTransactions = async (req, res) => {
                   WHEN ti_acq.draft_round % 10 = 3 THEN CONCAT(ti_acq.draft_round, 'rd')
                   ELSE CONCAT(ti_acq.draft_round, 'th')
                 END,
-                ' Draft Pick'
+                ' Round Draft Pick'
               )
               ELSE ti_acq.item_type
             END
@@ -127,7 +127,7 @@ transactionController.getTransactions = async (req, res) => {
                   WHEN ti_lost.draft_round % 10 = 3 THEN CONCAT(ti_lost.draft_round, 'rd')
                   ELSE CONCAT(ti_lost.draft_round, 'th')
                 END,
-                ' Draft Pick'
+                ' Round Draft Pick'
               )
               ELSE ti_lost.item_type
             END
