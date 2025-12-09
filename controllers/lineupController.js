@@ -103,6 +103,15 @@ exports.getLineupsForWeek = async (req, res) => {
       }
     }
 
+    // Check if bonus games are available for this week BEFORE creating lineup
+    const weekSchedule = await WeeklySchedule.getScheduleByWeek(weekNumber, seasonYear);
+    const hasBonusGames = weekSchedule.some(game => game.game_type === 'bonus');
+
+    // If requesting bonus lineup but no bonus games exist, redirect to primary
+    if (gameType === 'bonus' && !hasBonusGames) {
+      return res.redirect(`/lineups/week/${weekNumber}/primary?team=${selectedTeam.team_id}`);
+    }
+
     // Get or create lineup submission
     let lineup = await LineupSubmission.getByTeamAndWeek(selectedTeam.team_id, weekNumber, gameType, seasonYear);
 
@@ -116,6 +125,22 @@ exports.getLineupsForWeek = async (req, res) => {
       });
 
       lineup = await LineupSubmission.getByTeamAndWeek(selectedTeam.team_id, weekNumber, gameType, seasonYear);
+
+      // Initialize from source lineup:
+      // - Bonus lineups: copy from this week's primary
+      // - Primary lineups: copy from previous week's primary (if exists)
+      if (gameType === 'bonus' && hasBonusGames) {
+        const primaryLineup = await LineupSubmission.getByTeamAndWeek(selectedTeam.team_id, weekNumber, 'primary', seasonYear);
+        if (primaryLineup) {
+          await LineupPosition.copyPositionsFromLineup(primaryLineup.lineup_id, lineup.lineup_id);
+        }
+      } else if (gameType === 'primary' && weekNumber > 1) {
+        // For new primary lineups, copy from previous week's primary lineup
+        const previousWeekLineup = await LineupSubmission.getByTeamAndWeek(selectedTeam.team_id, weekNumber - 1, 'primary', seasonYear);
+        if (previousWeekLineup) {
+          await LineupPosition.copyPositionsFromLineup(previousWeekLineup.lineup_id, lineup.lineup_id);
+        }
+      }
     }
 
     // Get team roster organized by position with current lineup order
@@ -127,9 +152,7 @@ exports.getLineupsForWeek = async (req, res) => {
     // Check lineup completion
     const completionStatus = await LineupSubmission.isLineupComplete(lineup.lineup_id);
 
-    // Check if bonus games are available for this week
-    const weekSchedule = await WeeklySchedule.getScheduleByWeek(weekNumber, seasonYear);
-    const hasBonusGames = weekSchedule.some(game => game.game_type === 'bonus');
+    // hasBonusGames was already computed earlier in the function
 
     // Get all weeks for navigation
     const allWeeks = Array.from({ length: 17 }, (_, i) => ({

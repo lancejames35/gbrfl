@@ -302,12 +302,17 @@ class LineupPosition {
 
       // Insert new positions (excluding any that are pending waivers)
       for (const position of positions) {
-        const {
-          position_type,
-          player_id,
-          nfl_team_id,
-          sort_order
-        } = position;
+        const { position_type, sort_order } = position;
+
+        // Convert IDs to integers for proper comparison
+        // (DOM attributes come as strings, but DB IDs are integers)
+        const player_id = position.player_id ? parseInt(position.player_id, 10) : null;
+        const nfl_team_id = position.nfl_team_id ? parseInt(position.nfl_team_id, 10) : null;
+
+        // Skip if no player_id
+        if (!player_id) {
+          continue;
+        }
 
         // Skip if this player_id is a pending waiver (either in lineup_positions or waiver_requests)
         const isPendingWaiver = pendingWaiverPlayerIds.has(player_id);

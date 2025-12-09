@@ -1017,10 +1017,12 @@
         <div class="header-main">
             <!-- Left: Week navigation -->
             <div class="week-nav-group">
-                <a href="/lineups/week/<%= weekNumber > 1 ? weekNumber - 1 : 1 %><%= gameType === 'bonus' ? '/bonus' : '' %>?team=<%= selectedTeam.team_id %>" 
-                   class="nav-btn <%= weekNumber <= 1 ? 'disabled' : '' %>" title="Previous Week">
+                <button type="button" id="prevWeekBtn"
+                   class="nav-btn <%= weekNumber <= 1 ? 'disabled' : '' %>"
+                   title="Previous Week"
+                   <%= weekNumber <= 1 ? 'disabled' : '' %>>
                     <i class="bi bi-chevron-left"></i>
-                </a>
+                </button>
                 <select id="weekSelector" class="week-dropdown">
                     <% for (let week = 1; week <= 17; week++) { %>
                     <option value="<%= week %>" <%= week === weekNumber ? 'selected' : '' %>>
@@ -1028,10 +1030,12 @@
                     </option>
                     <% } %>
                 </select>
-                <a href="/lineups/week/<%= weekNumber < 17 ? weekNumber + 1 : 17 %><%= gameType === 'bonus' ? '/bonus' : '' %>?team=<%= selectedTeam.team_id %>" 
-                   class="nav-btn <%= weekNumber >= 17 ? 'disabled' : '' %>" title="Next Week">
+                <button type="button" id="nextWeekBtn"
+                   class="nav-btn <%= weekNumber >= 17 ? 'disabled' : '' %>"
+                   title="Next Week"
+                   <%= weekNumber >= 17 ? 'disabled' : '' %>>
                     <i class="bi bi-chevron-right"></i>
-                </a>
+                </button>
             </div>
             
             <!-- Center: Fixed game controls -->
@@ -1479,13 +1483,36 @@ const LineupManager = {
         this.initDragAndDrop();
         this.initLockCountdown();
         this.initWeekSelector();
+        this.initWeekNavButtons();
         this.initResizeHandler();
         this.initCopyButtons();
         this.initGameTypeDisplay();
         this.initCopyButtonVisibility();
         // Head coach no longer needs initialization - displayed from team data
-        
+
         // Lineup Manager initialized
+    },
+
+    // Initialize prev/next week navigation buttons
+    initWeekNavButtons() {
+        const prevBtn = document.getElementById('prevWeekBtn');
+        const nextBtn = document.getElementById('nextWeekBtn');
+
+        if (prevBtn && this.weekNumber > 1) {
+            prevBtn.addEventListener('click', async () => {
+                await this.flushPendingSave();
+                const gameTypeParam = this.gameType === 'bonus' ? '/bonus' : '';
+                window.location.href = `/lineups/week/${this.weekNumber - 1}${gameTypeParam}?team=${this.teamId}`;
+            });
+        }
+
+        if (nextBtn && this.weekNumber < 17) {
+            nextBtn.addEventListener('click', async () => {
+                await this.flushPendingSave();
+                const gameTypeParam = this.gameType === 'bonus' ? '/bonus' : '';
+                window.location.href = `/lineups/week/${this.weekNumber + 1}${gameTypeParam}?team=${this.teamId}`;
+            });
+        }
     },
 
     // Initialize copy button event handlers
@@ -1524,18 +1551,22 @@ const LineupManager = {
         // Game type selector buttons
         const primaryBtn = document.getElementById('primaryGameBtn');
         const bonusBtn = document.getElementById('bonusGameBtn');
-        
+
         if (primaryBtn) {
-            primaryBtn.addEventListener('click', () => {
+            primaryBtn.addEventListener('click', async () => {
                 if (this.gameType !== 'primary') {
+                    // Ensure any pending saves complete before navigating
+                    await this.flushPendingSave();
                     window.location.href = `/lineups/week/${this.weekNumber}?team=${this.teamId}`;
                 }
             });
         }
-        
+
         if (bonusBtn) {
-            bonusBtn.addEventListener('click', () => {
+            bonusBtn.addEventListener('click', async () => {
                 if (this.gameType !== 'bonus') {
+                    // Ensure any pending saves complete before navigating
+                    await this.flushPendingSave();
                     window.location.href = `/lineups/week/${this.weekNumber}/bonus?team=${this.teamId}`;
                 }
             });
@@ -1566,19 +1597,23 @@ const LineupManager = {
     initWeekSelector() {
         const weekSelector = document.getElementById('weekSelector');
         if (weekSelector) {
-            weekSelector.addEventListener('change', (e) => {
+            weekSelector.addEventListener('change', async (e) => {
                 const selectedWeek = e.target.value;
+
+                // Ensure any pending saves complete before navigating
+                await this.flushPendingSave();
+
                 // When changing weeks, check if the target week has separate mode enabled
                 const targetWeekKey = `lineupSeparateMode_week_${selectedWeek}`;
                 const targetWeekSeparateMode = localStorage.getItem(targetWeekKey) === 'true';
-                
+
                 // If target week has separate mode and we're currently on bonus, stay on bonus
                 // Otherwise, default to primary
                 let gameTypeParam = '';
                 if (targetWeekSeparateMode && this.gameType === 'bonus') {
                     gameTypeParam = '/bonus';
                 }
-                
+
                 const newUrl = `/lineups/week/${selectedWeek}${gameTypeParam}?team=${this.teamId}`;
                 window.location.href = newUrl;
             });
@@ -1746,6 +1781,16 @@ const LineupManager = {
         this.saveTimeout = setTimeout(() => {
             this.saveLineupAfterMove();
         }, 1000);
+    },
+
+    // Flush any pending save immediately (used before navigation)
+    async flushPendingSave() {
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+            this.saveTimeout = null;
+            // Save immediately instead of waiting
+            await this.saveLineupAfterMove();
+        }
     },
 
     // Save lineup after player movement

@@ -69,7 +69,35 @@ async function parseCSV(filePath) {
   return rows;
 }
 
+// Cache for weeks with bonus games
+const weeksWithBonusGames = new Map();
+
+async function checkWeekHasBonusGames(week, seasonYear = 2025) {
+  const cacheKey = `${week}-${seasonYear}`;
+  if (weeksWithBonusGames.has(cacheKey)) {
+    return weeksWithBonusGames.get(cacheKey);
+  }
+
+  const result = await db.query(`
+    SELECT COUNT(*) as count FROM weekly_schedule
+    WHERE week_number = ? AND season_year = ? AND game_type = 'bonus'
+  `, [week, seasonYear]);
+
+  const hasBonusGames = result[0].count > 0;
+  weeksWithBonusGames.set(cacheKey, hasBonusGames);
+  return hasBonusGames;
+}
+
 async function getLineupId(teamId, week, gameType, seasonYear = 2025) {
+  // Check if bonus games exist for this week before creating bonus lineup
+  if (gameType === 'bonus') {
+    const hasBonusGames = await checkWeekHasBonusGames(week, seasonYear);
+    if (!hasBonusGames) {
+      console.warn(`Skipping bonus lineup for Week ${week} - no bonus games scheduled for this week`);
+      return null;
+    }
+  }
+
   const result = await db.query(`
     SELECT lineup_id FROM lineup_submissions
     WHERE fantasy_team_id = ? AND week_number = ? AND game_type = ? AND season_year = ?
@@ -133,8 +161,13 @@ async function importLineups(filePath) {
     const lineup = lineups[key];
 
     try {
-      // Get or create lineup_id
+      // Get or create lineup_id (returns null for bonus lineups in weeks without bonus games)
       const lineupId = await getLineupId(lineup.teamId, lineup.week, lineup.gameType);
+
+      // Skip if lineup was not created (e.g., bonus lineup for week without bonus games)
+      if (lineupId === null) {
+        continue;
+      }
 
       // Delete existing positions for this lineup
       await db.query('DELETE FROM lineup_positions WHERE lineup_id = ?', [lineupId]);

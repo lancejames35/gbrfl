@@ -53,8 +53,35 @@ def load_nfl_teams(cursor):
         teams_by_name[team_name] = nfl_team_id
     return teams_by_code, teams_by_name
 
+# Cache for weeks with bonus games
+_weeks_with_bonus_games = {}
+
+def check_week_has_bonus_games(cursor, week, season_year):
+    """Check if a week has bonus games scheduled"""
+    cache_key = f"{week}-{season_year}"
+    if cache_key in _weeks_with_bonus_games:
+        return _weeks_with_bonus_games[cache_key]
+
+    cursor.execute("""
+        SELECT COUNT(*) FROM weekly_schedule
+        WHERE week_number = %s AND season_year = %s AND game_type = 'bonus'
+    """, (week, season_year))
+
+    result = cursor.fetchone()
+    has_bonus = result[0] > 0
+    _weeks_with_bonus_games[cache_key] = has_bonus
+    return has_bonus
+
 def get_or_create_lineup_submission(cursor, team_id, week, game_type, season_year):
-    """Get existing lineup_submission or create one"""
+    """Get existing lineup_submission or create one
+    Returns None for bonus lineups in weeks without bonus games scheduled"""
+
+    # Check if bonus games exist for this week before creating bonus lineup
+    if game_type == 'bonus':
+        if not check_week_has_bonus_games(cursor, week, season_year):
+            print(f"⚠️  Skipping bonus lineup for Week {week} - no bonus games scheduled")
+            return None
+
     cursor.execute("""
         SELECT lineup_id FROM lineup_submissions
         WHERE fantasy_team_id = %s AND week_number = %s AND game_type = %s AND season_year = %s
@@ -189,8 +216,12 @@ def main():
 
     for (team_id, week, game_type), positions in lineups_by_submission.items():
         try:
-            # Get or create lineup submission
+            # Get or create lineup submission (returns None for bonus lineups without bonus games)
             lineup_id = get_or_create_lineup_submission(cursor, team_id, week, game_type, season_year)
+
+            # Skip if lineup was not created (e.g., bonus lineup for week without bonus games)
+            if lineup_id is None:
+                continue
 
             # Delete existing positions for this lineup (to avoid duplicates)
             cursor.execute("DELETE FROM lineup_positions WHERE lineup_id = %s", (lineup_id,))
