@@ -1670,7 +1670,6 @@ const LineupManager = {
                         // Drag started
                     },
                     onEnd: (evt) => {
-                        // Drag ended
                         if (evt.oldIndex !== evt.newIndex) {
                             self.handlePositionReorder(position, evt);
                             self.updateStarterHighlighting(position, starterRequirements[position]);
@@ -1773,10 +1772,10 @@ const LineupManager = {
         if (this.saveTimeout) {
             clearTimeout(this.saveTimeout);
         }
-        
+
         // Show saving indicator
         this.showSaving();
-        
+
         // Set new timeout to save after 1 second of no changes
         this.saveTimeout = setTimeout(() => {
             this.saveLineupAfterMove();
@@ -1798,9 +1797,7 @@ const LineupManager = {
         try {
             // Collect all current player positions
             const positions = this.collectAllPositions();
-            
-            // Auto-saving lineup
-            
+
             const response = await fetch('/lineups/save', {
                 method: 'POST',
                 headers: {

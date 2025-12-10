@@ -314,19 +314,33 @@ class LineupPosition {
           continue;
         }
 
-        // Skip if this player_id is a pending waiver (either in lineup_positions or waiver_requests)
+        // Check if this player_id is a pending waiver (either in lineup_positions or waiver_requests)
         const isPendingWaiver = pendingWaiverPlayerIds.has(player_id);
         if (isPendingWaiver) {
-          // Update the sort_order for the pending waiver player if it exists in lineup_positions
+          // Check if pending waiver player already exists in lineup_positions
           const existsInLineup = pendingWaivers.some(pw => pw.player_id === player_id);
           if (existsInLineup) {
+            // Update the sort_order for the existing pending waiver entry
             await connection.query(`
               UPDATE lineup_positions
               SET sort_order = ?, nfl_team_id = ?
               WHERE lineup_id = ? AND player_id = ? AND player_status = 'pending_waiver'
             `, [sort_order, nfl_team_id, lineupId, player_id]);
+          } else {
+            // Pending waiver player not yet in lineup_positions - insert it to save their position
+            // Get the waiver_request_id for this player
+            const [waiverInfo] = await connection.query(`
+              SELECT MIN(request_id) as request_id
+              FROM waiver_requests
+              WHERE fantasy_team_id = ? AND pickup_player_id = ? AND status = 'pending'
+            `, [fantasyTeamId, player_id]);
+            const requestId = waiverInfo[0]?.request_id || null;
+
+            await connection.query(`
+              INSERT INTO lineup_positions (lineup_id, position_type, player_id, nfl_team_id, sort_order, player_status, waiver_request_id, created_at)
+              VALUES (?, ?, ?, ?, ?, 'pending_waiver', ?, NOW())
+            `, [lineupId, position_type, player_id, nfl_team_id, sort_order, requestId]);
           }
-          // If not in lineup_positions yet, skip - it will be added when the waiver is approved
         } else if (rosteredPlayerIds.has(player_id)) {
           // Only insert if player is actually on the roster
           await connection.query(`
