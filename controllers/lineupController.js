@@ -21,6 +21,13 @@ const { validationResult } = require('express-validator');
 exports.getLineups = async (req, res) => {
   try {
     const isGuest = req.session.guest;
+
+    // Block guest access to lineups
+    if (isGuest) {
+      req.flash('error_msg', 'Please log in to view lineups.');
+      return res.redirect('/dashboard');
+    }
+
     const nextUnlockedWeek = await getNextUnlockedWeek();
 
     let userTeams;
@@ -62,6 +69,13 @@ exports.getLineups = async (req, res) => {
 exports.getLineupsForWeek = async (req, res) => {
   try {
     const isGuest = req.session.guest;
+
+    // Block guest access to lineups
+    if (isGuest) {
+      req.flash('error_msg', 'Please log in to view lineups.');
+      return res.redirect('/dashboard');
+    }
+
     const weekNumber = parseInt(req.params.week);
     const gameType = req.params.gameType || 'primary';
     const seasonYear = 2025;

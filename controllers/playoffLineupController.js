@@ -17,6 +17,13 @@ const { validationResult } = require('express-validator');
 exports.getPlayoffLineups = async (req, res) => {
   try {
     const isGuest = req.session.guest;
+
+    // Block guest access to playoff lineups
+    if (isGuest) {
+      req.flash('error_msg', 'Please log in to view playoff lineups.');
+      return res.redirect('/dashboard');
+    }
+
     const seasonYear = 2025;
 
     // Get user's fantasy teams (or guest team)

@@ -29,9 +29,16 @@
         </a>
       </li>
       <li class="nav-item">
+        <% if (locals.isGuest) { %>
+        <span class="nav-link disabled text-muted" title="Login required to view lineups">
+          <i class="bi bi-clipboard-check me-2"></i> <span class="nav-text">Lineups</span>
+          <i class="bi bi-lock-fill ms-1 small"></i>
+        </span>
+        <% } else { %>
         <a class="nav-link <%= activePage === 'lineups' ? 'active' : '' %>" href="/lineups">
           <i class="bi bi-clipboard-check me-2"></i> <span class="nav-text">Lineups</span>
         </a>
+        <% } %>
       </li>
       <li class="nav-item">
         <a class="nav-link <%= activePage === 'schedule' ? 'active' : '' %>" href="/schedule">
