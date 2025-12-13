@@ -164,6 +164,8 @@ class LineupPosition {
    */
   static async getHistoricalLineupByPosition(lineupId) {
     try {
+      // Join with waiver_requests to check actual waiver status
+      // Exclude entries where player_status = 'pending_waiver' but the waiver was rejected
       const query = `
         SELECT
           lp.*,
@@ -184,7 +186,9 @@ class LineupPosition {
         LEFT JOIN nfl_players p ON lp.player_id = p.player_id
         LEFT JOIN nfl_teams nt ON lp.nfl_team_id = nt.nfl_team_id
         LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
+        LEFT JOIN waiver_requests wr ON lp.waiver_request_id = wr.request_id
         WHERE lp.lineup_id = ?
+          AND NOT (lp.player_status = 'pending_waiver' AND (wr.status = 'rejected' OR (lp.waiver_request_id IS NOT NULL AND wr.status IS NULL)))
         ORDER BY lp.position_type, lp.sort_order
       `;
 
