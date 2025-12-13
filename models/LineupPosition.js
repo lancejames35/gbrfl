@@ -164,8 +164,8 @@ class LineupPosition {
    */
   static async getHistoricalLineupByPosition(lineupId) {
     try {
-      // Join with waiver_requests to exclude rejected waiver players
-      // Include row if: player_status is NULL, OR not pending_waiver, OR waiver is still pending
+      // Only show players that are actually on the roster OR have a pending waiver
+      // This filters out orphaned entries (rejected waivers that weren't properly cleaned up)
       const query = `
         SELECT
           lp.*,
@@ -180,15 +180,17 @@ class LineupPosition {
           COALESCE(nt.team_code, pt.team_code, 'UNK') as team_abbrev,
           lp.position_type,
           1 as in_lineup,
-          COALESCE(lp.player_status, 'rostered') as player_status,
+          CASE WHEN wr.status = 'pending' THEN 'pending_waiver' ELSE 'rostered' END as player_status,
           lp.waiver_request_id
         FROM lineup_positions lp
+        JOIN lineup_submissions ls ON lp.lineup_id = ls.lineup_id
         LEFT JOIN nfl_players p ON lp.player_id = p.player_id
         LEFT JOIN nfl_teams nt ON lp.nfl_team_id = nt.nfl_team_id
         LEFT JOIN nfl_teams pt ON p.nfl_team_id = pt.nfl_team_id
-        LEFT JOIN waiver_requests wr ON lp.waiver_request_id = wr.request_id
+        LEFT JOIN fantasy_team_players ftp ON lp.player_id = ftp.player_id AND ftp.fantasy_team_id = ls.fantasy_team_id
+        LEFT JOIN waiver_requests wr ON wr.pickup_player_id = lp.player_id AND wr.fantasy_team_id = ls.fantasy_team_id AND wr.status = 'pending'
         WHERE lp.lineup_id = ?
-          AND (lp.player_status IS NULL OR lp.player_status != 'pending_waiver' OR wr.status = 'pending')
+          AND (ftp.player_id IS NOT NULL OR wr.request_id IS NOT NULL)
         ORDER BY lp.position_type, lp.sort_order
       `;
 
